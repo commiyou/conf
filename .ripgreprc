@@ -1,0 +1,34 @@
+# for rg
+# Don't let ripgrep vomit really long lines to my terminal.
+--smart-case
+--hidden
+# Follow symbolic links while recursively searching
+--follow
+
+--glob
+!.DS_Store
+
+--glob
+!*.pdf
+
+--glob
+!.jumbo/
+
+--glob
+!cscope.out
+
+--glob
+!*.pyc
+
+--glob
+!.git/
+
+--glob
+!.svn/
+
+--glob
+!tags
+
+--glob
+!gtags
+--no-ignore-vcs

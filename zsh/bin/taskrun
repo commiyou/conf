@@ -1,0 +1,81 @@
+#!/bin/bash
+
+function email() {
+	usage() {
+		echo -n "Usage: email -t mail_to_list [-f mail_from] "
+		echo  "[-s subject] content..."
+		echo "		mail_to_list seperated by comma"
+		echo "		subject and content must have one"
+	}
+	while getopts ":s:t:f:" option
+	do
+		case $option in
+			s) subject=$OPTARG
+				;;
+			t) mail_to_list=$OPTARG
+				;;
+			f) mail_from=$OPTARG
+				;;
+			*) usage  && exit -1
+				;;
+		esac
+	done
+	shift $((OPTIND-1))
+	unset OPTIND # in case of others usage of OPTIND
+	content="$*"
+	[[ -z "$content" ]] && content="$subject"
+	content=$(echo "$content" | sed 'a<br/>')
+
+	[[ -z "$mail_from" ]] && mail_from=$(hostname)
+	[[ -z "$mail_to_list" ]] && fatal "no mail to list"
+
+	/usr/lib/sendmail -t <<<"To:${mail_to_list}
+From:${mail_from}
+Subject:${subject}
+Content-type:text/html;charset=gb2312
+
+<head>
+<style type='text/css'>
+body {
+font-family: 'PingFang SC','Helvetica Neue',Helvetica,'Hiragino Sans GB',Arial,'Microsoft YaHei','微软雅黑',sans-serif,'Segoe UI Emoji','Segoe UI Symbol';
+font-size: 14px;
+line-height: 1.7;
+word-wrap: break-word;
+color: #222;
+}
+</style>
+</head>
+
+<body>
+task log <pre>$(readlink -f taskrun.log)</pre>, tail 10 line as follow
+<pre>
+${content}
+</pre>
+
+Send from $USER@$(hostname) at $(date +"%Y-%m-%d %H:%M:%S")
+<br />
+CWD: $(pwd)
+</body>"
+}
+
+
+if [[ "$1" == "-h" || "$1" == "--help" || $# -lt 3 ]]
+then
+	echo "usage: taskrun EMAIL_LIST  TASK_NAME CMD ..." >&2
+	exit 1
+fi
+
+set -x
+
+email_list=${1? no email list} ; shift
+task_name=${1? no task name} ; shift
+[[ $email_list = *@* ]] || { echo bad email $email_list; exit 1; }
+cmd="$@"
+
+
+$cmd > taskrun.log 2>&1
+if [[ $? != 0 ]]
+then
+	error_msg=$(tail -10  taskrun.log)
+	email -t "$email_list"  -s "[FAILED] ${task_name} @$(date +%Y%m%d)"  "$error_msg"
+fi

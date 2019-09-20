@@ -1,0 +1,43 @@
+#! /usr/bin/env python
+# -*- coding: gb18030 -*-
+#
+#
+"""
+
+"""
+import sys
+import urllib2
+
+
+def main(files, key_cols, input_delim, output_delim):
+    if not files:
+        files = [sys.stdin]
+
+    if not key_cols:
+        key_cols = [0]
+
+    if input_delim == "\\t":
+        input_delim = "\t"
+
+    if output_delim == "\\t":
+        output_delim = "\t"
+
+    for fd in files:
+        for line in fd:
+            ll = line.rstrip("\n").split(input_delim)
+
+            for k in key_cols:
+                ll[k] = urllib2.unquote(ll[k]).replace(output_delim, " ").replace("\n", " ")
+            print output_delim.join(ll)
+
+
+if __name__ == "__main__":
+    import argparse
+    parser = argparse.ArgumentParser(description='urllib2 unquote colums')
+    parser.add_argument(
+        '-k', metavar="colmuns", type=int, nargs='*', help='to unquote colums, default 0')
+    parser.add_argument('files', nargs='*', type=argparse.FileType('r'), help='default sys.stdin')
+    parser.add_argument('-d', metavar="input_delim", default="\t", help='default \\t')
+    parser.add_argument('-D', metavar="output_delim", default="\t", help='default \\t')
+    args = parser.parse_args()
+    main(args.files, args.k, args.d, args.D)

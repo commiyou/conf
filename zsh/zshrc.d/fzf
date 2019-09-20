@@ -1,0 +1,214 @@
+#!/usr/bin/env zsh
+# https://github.com/junegunn/fzf
+# [ -n "$TMUX" ] && export FZF_TMUX=1
+# Use ~~ as the trigger sequence instead of the default **
+export FZF_COMPLETION_TRIGGER='~~'
+
+# Options to fzf command
+export FZF_COMPLETION_OPTS='+c -x --color=dark,hl:32,hl+:32'
+
+# Use fd (https://github.com/sharkdp/fd) instead of the default find
+if (( $+commands[tmux] )); then
+  # command for listing path candidates.
+  # - The first argument to the function ($1) is the base path to start traversal
+  # - See the source code (completion.{bash,zsh}) for the details.
+  _fzf_compgen_path() {
+    command fd --hidden --follow -I --exclude ".git" . "$1"
+  }
+
+  # Use fd to generate the list for directory completion
+  _fzf_compgen_dir() {
+    command fd --type d --hidden -I --follow --exclude ".git" . "$1"
+  }
+fi
+
+MANPATH=$ZPLUG_REPOS/junegunn/fzf/man:$MANPATH
+
+
+export FZF_DEFAULT_COMMAND='command fd -E .git -E .svn -H -I --follow'
+alias fd="$FZF_DEFAULT_COMMAND"
+# export FZF_DEFAULT_OPTS="--layout=reverse --inline-info -m --cycle --bind=ctrl-j:execute(vim\ -u\ $vimrc)+accept --preview=''"
+#function cd() {
+  #if [[ "$#" != 0 ]]; then
+    #builtin cd "$@";
+    #return
+  #fi
+  #while true; do
+    #local lsd=$(echo ".." && ls -p | grep '/$' | sed 's;/$;;')
+    #local dir="$(printf '%s\n' "${lsd[@]}" |
+      #fzf --reverse --preview '
+          #__cd_nxt="$(echo {})";
+          #__cd_path="$(echo $(pwd)/${__cd_nxt} | sed "s;//;/;")";
+          #echo $__cd_path;
+          #echo;
+          #ls -p -FG "${__cd_path}";
+          #')"
+
+    #[[ ${#dir} != 0 ]] || return 0
+    #builtin cd "$dir" &> /dev/null
+  #done
+#}
+
+# fuzzy grep open via ag with line number
+vf() {
+  local file
+  local line
+
+  read -r file line <<<"$(rg --no-heading $@ -p | fzf -0 -1 | awk -F: '{print $1, $2}')"
+
+  if [[ -n $file ]]
+  then
+     vim $file +$line
+  fi
+}
+
+
+# Modified version where you can press
+#   - CTRL-O to open with `vim` command,
+#   - CTRL-D to cd to file
+#   - Enter to open or cd by file/dir
+f() {
+  local out file key query IFS cwd
+  cwd=$(pwd)
+  # yes $'\n' | v -l | awk '{print $NF}' | fzf --bind='enter:execute($vim {1} < /dev/tty)+accept'
+  while true; do
+    IFS=$'\n\n' out=($((yes $'\n' | v -l | awk '{ print $NF }' | sed  "s:~:$HOME:" | tac; z -l | sed -n '1,$p' | sed  "s:~:$HOME:"| awk '{ print $NF }' | tac; echo "..";command fd -E .git -E .svn -H -I --follow;) |
+      fzf-tmux --header="enter:vim or cd, ctrl-o:vim, ctrl-d:cd, ctrl-c:exit,
+cwd:$(pwd)" \
+      --query="$1" --expect=enter,ctrl-o,ctrl-d,ctrl-c --print-query --preview '
+      file {};
+      echo --------------------------------
+      (highlight -O ansi -l {} 2> /dev/null || cat {} || tree -c {}) 2>/dev/null | head -200'))
+
+    query="$out[1]"
+    key="$out[2]"
+    file="$out[3]"
+    [ "$key" = ctrl-c ] && return
+    if [ "$key" = enter ]
+    then
+      if [[ "$query" == ".." || "$file" == ".." ]]
+      then
+        builtin cd ..
+      elif [ -d "$file" ]
+      then
+        builtin cd "$file"
+      elif [ -f "$file" ]
+      then
+        vim "$file"
+        [ $(pwd) = "$cwd" ] ||  builtin cd "$cwd"
+        return
+      fi
+    elif [ "$key" = ctrl-o ]
+    then
+      vim "$file"
+      [ $(pwd) = "$cwd" ] ||  builtin cd "$cwd"
+      return
+    elif [ "$key" = ctrl-d ]
+    then
+      [ "$query" = ".." ] && builtin cd .. || [ -d "$file" ] && builtin cd "$file" || builtin cd $(dirname "$file")
+    fi
+  done
+}
+
+fzf-direct-completion() {
+  FZF_COMPLETION_TRIGGER= fzf-completion
+}
+zle -N fzf-direct-completion
+
+if (( $+commands[jumbo] )); then
+  _fzf_complete_jumbo() {
+    ARGS="$@"
+    if [[ $ARGS == 'jumbo install'* ]]; then
+      _fzf_complete "--multi --reverse" "$@"  < <(
+        { jumbo search 2>/dev/null | command sed 'N;s/\n\s*//;P;D' }
+      )
+    else
+      eval "zle ${fzf_default_completion:-expand-or-complete}"
+    fi
+  }
+  _fzf_complete_jumbo_post() {
+    command awk '{print $1}'
+  }
+fi
+
+if [ -f $ZPLUG_REPOS/rupa/z/z.sh ]; then
+  _fzf_complete_z() {
+    _fzf_complete "--reverse --no-sort --bind=tab:down,btab:up --cycle" "$@"  < <(
+      z -l | sed -n '1,$p' | awk '{ print $NF }' | tac; command fd -E .git -E .svn -H -I --follow -t d;
+    )
+  }
+fi
+
+if [ -f $ZPLUG_REPOS/rupa/v/v ]; then
+  # v <tab>
+  _fzf_complete_v() {
+    _fzf_complete "--reverse --no-sort --bind=tab:down,btab:up --cycle" "$@"  < <(
+      yes $'\n' | v -l | awk '{ print $NF }' | tac; command fd -E .git -E .svn -H -I --follow -t f;
+    )
+  }
+fi
+
+# vim <tab>
+#_fzf_complete_vim() {
+    #echo 22 > ~/12313
+    #echo "$@" >> ~/12313
+  #if [[ "$@"  =~ '/' || -d "$@" ]]; then
+    #echo 1111 >> ~/12313
+    #_fzf_complete "--reverse --no-sort --bind=tab:down,btab:up --cycle" $(filename "$@")  < <(
+    #command fd -E .git -E .svn -H -I --follow -t f $(basename "$@");
+    #)
+  #else
+    #echo 33 >> ~/12313
+    #_fzf_complete "--reverse --no-sort --bind=tab:down,btab:up --cycle" "$@"  < <(
+    #command fd -E .git -E .svn -H -I --follow -t f;
+    #)
+  #fi
+#}
+
+#_fzf_complete_tfls _fzf_complete_ofls _fzf_complete_nfcat _fzf_complete_tfcat _fzf_complete_ofcat _fzf_complete_nfdu _fzf_complete_tfdu _fzf_complete_ofdu _fzf_complete_nfls() {
+  #_fzf_complete "--reverse --no-sort --bind=tab:down,btab:up --cycle" "$@"  < <(
+    #echo /app/ecom/fcr/dynamic_creative/dp/small_shitu/
+    #echo /app/ecom/fcr/
+    
+  #)
+#}
+
+# let tab trigger without FZF_COMPLETION_TRIGGER
+if [ -f $ZPLUG_REPOS/junegunn/fzf/shell/completion.zsh ]; then
+  egrep -q '^  eval "type _fzf_complete_\${cmd} > ' $ZPLUG_REPOS/junegunn/fzf/shell/completion.zsh || \
+    sed -i '/^  trigger=\${FZF_COMPLETION_T/ a \  eval "type _fzf_complete_\${cmd} > /dev/null" && trigger=' $ZPLUG_REPOS/junegunn/fzf/shell/completion.zsh
+fi
+
+for fzf_conf ($ZPLUG_REPOS/junegunn/fzf/shell/*.zsh) source $fzf_conf
+
+
+# CTRL-R - Paste the selected command from history into the command line
+fh() {
+  local command
+  out=$(fc -rnl 1 |
+    FZF_DEFAULT_OPTS="--height ${FZF_TMUX_HEIGHT:-40%} $FZF_DEFAULT_OPTS -n2..,.. --tiebreak=index --no-sort --expect=tab --bind=ctrl-r:toggle-sort $FZF_CTRL_R_OPTS --query=${(qqq)LBUFFER} --header='tab:edit enter:execute' " $(__fzfcmd))
+
+   key=$(head -1 <<< "$out")
+   command=$(head -2 <<< "$out" | tail -1)
+   command=$(echo -e "$command")   # fix multi line with "\n"
+  
+   if [[ !  -z  $param  ]]; then
+     BUFFER="$BUFFER"
+     zle redisplay     # redisplay the current command prompt line
+   else
+     # See http://zsh.sourceforge.net/Doc/Release/Zsh-Line-Editor.html#Zle-Widgets
+     # for more details on this
+     BUFFER="$command"  # replace the buffer of the command prompt with our command
+     zle redisplay     # redisplay the current command prompt line
+
+     if [ "$key" = tab ]; then
+       zle edit-command-line
+     fi
+     zle accept-line   # accept the current line in buffer a.k.a "press enter"
+   fi
+ }
+zle     -N   fh
+bindkey '^R' fh
+ 
+bindkey '^X^T' fzf-file-widget
+bindkey '^T' transpose-chars

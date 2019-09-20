@@ -1,0 +1,20 @@
+# stdin作为参数，{} 占位符
+$ seq 5 | parallel echo pre_placehoder_{}
+pre_placehoder_1
+pre_placehoder_2
+pre_placehoder_3
+pre_placehoder_4
+pre_placehoder_5
+
+# 常用方法
+doit() {
+	x=$1
+	do_something $x
+	[... 100 lines that do something with $x ...]
+}
+export -f doit
+cat list | parallel doit
+
+
+# stdin作为cmd输入
+cat my_large_log   |parallel --pipe grep pattern 

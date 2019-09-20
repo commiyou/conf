@@ -1,0 +1,73 @@
+#!/usr/bin/env python
+import sys
+import argparse
+try:
+    import cutil
+except:
+    pass
+
+
+class valueGetter(object):
+    def __init__(self, e):
+        if e.startswith("v"):
+            self.e = float(e[1:])
+            self.get = self._value
+        else:
+            self.e = int(e)
+            self.get = self._idx
+
+    def _idx(self, ll):
+        return ll[self.e]
+
+    def _value(self, ll):
+        return self.e
+
+
+def safe_divide(e1, e2, default="N/A", percent=False):
+    try:
+        value = "%.6f" % (float(e1) / float(e2))
+    except:
+        value = default
+
+    if percent:
+        try:
+            return "%.2f%%" % (float(value) * 100)
+        except:
+            return value
+    else:
+        return value
+
+
+common_parser = argparse.ArgumentParser(description='divide num by indexs or values')
+common_parser.add_argument("-d", "--delim", nargs=1,
+                           required=False, default="\t")
+common_parser.add_argument("-D", "--DELIM", nargs=1,
+                           required=False, default="\t",
+                           help="output delim")
+common_parser.add_argument("-e", "--divide_exception_default",
+                           required=False, default="N/A", help="default N/A")
+common_parser.add_argument("-p", nargs="+", metavar="p1,p2", required=True,
+                           help="idx1,idx2 or idx1,v123 or v123,idx1")
+common_parser.add_argument("-P", "--percent", action="store_true", help="percent")
+common_parser.add_argument("files", nargs="*", type=argparse.FileType('r'))
+
+args = common_parser.parse_args(sys.argv[1:])
+
+idxs = []
+for e in args.p:
+    e1, e2 = e.split(",")
+    idxs.append([valueGetter(e1), valueGetter(e2)])
+
+infiles = args.files
+if not infiles:
+    infiles = [sys.stdin]
+for fd in infiles:
+    for line in fd:
+        line = line.rstrip('\n')
+        ll = map(lambda x: x.strip(), line.split(args.delim))
+        for e1, e2 in idxs:
+            ll.append(safe_divide(e1.get(ll),
+                                  e2.get(ll),
+                                  default=args.divide_exception_default,
+                                  percent=args.percent))
+        print args.DELIM.join(ll)

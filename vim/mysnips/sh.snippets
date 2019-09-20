@@ -1,0 +1,19 @@
+snippet warn "echo and return 1" w
+echo "$0" >&2 && return 1
+endsnippet
+
+snippet fun "function-sh" b
+## ${1:function_name} ${2:args}
+## ~~~~~~~~~~~~~~~~~~~
+## ${3:desc}
+function $1() {
+	${0:#function_body}
+}
+endsnippet
+
+snippet #f "function-header" b
+## ${1:function_name} ${2:args}
+## ~~~~~~~~~~~~~~~~~~~
+## ${3:desc}
+endsnippet
+

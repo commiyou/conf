@@ -1,0 +1,94 @@
+#!/home/work/.jumbo/bin/python
+# -*- coding: utf-8 -*-
+# Last modified:
+
+"""docstring
+"""
+
+__revision__ = '0.1'
+
+import sys
+from collections import defaultdict
+
+
+def get_list_by_cols(line, key_cols, delim):
+    if key_cols is None:
+        return map(lambda x: x.strip(), line.split(delim))
+    else:
+        ll = line.split(delim)
+        return [ll[i].strip() for i in key_cols]
+
+
+def proc(input_fd_list,  key_cols,  value_cols, delim, values_delim, key_delim,
+         value_delim, value_sort_idx, vaule_sort_reverse):
+
+    res = defaultdict(set)
+    for fd in input_fd_list:
+        for line in fd:
+            line = line.rstrip('\n')
+            key = tuple(get_list_by_cols(line,  key_cols, delim))
+            value = tuple(get_list_by_cols(line,  value_cols, delim))
+            res[key].add(value)
+
+    if value_sort_idx:
+        value_sort_idx = int(value_sort_idx)
+    for k in res:
+        ks = key_delim.join(k)
+        if value_sort_idx is not None:
+            try:
+                vs = sorted(
+                    list(res[k]), key=lambda x: float(x[value_sort_idx]), reverse=vaule_sort_reverse)
+            except:
+                vs = sorted(
+                    list(res[k]), key=lambda x: x[value_sort_idx], reverse=vaule_sort_reverse)
+
+        else:
+            vs = res[k]
+
+        vs = values_delim.join([value_delim.join(x) for x in vs])
+        print delim.join([ks, vs])
+
+
+def create_range_callback(option, opt, value, parser):
+    tmp = value.split(",")
+    res = []
+    for e in tmp:
+        try:
+            i, j = map(int, e.split('-'))
+            res += range(i, j + 1)
+        except:
+            res.append(int(e))
+    setattr(parser.values, option.dest, res)
+
+
+if __name__ == "__main__":
+    from optparse import OptionParser
+    parser = OptionParser(usage="usage:%prog [options] [file]")
+    parser.add_option("-k", dest="key_cols", help="the key cols in <key_file>, default 0, Example: 1,3-5,10 (1,3,4,10)",
+                      action="callback", callback=create_range_callback, type="string", default=[0])
+    parser.add_option("-v", dest="value_cols", help="the col to merge",
+                      action="callback", callback=create_range_callback, type="string", default=[-1])
+    parser.add_option("-d", dest="delim",
+                      help="delimeter, default tab", default="\t")
+    parser.add_option("-D", dest="values_delim",
+                      help="the delimeter to join value_cols, default # ", default="#")
+    parser.add_option("--kd", dest="key_delim",
+                      help="the delim to join item in key_cols, defalut tab", default="\t")
+    parser.add_option("--vd", dest="value_delim",
+                      help="the delim to join item in value_cols, defalut \",\" ", default=",")
+    parser.add_option("--value_sort_index", dest="value_sort_index",
+                      help="the idx for values to sort, default not sort", default=None)
+    parser.add_option("--value_sort_reverse", dest="value_sort_reverse",
+                      help="sort from big to small, default True", default=True)
+    (options, args) = parser.parse_args()
+    # print options,args
+    # 遍历文件列表
+    fd_list = []
+    if not args:
+        fd_list.append(sys.stdin)
+    else:
+        for file in args:
+            fd_list.append(open(file))
+
+    proc(fd_list, options.key_cols, options.value_cols, options.delim, options.values_delim,
+         options.key_delim, options.value_delim, options.value_sort_index, options.value_sort_reverse)

@@ -1,0 +1,24 @@
+## Searching code
+# https://help.github.com/articles/understanding-the-search-syntax/
+# https://help.github.com/articles/searching-code/
+#SYNTAX
+CONTENT + search qualifier
+# NOT
+hello NOT world # matches repositories that have the word "hello" but not the word "world."
+# search by fliename
+filename:bindkey.zsh
+#Search by file extension
+extension:EXTENSION
+
+# find code in file 
+octocat in:file  # matches code where "octocat" appears in the file contents.
+octocat in:path # matches code where "octocat" appears in the file path.
+octocat in:file,path  # matches code where "octocat" appears in the file contents or the file path.
+
+# Search by language
+element language:xml size:>100  #matches code with the word "element" that's marked as being XML and has gt 100 bytes.
+
+# sort result
+sort:interactions  
+sort:reactions
+sort:updated 

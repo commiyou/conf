@@ -1,0 +1,7 @@
+#!/bin/bash
+# use for tmux/zsh auto set terminal title
+case $(hostname -f) in
+	* )
+		hostname -s
+		;;
+esac

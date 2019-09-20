@@ -1,0 +1,77 @@
+#!/usr/bin/env python
+# coding:utf8
+import sys
+import click
+try:
+    import cutil
+except:
+    pass
+
+
+def get_str_of_num(num):
+    result = []
+    num = int(num)
+    if num >= 10000000:
+        n_kw = num / 10000000
+        result.append("%s%s" % (n_kw, click.style('kw', fg='green')))
+        num -= n_kw * 10000000
+
+    if num >= 10000:
+        n_w = num / 10000
+        result.append("%s%s" % (n_w, click.style('w', fg='green')))
+        num -= n_w * 10000
+
+    if num >= 1000:
+        n_k = num / 1000
+        result.append("%s%s" % (n_k, click.style('k', fg='green')))
+        num -= n_k * 1000
+
+    if num:
+        result.append(str(num))
+
+    return "".join(result)
+
+
+def stat(itr, delim, value_idx, space):
+    delim = str(delim)
+    results = []
+    sums = 0
+    n = 0
+    for lineno, line in enumerate(itr):
+        fds = line.rstrip('\n').split(delim)
+        value = float(fds[value_idx])
+        sums += value
+        if lineno > 0 and lineno % space == 0:
+            n += 1
+            results.append((n, lineno, sums))
+
+    if lineno % space != 0:
+        results.append((n, lineno, sums))
+
+    for n, lineno, num in results:
+        click.echo("%s\t%s\t%s\t%.2f%%\t%s" % (n, get_str_of_num(lineno),
+                                               click.style(":", fg="red"),
+                                               num * 100.0 / results[-1][-1],
+                                               get_str_of_num(num)))
+
+
+@click.command()
+@click.option('-d', '--delim', help='delimeter, default tab', default="\t")
+@click.option('-n', help='the space of each sum-up', default=5000)
+@click.option('-v', '--value', help='the value column to sum-up', default=-1)
+@click.argument('files', nargs=-1, type=click.File())
+def main(delim, n, value, files):
+    """
+    Analysis of the every N lines sum-up in sorted file
+    """
+    if not files:
+        files = [sys.stdin]
+
+    for fd in files:
+        if len(files) > 1:
+            print '==  %s : ' % (fd.name)
+        stat(fd, delim, value, n)
+
+
+if __name__ == "__main__":
+    main()

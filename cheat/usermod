@@ -1,0 +1,2 @@
+# add group for user
+usermod -a -G work youbin

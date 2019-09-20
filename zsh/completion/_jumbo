@@ -1,0 +1,22 @@
+#compdef jumbo
+local -a subcmds
+subcmds=(
+ 'add-repo: Add a new repository'
+ 'check: Check for updates, force update repo data'
+ 'check-unused: Check for unused packages'
+ 'clean: Clean unused packages/temporary files'
+ 'doctor: Environment diagnosis'
+ 'install: Install packages'
+ 'list: List all installed packages'
+ 'list-files: List installed files of a package'
+ 'list-repo: List configured repository'
+ 'local-install: Install packages from local install file'
+ 'remove: Uninstall pacakges'
+ 'remove-repo: Remove a repository'
+ 'report: Submit issue, result of 'doctor' will be included'
+ 'search: Search for packages, or list all packages available'
+ 'update: Update packages')
+if (( CURRENT == 2 )); then
+  _describe -t commands "jumbo subcommand" subcmds
+  return
+fi

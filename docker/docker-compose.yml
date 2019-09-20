@@ -1,0 +1,27 @@
+version: '3.4'
+services:
+  env:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        USER: ${USER}
+        GROUP: ${GROUP}
+        USER_ID: ${USER_ID:-0}
+        GROUP_ID: ${GROUP_ID:-0}
+    image: hellocommi/baseenv
+    environment:
+      - http_proxy
+      - https_proxy
+      - ftp_proxy
+      - DISPLAY
+      - XAUTHORITY
+
+    network_mode: "host"
+
+    volumes:
+      - ${CONF_DIR}:${CONF_DIR}
+      - ${CONF_DIR}/bashrc:${HOME_DIR}/.bashrc
+      - ${CONF_DIR}/bashrc:/root/.bashrc
+      - ${HOME_DIR}/work:${HOME_DIR}/work
+

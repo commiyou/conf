@@ -1,0 +1,108 @@
+# A plain old glob
+print -l *.txt
+print -l **/*.txt
+
+# Show text files that end in a number from 1 to 10
+print -l **/*<1-10>.txt
+
+# Show text files that start with the letter a
+print -l **/[a]*.txt
+
+# Show text files that start with either ab or bc
+print -l **/(ab|bc)*.txt
+
+# Show text files that don't start with a lower or uppercase c
+print -l **/[^cC]*.txt
+
+# Show only directories
+print -l **/*(/)
+
+# Show only regular files
+print -l **/*(.)
+
+# Show empty files
+print -l **/*(L0)
+
+# Show files greater than 3 KB
+print -l **/*(Lk+3)
+
+# Show files modified in the last hour
+print -l **/*(mh-1)
+
+# Sort files from most to least recently modified and show the last 3
+print -l **/*(om[1,3])
+
+# `.` show files, `Lm-2` smaller than 2MB, `mh-1` modified in last hour,
+# `om` sort by modification date, `[1,3]` only first 3 files
+print -l **/*(.Lm-2mh-1om[1,3])
+
+# Show every directory that contain directory `.git`
+print -l **/*(e:'[[ -d $REPLY/.git ]]':)
+
+# Return the file name (t stands for tail)
+print -l *.txt(:t)
+
+# Return the file name without the extension (r stands for remove_extension)
+print -l *.txt(:t:r)
+
+# Return the extension
+print -l *.txt(:e)
+
+# Return the parent folder of the file (h stands for head)
+print -l *.txt(:h)
+
+# Return the parent folder of the parent
+print -l *.txt(:h:h)
+
+# Return the parent folder of the first file
+print -l *.txt([1]:h)
+
+# Parameter expansion
+files=(*.txt)          # store a glob in a variable
+print -l $files
+print -l $files(:h)    # this is the syntax we saw before
+print -l ${files:h}
+print -l ${files(:h)}  # don't mix the two, or you'll get an error
+print -l ${files:u}    # the :u modifier makes the text uppercase
+
+# :s modifier
+variable="path/aaabcd"
+echo ${variable:s/bc/BC/}    # path/aaaBCd
+echo ${variable:s_bc_BC_}    # path/aaaBCd
+echo ${variable:s/\//./}     # path.aaabcd (escaping the slash \/)
+echo ${variable:s_/_._}      # path.aaabcd (slightly more readable)
+echo ${variable:s/a/A/}      # pAth/aaabcd (only first A is replaced)
+echo ${variable:gs/a/A/}     # pAth/AAAbcd (all A is replaced)
+
+# Split the file name at each underscore
+echo ${(s._.)file}
+
+# Join expansion flag, opposite of the split flag.
+array=(a b c d)
+echo ${(j.-.)array} # a-b-c-d
+
+
+gvim -p *(m0)     # all files modified today
+ls *(.mh3)  # modified 3 hours ago
+ls *(.mh-3) # less than 3 hours
+ls *(.mh+3) # more than 3 hours
+vi *(om[1])<TAB>  # edit newest file 
+gvim -p *(m0)     # all files modified today
+mv *.*(^m-1) old/ # move all but todays files to sub-directory
+ls *(^m0)         # files NOT modified today
+cp NF ${PWD/html/release}    # *N*
+# where is an alias set?
+zsh -lxic : 2> >(grep "> alias 'web")
+
+ls *(.)           # list just regular files *N*
+ls -d *(/)           # list just directories *C*
+grep -i "$1" **/*.{js,php,css}~(libs|temp|tmp|test)/* # exclude directories from grep *N* EXTENDED_GLOB required
+
+ls *(.L0)         # list pesky empty files (yes that is a zero) *N*
+ls -l *(L-2)      # list file size less than 2 bytes *N*
+ls **/*(.Lm+10)   # list files larger than 10MB anywhere in hierarchy *N*
+ls **/*(.Lm+10)   # list files larger than 10MB anywhere in hierarchy *N*
+ls -hlS **/*(.Lm+2)  | less  # list largest files  largest first  *N*
+ls -hlS /**/*(.OL[1,10]) # find the 10 biggest files on your system *N*
+
+# use cat > /dev/null and them press key to get keycode or Control-V-F1

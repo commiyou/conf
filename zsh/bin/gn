@@ -1,0 +1,2 @@
+#!/bin/sh
+bash -c "export LANG=zh_CN.gbk; source $CONF_DIR/shrc; zsh"

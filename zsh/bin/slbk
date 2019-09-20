@@ -1,0 +1,127 @@
+#!/usr/bin/env python
+# -*- coding: gbk -*-
+# Last modified:
+"""docstring
+"""
+
+__revision__ = '0.1'
+
+import sys
+
+try:
+    import cutil
+except:
+    pass
+
+
+def get_list_by_cols(line, key_cols, delim):
+    if key_cols is None:
+        return map(lambda x: x.strip(), line.split(delim))
+    else:
+        ll = line.split(delim)
+        return [ll[i].strip() for i in key_cols]
+
+
+def proc(input_fd_list, key_fd, key_cols1, key_cols2, delim, reverse_flag, ignore_flag,
+         input_delim):
+
+    # 若k1, k2中有一个没设置，用另外一个
+    if key_cols1 is None and key_cols2 is not None:
+        key_cols1 = key_cols2
+    elif key_cols1 is not None and key_cols2 is None:
+        key_cols2 = key_cols1
+
+    # 如果都没设置，k1默认使用整行，k2与k1一致
+    if key_cols2 is None:
+        key_cols2_range = None
+    else:
+        key_cols2_range = len(key_cols2)
+
+    # 读取key_file
+    keys = set()
+    for line in key_fd:
+        line = line.rstrip('\n')
+        tmp = tuple(get_list_by_cols(line, key_cols1, delim))
+        if ignore_flag:
+            tmp = tuple(map(lambda x: x.upper(), tmp))
+        if key_cols2_range is None:
+            key_cols2_range = len(tmp)
+        keys.add(tmp)
+
+    key_fd.close()
+    if key_cols2 is None:
+        key_cols2 = range(key_cols2_range)
+
+    for fd in input_fd_list:
+        for line in fd:
+            line = line.rstrip('\n')
+            key = tuple(get_list_by_cols(line, key_cols2, input_delim))
+            if ignore_flag:
+                key = tuple(map(lambda x: x.upper(), key))
+            if reverse_flag:
+                if key not in keys:
+                    print line
+            else:
+                if key in keys:
+                    print line
+
+
+def create_range_callback(option, opt, value, parser):
+    tmp = value.split(",")
+    res = []
+    for e in tmp:
+        try:
+            i, j = map(int, e.split('-'))
+            res += range(i, j + 1)
+        except:
+            res.append(int(e))
+    setattr(parser.values, option.dest, res)
+
+
+if __name__ == "__main__":
+    from optparse import OptionParser
+    parser = OptionParser(usage="usage:%prog [options] [file]")
+    parser.add_option(
+        "-k",
+        dest="key_cols1",
+        help="the key cols in <key_file>, default all, Example: 1,3-5,10 (1,3,4,10)",
+        action="callback",
+        callback=create_range_callback,
+        type="string",
+        default=None)
+    parser.add_option(
+        "-K",
+        dest="key_cols2",
+        help="the key cols in <input_file>,default same as key_cols1",
+        action="callback",
+        callback=create_range_callback,
+        type="string",
+        default=None)
+    parser.add_option("-f", dest="key_file", help="the file contains key", default=None)
+    parser.add_option("-d", dest="delim", help="delimeter, default tab, key files", default="\t")
+    parser.add_option(
+        "-D", dest="input_delim", help="input file delimeter, default tab", default="\t")
+    parser.add_option(
+        "-r",
+        dest="reverse_flag",
+        help="select line not in <key_file>",
+        action="store_true",
+        default=False)
+    parser.add_option(
+        "-i", dest="ignore_case", help="ignore case", action="store_true", default=False)
+    (options, args) = parser.parse_args()
+    # print options,args
+    # 遍历文件列表
+    fd_list = []
+    if not args:
+        fd_list.append(sys.stdin)
+    else:
+        for file in args:
+            fd_list.append(open(file))
+
+    if options.key_file is None:
+        print >> sys.stderr, "Error : must specify <key_file>"
+        sys.exit(1)
+
+    proc(fd_list, open(options.key_file), options.key_cols1, options.key_cols2, options.delim,
+         options.reverse_flag, options.ignore_case, options.input_delim)

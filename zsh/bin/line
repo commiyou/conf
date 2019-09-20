@@ -1,0 +1,17 @@
+#!/bin/bash
+if [[ $# -eq 1 ]]
+then
+	sed  -n ''"$1"'p'
+elif [[ $# -eq 2 ]]
+then
+	if  [[ $2 =~ '^[0-9]+$' ]]
+	then
+		sed  -n ''"$1,$2"'p'
+	else
+		sed  -n ''"$1"'p' $2
+	fi
+elif  [[ $# -eq 3 ]]
+then
+	sed  -n ''"$1,$2"'p' $3
+fi
+

@@ -1,0 +1,43 @@
+#!/usr/bin/env python
+# -*- coding: gbk -*-
+
+import click
+try:
+    import cutil
+except:
+    pass
+
+
+def safe_divide(e1, e2, default="N/A", percent=False):
+    try:
+        value = "%.6f" % (float(e1) / float(e2))
+    except:
+        value = default
+
+    if percent:
+        try:
+            return "%.2f%%" % (float(value) * 100)
+        except:
+            return value
+    else:
+        return value
+
+
+@click.command()
+@click.option('-d', '--denominator', help='fenmu', type=click.FLOAT, nargs=1)
+@click.option('-a', '--average', help='fenmu  & fenzi should divide / average', default=1)
+@click.argument('moleculars', nargs=-1, type=click.FLOAT)
+def main(denominator, average, moleculars):
+    """
+    calc molecular / denominator for each molecular in moleculars
+    """
+    print " average: %d" % average
+    for molecular in moleculars:
+        print " %10.2f : %10.2f / %10.2f = %s" % (molecular,
+                                                  molecular / average,
+                                                  denominator / average,
+                                                  safe_divide(molecular, denominator))
+
+
+if __name__ == "__main__":
+    main()

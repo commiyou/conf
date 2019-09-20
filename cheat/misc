@@ -1,0 +1,2 @@
+# linux release  , centos
+lsb_release -a

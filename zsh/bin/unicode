@@ -1,0 +1,11 @@
+#! /usr/bin/env python
+# -*- coding: gb18030 -*-
+#
+#
+
+"""
+
+"""
+import sys
+
+print sys.argv[1].decode("unicode escape").encode("gb18030")

@@ -1,0 +1,73 @@
+#!/usr/bin/env python
+# -*- coding: gbk -*-
+
+import sys
+import click
+import commands
+try:
+    import cutil
+except:
+    pass
+
+
+def try_decode_str(line, encodings=("utf8", "gb18030"), errors="strict"):
+    if isinstance(line, unicode):
+        return line
+    if isinstance(encodings, str):
+        encodings = [encodings]
+
+    for encoding in encodings:
+        try:
+            line = line.decode(encoding, errors=errors)
+        except:
+            continue
+        return line
+    raise UnicodeError("line[%s] decode error, coding list %s" % (line, ", ".join(encodings)))
+
+
+def get_encoding(encoding=None):
+    import locale
+    encoding = encoding \
+        or locale.getpreferredencoding() or sys.stdin.encoding or sys.getdefaultencoding()
+    if encoding.lower().replace("-", "") == "iso88591":
+        encoding = "gb18030"
+    return encoding
+
+
+@click.command()
+@click.option('-d', '--delim', help='delimeter, default tab', default="\t")
+@click.option('-f', '--from-encoding', help='from encoding', default=None)
+@click.option('-t', '--to-encoding', help='to encoding', default=None)
+@click.option('-l', '--lineno', help='the line no to print, default 0', default=0)
+@click.argument('files', nargs=-1, type=click.File())
+def main(delim, from_encoding, to_encoding, lineno, files):
+    """
+    pretty print the fields no of one line in file
+    """
+    if not files:
+        files = [sys.stdin]
+
+    for fd in files:
+        if fd is not sys.stdin:
+            print>>sys.stderr, "== %s" % commands.getoutput("file %s" % fd.name)
+        for idx, line in enumerate(fd):
+            if idx == lineno:
+                line = line.rstrip("\n")
+                if from_encoding:
+                    line = line.decode(from_encoding, errors="ignore")
+                else:
+                    line = try_decode_str(line)
+                delim = try_decode_str(delim)
+
+                to_encoding = get_encoding(to_encoding)
+                line = line.encode(to_encoding)
+                delim = delim.encode(to_encoding)
+
+                ll = line.split(delim)
+                for i, e in enumerate(ll):
+                    print '%5d : %s' % (i, e)
+                break
+
+
+if __name__ == "__main__":
+    main()

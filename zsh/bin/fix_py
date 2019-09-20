@@ -1,0 +1,53 @@
+#!/bin/bash
+set -o pipefail
+if [[ $# != 0 ]]
+then
+	for f in $*
+	do
+		echo "processing $f ..." >&2
+		cp -f $f $f.fixbak
+		autopep8 -a  $f.fixbak | awk '
+		{print $0}
+		(NR<4 && $0~/^#.*coding/) {
+			getline;
+			if (!($0~/^\"\"\"/)) {
+				print "\"\"\"doc\"\"\"";
+			}
+			print $0}
+		$0~/^ *def / || $0~/^ *class /{
+			space_len=match($0, /[^ ]/)-1 + 4;
+			prefix_spaces = ""
+			while (space_len -- > 0) {
+				prefix_spaces = prefix_spaces" "
+			} 
+			getline;
+			if (!($0~/^ *\"\"\"/)) {
+
+				printf("%s%s\n", prefix_spaces, "\"\"\"doc\"\"\"");
+			}
+			print $0}' > $f || mv -f $f.fixbak $f
+	done
+else
+	#autopep8.py -a - | awk '{print $0} $0~/^def / || $0~/^class /  {getline; if (!($0~/    \"\"\"/)) {print  "    \"\"\"doc\"\"\""}; print $0}  (NR<4 && $0~/^#.*coding/) {getline; if (!($0~/\"\"\"/))  print "\"\"\"doc\"\"\""; print $0}'
+	autopep8 -a - | awk '
+		{print $0}
+		(NR<4 && $0~/^#.*coding/) {
+			getline;
+			if (!($0~/^\"\"\"/)) {
+				print "\"\"\"doc\"\"\"";
+			}
+			print $0}
+		$0~/^ *def / || $0~/^ *class /{
+			space_len=match($0, /[^ ]/)-1 + 4;
+			prefix_spaces = ""
+			while (space_len -- > 0) {
+				prefix_spaces = prefix_spaces" "
+			} 
+			getline;
+			if (!($0~/^ *\"\"\"/)) {
+				printf("%s%s\n", prefix_spaces, "\"\"\"doc\"\"\"");
+			}
+			print $0}'
+fi
+
+#awk  ' {space_len=match($0,/[^ ]/)-1; while (space_len-->0) printf("%s", ",")}'

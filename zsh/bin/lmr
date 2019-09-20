@@ -1,0 +1,211 @@
+#!/bin/bash
+
+function usage() {
+    echo -e "Usage: $0 [-t] [-k] [-F] [-p partion_fields=1] [-s sorted_fileds=1] [-n NUM_HASHING_SEGS=6] [-m MAPPER -f INPUT_FILE].. -r <REDUCER> [-o OUTPUT_DIR=output_dir] [-b blocksize=100M] [-e encoding=utf8] [-H test_head_lines=1000] ";
+    exit 1
+}
+
+BLOCKSIZE="500M"
+NUM_HASHING_SEGS="6"
+OUTPUT_DIR="output_dir"
+
+test_mode=false
+keep_mapper_out=false
+force_remove_output_dir=false
+sorted_fields=1
+partion_fields=1
+encoding="utf8"
+test_head_lines=1000
+mapper_arr=()
+input_arr=()
+while getopts ":tFkp:s:n:m:f:r:o:b:H:e:" o; do
+    case "${o}" in
+        t)
+            test_mode=true
+            ;;
+        k)
+            keep_mapper_out=true
+            ;;
+        F)
+            force_remove_output_dir=true
+            ;;
+        p)
+            partion_fields="$OPTARG"
+            ;;
+        s)
+            sorted_fields="$OPTARG"
+            ;;
+        n)
+            NUM_HASHING_SEGS=$OPTARG
+            ;;
+        m)
+            mapper_arr[${#mapper_arr[@]}]="${OPTARG}"
+            ;;
+        f)
+            input_arr[${#input_arr[@]}]="${OPTARG}"
+            ;;
+        r)
+            REDUCER="$OPTARG"
+            ;;
+        o)
+            OUTPUT_DIR="$OPTARG"
+            ;;
+        b)
+            BLOCKSIZE="$OPTARG"
+            ;;
+        e)
+            encoding="$OPTARG"
+            ;;
+        H)
+            test_mode=true
+            test_head_lines="$OPTARG"
+            ;;
+        *)
+            usage
+            ;;
+    esac
+done
+shift $((OPTIND-1))
+if [[ $# -ne 0 ]]
+then
+    echo "bad args '$@'"
+    usage
+    exit 1
+fi
+
+   
+function timer()
+{
+    if [[ $# -eq 0 ]]; then
+        echo $(date '+%s')
+    else
+        local  stime=$1
+        etime=$(date '+%s')
+
+        if [[ -z "$stime" ]]; then stime=$etime; fi
+
+        dt=$((etime - stime))
+        ds=$((dt % 60))
+        dm=$(((dt / 60) % 60))
+        dh=$((dt / 3600))
+        printf '%d:%02d:%02d' $dh $dm $ds
+    fi
+}
+
+START_TIME=$(timer)
+if [[ ${#mapper_arr[@]} -eq 1 && ${#input_arr[@]} -eq 0 ]]; then
+    input_arr=(-)
+fi
+if [[ ${#mapper_arr[@]} -ne ${#input_arr[@]}  ]]; then
+    echo "mapper cnt not same as input file cnt "
+    exit 1
+fi
+if [[ ${#mapper_arr[@]} -eq 0 || -z "$REDUCER" ]]; then
+    echo "should has mapper or reducer, maper cnt ${#mapper_arr[@]}, reducer $REDUCER"
+    usage
+    exit 1
+fi
+
+if [ $force_remove_output_dir = true ]; then
+    rm -rf $OUTPUT_DIR
+fi
+mkdir "$OUTPUT_DIR" || exit 1
+echo  $' \e[1;33m>>>\e[m' "Mappers #${#mapper_arr[@]} running..."
+echo 
+
+
+HASHING_SCRIPT=`mktemp hashing.py.XXXX -p $OUTPUT_DIR`
+echo hashing script $HASHING_SCRIPT
+# trap 'rm -r "$HASHING_SCRIPT"' SIGHUP SIGINT SIGTERM
+
+TEMPDIR=`mktemp -d mapper_tmp.XXXX -p $OUTPUT_DIR`
+{
+    echo $' \e[1;32m>>>\e[m' Temporary output directory for mapper created: $'\e[1;32m'$TEMPDIR$'\e[m'
+}>&2
+
+function clean_up() {
+    echo $' \e[1;32m>>>\e[m Cleaning...'
+    sleep 1
+    if [ $keep_mapper_out = false ] ; then
+        echo rm $TEMPDIR
+        rm -r "$TEMPDIR" &&
+        echo  $' \e[1;32m>>>\e[m' Temporary directory deleted: $'\e[1;32m'"$TEMPDIR"$'\e[m' ||
+        echo  $' \e[1;31m*\e[m' Failed to delete temporary directoy: $'\e[1;32m'"$TEMPDIR"$'\e[m'
+    fi
+    rm "$HASHING_SCRIPT"
+} >&2
+trap 'clean_up; exit' SIGHUP SIGINT SIGTERM 
+
+cat <<EOF > "${HASHING_SCRIPT}"
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+# from __future__ import print_function
+import sys, gzip, re, os, fileinput, io
+def tokens(str1): return re.findall('[a-z]+', str1.lower())
+N_REDUCER, MAPPER_ID, BASE_DIR  = int(sys.argv[1]), int(sys.argv[2]), sys.argv[3]
+
+# print(sys.argv, sys.stdin.encoding)
+# print(MAPPER_ID, ' ', file = sys.stderr, end = '')
+# print(MAPPER_ID, end = ' ')
+
+import base64
+def outfile(seg_id):
+    segdir = '{}/reducer-{:02}'.format(BASE_DIR, seg_id)
+    try: os.makedirs(segdir)
+    except OSError : pass
+    # return io.open('{}/{:02}'.format( segdir, base64.urlsafe_b64encode() ), 'at', buffering=1, encoding=None)
+    # return io.open('{}/mapper-{:02}'.format( segdir, MAPPER_ID ), 'at', buffering=1, encoding=None)
+    # return io.open('{}/mapper-{:02}'.format( segdir, MAPPER_ID ), 'at', encoding = 'utf-8')
+    return open('{}/mapper-{:02}'.format( segdir, MAPPER_ID ), 'at')
+
+seg_file = [ outfile(seg_id) for seg_id in range(N_REDUCER) ]
+
+for line in fileinput.input(sys.argv[4:], openhook=fileinput.hook_encoded("$encoding")):
+    try:
+        line = line.rstrip("\n")
+        ll = line.split("\t", $partion_fields)
+        key = "\t".join(ll[:$partion_fields])
+        # value = "\t".join(ll[$partion_fields:])
+    except:
+        print(line)
+        raise
+    # print(line, file = seg_file[hash(key) % N_REDUCER])
+    print>> seg_file[hash(key) % N_REDUCER], line
+fileinput.close()
+for seg_id in range(N_REDUCER): seg_file[seg_id].close()
+EOF
+
+
+
+
+for idx in "${!mapper_arr[@]}"
+do
+    MAPPER="${mapper_arr[$idx]}"
+    input_file=${input_arr[$idx]}
+    # cat $input_file | parallel --pipe --block "${BLOCKSIZE}"  --ungroup   "echo -n $'\e[s\e[F\e[2K           #$idx  ${MAPPER} \e[u' ; ${MAPPER}  | python $HASHING_SCRIPT ${NUM_HASHING_SEGS} {#} $TEMPDIR " # pipe to here
+    if [ $test_mode = true ]; then
+        head -${test_head_lines} $input_file | parallel --pipe --block "${BLOCKSIZE}"  --ungroup   "echo  $'           #$idx  ${MAPPER} ' ; ${MAPPER}  | python $HASHING_SCRIPT ${NUM_HASHING_SEGS} {#} $TEMPDIR " # pipe to here
+    else
+        cat $input_file | parallel --pipe --block "${BLOCKSIZE}"  --ungroup   "echo  $'           #{#} ${MAPPER} ' ; ${MAPPER}  | python $HASHING_SCRIPT ${NUM_HASHING_SEGS} {#} $TEMPDIR " # pipe to here
+    fi
+done
+
+# parallel --pipe --block "$1" "$3 | python $HASHING_SCRIPT $2 1 $TEMPDIR" # io.open line buffering
+# echo $TEMPDIR
+if [ $test_mode = true ]; then
+    parallel  -vv --ungroup "sort -k 1,$sorted_fields -t $'\t' -s {}/*  | tee -a ${OUTPUT_DIR}/sorted_md   |  ${REDUCER} > '${OUTPUT_DIR}/{/.}'"  ::: "${TEMPDIR}"/*
+else
+    parallel   --ungroup "sort -k 1,$sorted_fields -t $'\t' -s {}/*  | ${REDUCER} > '${OUTPUT_DIR}/{/.}'"  ::: "${TEMPDIR}"/*
+fi
+echo  $' \e[1;33m>>>\e[m' Reducer running. Temporary input directory: $'\e[1;32m'"$TEMPDIR"$'\e[m'
+{
+    clean_up
+    echo 
+    if [ $keep_mapper_out = true ] ; then
+        echo  $' \e[1;33m*\e[m' Mapper output directory: $'\e[1;32m'"$TEMPDIR"$'\e[m'
+    fi
+    
+    echo  $' \e[1;33m*\e[m' Output directory: $'\e[1;32m'"$OUTPUT_DIR"$'\e[m'
+    echo  $' \e[1;33m*\e[m' Elasped time: $'\e[1;32m'$(timer $START_TIME)$'\e[m'
+    
+} >&2

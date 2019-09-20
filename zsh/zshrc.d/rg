@@ -1,0 +1,10 @@
+alias rg!="\rg --no-config"
+[ -f $ZDOTDIR/../.ripgreprc ]  && export RIPGREP_CONFIG_PATH=$ZDOTDIR/../.ripgreprc
+
+rg() {
+    if [ -t 1 ]; then
+        command rg -p "$@" | less -RFX
+    else
+        command rg "$@"
+    fi
+}

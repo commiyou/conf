@@ -1,0 +1,105 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+# Last modified: 
+
+"""docstring
+"""
+
+__revision__ = '0.1'
+
+import sys
+from optparse import OptionParser
+import random
+from collections import defaultdict
+import heapq
+
+        
+def discard(key_cols,dem,cnt,ins):
+    cnt = int (cnt)
+    result = defaultdict(list)
+
+    for line in ins:
+        line = line.strip()
+        ll = line.split(dem)
+        #key = tuple( [ ll[index] for index in key_fields])
+        key = tuple([ ll[index] for index in key_fields])
+        result[key].append(line)
+    for key in result:
+        if len(result[key]) <= cnt:
+            print "\n".join(result[key])
+        else:
+            for line in random.sample(result[key],cnt):
+                print line.rstrip("\n")
+
+
+
+
+
+def create_range_callback(option, opt, value, parser):
+    tmp = value.split(",")
+    res = []
+    for e in tmp:
+        try:
+            i, j = map(int, e.split('-'))
+            res +=  range(i,j+1)
+        except:
+            res.append(int(e))
+    setattr(parser.values, option.dest, res)
+
+def operate(options, line_list):
+    if options.shuf:
+        if len(curr_lines) <= options.cnt:
+            for tmp_line in curr_lines:
+                print tmp_line.rstrip("\n")
+        else:
+            for tmp_line in random.sample(curr_lines, options.cnt):
+                print tmp_line.rstrip("\n")
+    elif options.max:
+        tmp_id_line_dict = {}
+        if options.max_key is None:
+            options.max_key = [-1]
+        for tmp_line in curr_lines:
+            tmp_line =  tmp_line.rstrip("\n")
+            tmp_ll = tmp_line.split(options.delim)
+            tmp_id_line_dict[id(tmp_ll)] = [ tmp_ll, [ float(tmp_ll[x]) for x in options.max_key]]
+        #print tmp_id_line_dict
+        res = heapq.nlargest(options.cnt, tmp_id_line_dict, lambda x:tmp_id_line_dict[x][1])
+        for k in res:
+            print options.delim.join( tmp_id_line_dict[k][0])
+    else:
+        for tmp_line in curr_lines[ :options.cnt]:
+            print tmp_line.rstrip("\n")
+
+if __name__ == "__main__":
+    parser = OptionParser(usage="usage:%prog [options] [file]")
+    parser.add_option("-k", dest="key_cols",help="the key cols from input, start from 0, default 0", action = "callback", callback = create_range_callback, type = "string", default = [0])
+    parser.add_option("-d", dest="delim",help="delimeter, default tab",default="\t")
+    parser.add_option("-n", dest="cnt",help="sample cnt of every key, default 10", type = "int", default = 10)
+    parser.add_option("--shuf", dest="shuf",help="the line select by shuf", action = "store_true", default = False)
+    parser.add_option("--top", dest="top",help="the line select by top", action = "store_true", default = False)
+    parser.add_option("--max", dest="max",help="the line select by max", action = "store_true", default = False)
+    parser.add_option("-K", dest="max_key",help="the keys(0,1,0-3) for max to calc, default the last item", action = "callback", callback = create_range_callback, type = "string", default = None)
+    (options,args) = parser.parse_args()
+    # 遍历文件列表
+    fd_list = []
+    if not args:
+        fd_list.append(sys.stdin)
+    else:
+        for file in args:
+            fd_list.append(open(file))
+
+    curr_key = None
+    curr_lines = []
+    for fd in fd_list:
+        for line in fd:
+            line = line.rstrip('\n')
+            ll = line.split(options.delim)
+            key = tuple([ ll[index] for index in options.key_cols])
+            if key != curr_key:
+                if curr_key is not None:
+                    operate(options,curr_lines)
+                curr_key = key
+                curr_lines = []
+            curr_lines.append(line)
+    if curr_key is not None:
+        operate(options,curr_lines)

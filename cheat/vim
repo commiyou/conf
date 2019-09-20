@@ -1,0 +1,280 @@
+## movition
+# move backward and forward in your edit locations
+g;
+g,
+
+# :jumplist
+ctrl-o
+ctrl-i
+
+# :tags
+ctrl-]
+ctrl-t
+
+## command line
+# copy yanked text to VI command prompt, " stands for default register.
+<ctrl-r>"
+
+
+## vim plugins
+# vim-gitgutter
+# prev/next changes
+[c
+]c
+
+
+# ale
+# quick fix
+<leader>qf
+<leader>n
+<leader>p
+
+# jedi
+let g:jedi#goto_command = "<leader>d"
+let g:jedi#goto_assignments_command = "<leader>g"
+let g:jedi#goto_definitions_command = ""
+let g:jedi#documentation_command = "K"
+let g:jedi#usages_command = "<leader>uu"
+let g:jedi#completions_command = "<c-n>"
+let g:jedi#rename_command = "<leader>r"
+
+# fzf
+# Look for files under current directory
+:FZF
+
+# Look for files under your home directory
+:FZF ~
+
+# With options
+:FZF --no-sort --reverse --inline-info /tmp
+
+# Bang version starts fzf in fullscreen mode
+:FZF!
+
+# vim commands
+Files [PATH]    Files (similar to :FZF)
+GFiles [OPTS]    Git files (git ls-files)
+GFiles?    Git files (git status)
+Buffers    Open buffers
+Colors    Color schemes
+Ag [PATTERN]    ag search result (ALT-A to select all, ALT-D to deselect all)
+Rg [PATTERN]    rg search result (ALT-A to select all, ALT-D to deselect all)
+Lines [QUERY]    Lines in loaded buffers
+BLines [QUERY]    Lines in the current buffer
+Tags [QUERY]    Tags in the project (ctags -R)
+BTags [QUERY]    Tags in the current buffer
+Marks    Marks
+Windows    Windows
+Locate PATTERN    locate command output
+History    v:oldfiles and open buffers
+History:    Command history
+History/    Search history
+Snippets    Snippets (UltiSnips)
+Commits    Git commits (requires fugitive.vim)
+BCommits    Git commits for the current buffer
+Commands    Commands
+Maps    Normal mode mappings
+Helptags    Help tags 1
+Filetypes    File types
+
+# fugitive https://github.com/tpope/vim-fugitive
+# View any blob, tree, commit, or tag in the repository with 
+:Gedit (and :Gsplit, :Gvsplit, :Gtabedit, ...)
+# bring up the staged version of the file side by side with the working tree version 
+:Gdiff 
+# Bring up the output of git status with
+:Gstatus.  # Press - to add/reset a file's changes, or p to add/reset --patch
+:Gblame # brings up an interactive vertical split with git blame output. Press enter on a line to edit the commit where the line changed, or o to open it in a split. When you're done, use :Gedit in the historic buffer to go back to the work tree version.
+:Gmove does a git mv on a file and simultaneously renames the buffer.
+:Gdelete does a git rm on a file and simultaneously deletes the buffer.
+:Ggrep to search the work tree (or any arbitrary commit) with git grep
+:Glog loads all previous revisions of a file into the quickfix list so you can iterate over them and watch the file evolve!
+# http://vimcasts.org/episodes/fugitive-vim-resolving-merge-conflicts-with-vimdiff/
+
+
+# a.vim https://github.com/vim-scripts/a.vim
+
+:A switches to the header file corresponding to the current file being edited (or vise versa)
+:AS :AV :AT
+<Leader>ih switches to file under cursor
+<Leader>is switches to the alternate file of file under cursor (e.g. on  <foo.h> switches to foo.cpp)
+
+# vim-easymotion
+; # easymotion-prefix
+"""""""""""""""""""""""""""""""""""""""""
+" => easymotion 
+"Default Mapping      | Details
+"---------------------|----------------------------------------------
+"<Leader>f{char}      | Find {char} to the right. See |f|.
+"<Leader>F{char}      | Find {char} to the left. See |F|.
+"<Leader>w            | Beginning of word forward. See |w|.
+"<Leader>W            | Beginning of WORD forward. See |W|.
+"<Leader>b            | Beginning of word backward. See |b|.
+"<Leader>B            | Beginning of WORD backward. See |B|.
+"<Leader>e            | End of word forward. See |e|.
+"<Leader>E            | End of WORD forward. See |E|.
+"<Leader>ge           | End of word backward. See |ge|.
+"<Leader>gE           | End of WORD backward. See |gE|.
+"<Leader>j            | Line downward. See |j|.
+"<Leader>k            | Line upward. See |k|.
+"<Leader>h            | inLine search 
+"<Leader>l            | inLine search
+"<Leader>.            | repeat
+"<Leader>n            | Jump to latest "/" or "?" forward. See |n|.
+"<Leader>N            | Jump to latest "/" or "?" backward. See |N|.
+"<Leader>s            | Find(Search) {char} forward and backward.
+
+Find Motion Command Line~
+Key Mappings            | Details
+----------------------- |----------------------------------------------
+<CR>                    | Execute EasyMotion.
+<ESC> or <C-c>          | Cancel
+<Right> or <C-f>        | Cursor right
+<Left> or <C-b>         | Cursor left
+<Home> or <C-a>         | cursor to beginning of command-line
+<End> or <C-e>          | cursor to end of command-line
+<BS>  or <C-h>          | Delete one character
+<C-d>                   | Delete one character at the cursor pos
+<C-w>                   | Delete the word before the cursor
+<C-u>                   | Delete all entered characters before the cursor
+<Up> or <C-p>           | Recall older (previous) search from history
+<Down> or <C-n>         | Recall more recent (next) search from history
+<C-r> {0-9a-z"%#:-=.}   | Insert Register. See |c_Ctrl-R|
+<C-r><C-w>              | Insert the Word under cursor
+<C-r><C-a>              | Insert the |WORD| under cursor
+<C-r><C-f>              | Insert the Filename under cursor
+------------------------|---------------------------------------
+<Over>(paste)           | Paste yanked text to the command line
+						|   Default: <C-v>
+<Over>(buffer-complete) | Completion of buffer text Default: <C-l>
+*<Over>(em-scroll-f)*     | Scroll window forward & jump to the next match
+						|   Default: <Tab>
+*<Over>(em-scroll-b)*     | Scroll window backward & jump to previous match
+						|   Default: <S-Tab>
+*<Over>(em-jumpback)*     | Jump back original cursor position like <C-o>
+						|   Default: <C-o>
+*<Over>(em-openallfold)*  | Open all fold
+						|   Default: <C-z>
+
+Repeat the last find motion
+In a find motion (e.g. <Plug>(easymotion-s)), type <CR> without input characters to find the last motion again.
+
+# incsearch  https://github.com/haya14busa/incsearch.vim
+# Move the cursor to next/previous matches while incremental searching like Emacs.
+Mapping    description
+<Over>(incsearch-next)    to next match. default: <Tab>
+<Over>(incsearch-prev)    to prev match. default: <S-Tab>
+
+# Scroll-like feature while incremental searching
+Mapping    description
+<Over>(incsearch-scroll-f)    scroll to the next page match. default: <C-j>
+<Over>(incsearch-scroll-b)    scroll to the previous page match. default: <C-k>
+
+
+#  vim-surround  https://github.com/tpope/vim-surround
+ysiw"
+cs"'
+ds"   # delete "
+yssb  # line with brace
+
+
+# unimpaired  
+# GOOD!!!!
+:help unimpaired
+
+# vim-test
+nmap <silent> t<C-n> :TestNearest<CR> " t Ctrl+n
+nmap <silent> t<C-f> :TestFile<CR>    " t Ctrl+f
+nmap <silent> t<C-s> :TestSuite<CR>   " t Ctrl+s
+nmap <silent> t<C-l> :TestLast<CR>    " t Ctrl+l
+nmap <silent> t<C-g> :TestVisit<CR>   " t Ctrl+g
+
+
+# vimus
+" Prompt for a command to run map
+map <Leader>vp :VimuxPromptCommand<CR>
+map <Leader>vm :VimuxPromptCommand("make ")<CR>
+" Run last command executed by VimuxRunCommand
+map <Leader>vl :VimuxRunLastCommand<CR>
+" Inspect runner pane map
+map <Leader>vi :VimuxInspectRunner<CR>
+" Close vim tmux runner opened by VimuxRunCommand
+map <Leader>vq :VimuxCloseRunner<CR>
+" Interrupt any command running in the runner pane map
+map <Leader>vs :VimuxInterruptRunner<CR>
+" Zoom the tmux runner page
+map <Leader>vz :VimuxZoomRunner<CR>
+
+
+# pasting register
+# In normal and visual modesEdit
+"+p  or "*p  # pastes the contents of the clipboard,
+"/p          # pastes the last search
+":p 		 # pastes the last command
+# 0 always keeps the latest explicit yank
+# yank
+
+# In insert and command-line modes
+<C-R>
+
+
+# targets.vim  https://github.com/wellle/targets.vim
+# Supported separators:
+, . ; : + - = ~ _ * # / | \ & $
+# In Separator, Select inside separators.
+i, i. i; i: i+ i- i= i~ i_ i* i# i/ i| i\ i& i$
+# A Separator, Includes the leading separator, but excludes the trailing one. 
+a, a. a; a: a+ a- a= a~ a_ a* a# a/ a| a\ a& a$
+# Inside Separator, Like inside separators, but exclude whitespace at both ends. 
+I, I. I; I: I+ I- I= I~ I_ I* I# I/ I| I\ I& I$
+# Around Separator, Includes both separators and a surrounding whitespace, similar to a' and A(.
+A, A. A; A: A+ A- A= A~ A_ A* A# A/ A| A\ A& A$
+# Next and Last Separator
+in, an, In, An, il, al, Il, Al, ...
+
+# Argument Text Objects 'a'
+ia, aa, Ia, Aa, ina, ila ...
+      ...........
+a , b ( cccccccc , d ) e
+       └── ia ──┘
+
+# ultisnips
+   g:UltiSnipsExpandTrigger               <tab>
+   g:UltiSnipsListSnippets                <s-tab>
+   g:UltiSnipsJumpForwardTrigger          <c-j>
+   g:UltiSnipsJumpBackwardTrigger         <c-k>
+
+
+# https://github.com/terryma/vim-multiple-cursors
+name: <C-n> name multicursor and add a virtual cursor + selection on the match
+next: <C-n> add a new virtual cursor + selection on the next match
+skip: <C-x> skip the next match
+prev: <C-p> remove current virtual cursor + selection and go back on previous match
+select all: g<c-n> start muticursor and directly select all matches
+
+# https://github.com/wellle/tmux-complete.vim
+<C-X><C-U>
+
+
+# https://github.com/skywind3000/gutentags_plus
+:GscopeFind {querytype} {name}
+0 or s: Find this symbol
+1 or g: Find this definition
+2 or d: Find functions called by this function
+3 or c: Find functions calling this function
+4 or t: Find this text string
+6 or e: Find this egrep pattern
+7 or f: Find this file
+8 or i: Find files #including this file
+9 or a: Find places where this symbol is assigned a value
+keymap    desc
+<leader>cs    Find symbol (reference) under cursor
+<leader>cg    Find symbol definition under cursor
+<leader>cd    Functions called by this function
+<leader>cc    Functions calling this function
+<leader>ct    Find text string under cursor
+<leader>ce    Find egrep pattern under cursor
+<leader>cf    Find file name under cursor
+<leader>ci    Find files #including the file name under cursor
+<leader>ca    Find places where current symbol is assigned
+

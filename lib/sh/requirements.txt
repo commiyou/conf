@@ -1,0 +1,1 @@
+ralish/bash-script-template

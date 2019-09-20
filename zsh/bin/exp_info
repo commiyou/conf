@@ -1,0 +1,39 @@
+from __future__ import unicode_literals
+
+import collections
+import itertools
+import json
+import logging
+import os
+import sys
+import urllib2
+
+try:
+    raise
+    import utils
+except:
+    sys.path.append(os.path.expandvars('$ZDOTDIR/../utils'))
+    import utils
+
+logging.basicConfig()
+LOGGER = logging.getLogger(__name__)
+LOGGER.setLevel(logging.DEBUG)
+
+if len(sys.argv) > 1 and (sys.argv[1] == '-h' or sys.argv[1] == '--help'):
+    print >> sys.stderr, 'inputs: is_sy, show, click, charge'
+    exit()
+
+dd = collections.defaultdict(lambda: utils.ZDX())
+for line in sys.stdin:
+    ll = line.strip().split("\t")
+    if len(ll) != 4:
+        print >> sys.stderr, 'inputs: is_sy, show, click, charge'
+        exit(-1)
+    k = ll[0]
+    dd[k].add(*ll[1:])
+
+print 'is_sy\t' + utils.ZDX.label_str
+
+print 'true\t' + dd['true'].str
+print 'false\t' + dd['false'].str
+print 'diff\t' + "\t".join(dd['true'].diff(dd['false'], factor=2))

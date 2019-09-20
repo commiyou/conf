@@ -1,0 +1,27 @@
+# To replace all occurrences of "day" with "night" and write to stdout:
+sed 's/day/night/g' file.txt
+
+# To replace all occurrences of "day" with "night" within file.txt:
+sed -i 's/day/night/g' file.txt
+
+# To replace all occurrences of "day" with "night" on stdin:
+echo 'It is daytime' | sed 's/day/night/g'
+
+# To remove leading spaces
+sed -i -r 's/^\s+//g' file.txt
+
+# To remove empty lines and print results to stdout:
+sed '/^$/d' file.txt
+
+# To replace newlines in multiple lines
+sed ':a;N;$!ba;s/\n//g'  file.txt
+
+# reference of last match pattern
+echo "2015/11/20 11:20:30  INFO http://exp.com?jobid=123" | sed 's/\(.*\) INFO \(http.*jobid=\(.*\)\)/\1 \2 \3/' 
+
+# print 2~end
+sed -n '2,$p' file
+
+# remve last two chars
+sed 's/..$//' filename.txt
+

@@ -1,0 +1,9 @@
+#!/bin/sh
+$BIN_DIR/tmuxcomplete_bak "$@"
+exit $?
+
+if [[ 0 && -e $VIM_DIR/repos/tmux-complete.vim/sh/tmuxcomplete ]]; then
+   sh $VIM_DIR/repos/tmux-complete.vim/sh/tmuxcomplete "$@"
+else
+    $BIN_DIR/tmuxcomplete_bak "$@"
+fi

@@ -1,0 +1,3 @@
+# https://stackoverflow.com/questions/44284275/passing-compiler-options-cmake
+cmake -D CMAKE_CXX_FLAGS="-Wno-dev -Wl,-rpath=/home/abcd/libs/" path/to/CMakeLists.txt
+CXX=/opt/compiler/gcc-4.8.2/bin/g++ cake

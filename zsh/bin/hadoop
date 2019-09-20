@@ -1,0 +1,475 @@
+#!/usr/bin/env python
+import os
+import sys
+import argparse
+import subprocess
+import collections
+import re
+import time
+import logging
+logging.basicConfig(level=logging.WARNING,
+        format='%(levelname)s: %(asctime)s: [%(pathname)s][%(lineno)d][%(funcName)s] %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S')
+        # filename='mypy.log', filemode="w"
+
+
+_hadoop_bin = "/home/work/hadoop/hadoop-client-nmg/hadoop/bin/hadoop"
+def _get_hadoop_bin(**kws):
+    """get hadoop_bin
+        order:
+            kws["hadoop_bin"]
+            _hadoop_bin
+            os.getenv("hadoop_bin")
+    """
+    hadoop_bin = kws.get("hadoop_bin")
+    if not hadoop_bin:
+        hadoop_bin = _hadoop_bin
+    if not hadoop_bin:
+        hadoop_bin = os.getenv("hadoop_bin")
+    if not hadoop_bin:
+        raise Exception("no hadoop_bin( export hadoop_bin= )")
+    return hadoop_bin
+
+def _hadoop_command(cmd, stdin=None, stdout=subprocess.PIPE, stderr=subprocess.PIPE):
+    env = dict(os.environ)
+    p = subprocess.Popen(cmd, env=env, shell=True, close_fds=True,
+            stdin=stdin, stdout=stdout, stderr=stderr)
+    return p
+
+def _raise_error_hadoop_command(cmd, *args, **kw):
+    p = _hadoop_command(cmd, *args, **kw)
+    stdout, stderr = p.communicate()
+    ret = p.returncode
+    logging.debug("cmd[%(cmd)s] ret[%(ret)d] stdout[%(stdout)s] stderr[%(stderr)s]" % locals())
+    if ret != 0:
+        raise IOError('cmd[%(cmd)s] %(stderr)s' % locals())
+    return ret, stdout, stderr
+
+def _no_error_hadoop_command(cmd, *args, **kw):
+    p = _hadoop_command(cmd, *args, **kw)
+    stdout, stderr = p.communicate()
+    ret = p.returncode
+    logging.debug("cmd[%(cmd)s] ret[%(ret)d] stdout[%(stdout)s] stderr[%(stderr)s]" % locals())
+    if ret != 0:
+        logging.info("cmd[%(cmd)s] %(stderr)s" % locals())
+    return ret, stdout, stderr
+
+def human_size(_size):
+    _size = int(_size)
+    suffix = "BKMGT"
+    while _size >= 1024 and len(suffix) > 1:
+        _size /= 1024.0
+        suffix=suffix[1:]
+    suffix = suffix[0]
+    if suffix == "B":
+        return str(_size)
+    else:
+        return "%.2f%s" % (_size, suffix)
+
+
+
+########### hadoop functions
+def ls(hadoop_path, human=False, size=False, time=False, reverse=False, **kws):
+    hadoop_bin = _get_hadoop_bin(**kws)
+    cmd = "%s fs -ls %s" % (hadoop_bin, hadoop_path)
+    ret, stdout, stderr = _no_error_hadoop_command(cmd)
+    files=[]
+    hadoop_obj = collections.namedtuple("hadoop_obj", "mod, inode, user, group, size, time, path")
+    for line in stdout.split('\n'):
+        if line and not re.search('Found [0-9]+ items$', line):
+            mod, inode, user, group, _size, date, _time, path = line.split()
+            files.append(hadoop_obj(mod, inode, user, group, _size, "%s %s" % (date, _time), path))
+    if size:
+        files.sort(key=lambda x:int(x.size), reverse=True)
+    if time:
+        files.sort(key=lambda x:x.time, reverse=True)
+    if reverse:
+        files.reverse()
+
+    if human:
+        files = [f._replace(size=human_size(f.size)) for f in files]
+
+    return files
+
+def files(hadoop_path, human=False, size=False, time=False, reverse=False, **kws):
+    """get files in hadoop_path
+    """
+    _files = ls(hadoop_path, human=human, size=size, time=time, reverse=reverse, **kws)
+    return filter(lambda x:x.mod and x.mod[0] == '-', _files)
+
+def dirs(hadoop_path, time=False, reverse=False, **kws):
+    """get dirs in hadoop_path
+    """
+    _files = ls(hadoop_path, time=time, reverse=reverse, **kws)
+    return filter(lambda x:x.mod and x.mod[0] == 'd', _files)
+
+def teste(hadoop_path, **kws):
+    """Input: hadoop_path,
+              hadoop_bin,
+       Output: bool
+    """
+    hadoop_bin = _get_hadoop_bin(**kws)
+    cmd = "%s fs -test -e %s" % (hadoop_bin, hadoop_path)
+    ret, stdout, stderr = _no_error_hadoop_command(cmd)
+    return ret == 0
+
+def testd(hadoop_path, **kws):
+    """Input: hadoop_path,
+              hadoop_bin,
+       Output: bool
+    """
+    hadoop_bin = _get_hadoop_bin(**kws)
+    cmd = "%s fs -test -d %s" % (hadoop_bin, hadoop_path)
+    ret, stdout, stderr = _no_error_hadoop_command(cmd)
+    return ret == 0
+
+def testz(hadoop_path, **kws):
+    """Input: hadoop_path,
+              hadoop_bin,
+       Output: bool
+    """
+    hadoop_bin = _get_hadoop_bin(**kws)
+    cmd = "%s fs -test -z %s" % (hadoop_bin, hadoop_path)
+    ret, stdout, stderr = _no_error_hadoop_command(cmd)
+    return ret == 0
+
+def testf(hadoop_path, **kws):
+    """Input: hadoop_path,
+              hadoop_bin,
+       Output: bool
+    """
+    return teste(hadoop_path, **kws) and not testd(hadoop_path, **kws)
+
+def mkdir(hadoop_path, force=False, **kws):
+    """Input: hadoop_path,
+              hadoop_bin,
+       Output: None
+    """
+    hadoop_bin = _get_hadoop_bin(**kws)
+    cmd = "%s fs -mkdir %s" % (hadoop_bin, hadoop_path)
+    if testd(hadoop_path):
+        return
+    if teste(hadoop_path):
+        if not force:
+            raise Exception("hadoop mkdir hadoop_path [%(hadoop_path)s] exist" % locals())
+        logging.info("hadoop mkdir hadoop_path [%(hadoop_path)s] exist, force to delete it" % locals())
+        rmr(hadoop_path)
+    ret, stdout, stderr = _no_error_hadoop_command(cmd)
+
+def rmr(hadoop_path, **kws):
+    """Input: hadoop_path,
+              hadoop_bin,
+       Output: None
+    """
+    hadoop_bin = _get_hadoop_bin(**kws)
+    cmd = "%s fs -rmr  %s" % (hadoop_bin, hadoop_path)
+    ret, stdout, stderr = _no_error_hadoop_command(cmd)
+
+def mv(hadoop_from_path, hadoop_to_path, force=False, **kws):
+    hadoop_bin = _get_hadoop_bin(**kws)
+    striped_to_path = hadoop_to_path.rstrip("/")
+    if testf(striped_to_path):
+        if not force:
+            raise Exception("hadoop mv hadoop_to_path [%(hadoop_to_path)s] exists" % locals())
+        logging.info("hadoop mv hadoop_to_path [%(hadoop_to_path)s] exists, force to delete it" % locals())
+        rmr(hadoop_to_path)
+    if hadoop_to_path.endswith('/'):
+        mkdir(hadoop_to_path, force)
+    if testd(hadoop_to_path):
+        real_to_path = os.path.join(hadoop_to_path, os.path.basename(hadoop_to_path.rstrip("/")))
+        if teste(real_to_path):
+            if not force:
+                raise Exception("hadoop mv hadoop_to_path[%(real_to_path)s] exists" % locals())
+            logging.info("hadoop mv hadoop_to_path[%(real_to_path)s] exist, force to delete it ..." % locals())
+            rmr(real_to_path)
+    cmd = "%s fs -mv %s %s" % (hadoop_bin, hadoop_from_path, hadoop_to_path)
+    ret, stdout, stderr = _raise_error_hadoop_command(cmd)
+
+def cp(hadoop_from_path, hadoop_to_path, force=False, **kws):
+    hadoop_bin = _get_hadoop_bin(**kws)
+    striped_to_path = hadoop_to_path.rstrip("/")
+    if testf(striped_to_path):
+        if not force:
+            raise Exception("hadoop cp hadoop_to_path [%(hadoop_to_path)s] exists" % locals())
+        logging.info("hadoop cp hadoop_to_path [%(hadoop_to_path)s] exists, force to delete it" % locals())
+        rmr(hadoop_to_path)
+    if hadoop_to_path.endswith('/'):
+        mkdir(hadoop_to_path, force)
+    if testd(hadoop_to_path):
+        real_to_path = os.path.join(hadoop_to_path, os.path.basename(hadoop_to_path.rstrip("/")))
+        if teste(real_to_path):
+            if not force:
+                raise Exception("hadoop cp hadoop_to_path[%(real_to_path)s] exists" % locals())
+            logging.info("hadoop cp hadoop_to_path[%(real_to_path)s] exist, force to delete it ..." % locals())
+            rmr(real_to_path)
+    cmd = "%s fs -cp %s %s" % (hadoop_bin, hadoop_from_path, hadoop_to_path)
+    ret, stdout, stderr = _raise_error_hadoop_command(cmd)
+
+def touchz(hadoop_path, **kws):
+    hadoop_bin = _get_hadoop_bin(**kws)
+    cmd = "%s fs -touchz %s" % (hadoop_bin, hadoop_path)
+    ret, stdout, stderr = _raise_error_hadoop_command(cmd)
+
+def dus(hadoop_path, human=False, **kws):
+    """raise exception
+    """
+    hadoop_bin = _get_hadoop_bin(**kws)
+    cmd = "%s fs -dus %s" % (hadoop_bin, hadoop_path)
+    ret, stdout, stderr = _raise_error_hadoop_command(cmd)
+    path, size = stdout.strip().split()
+    if human:
+        size = human_size(size)
+    return "\t".join([path, size])
+
+def size(hadoop_path, human=False, **kws):
+    path, _size = dus(hadoop_path, human, **kws).split("\t")
+    return _size
+
+def cat(hadoop_path, force=False, size=100, **kws):
+    hadoop_bin = _get_hadoop_bin(**kws)
+    cmd = "%s fs -cat %s" % (hadoop_bin, hadoop_path)
+    if hadoop_path.endswith(".gz"):
+        cmd = "%s | zcat" % (cmd)
+    if force:
+        os.system(cmd)
+        return
+
+    if not testf(hadoop_path, **kws):
+        logging.error("cmd[%s] hadoop_path[%s] not file" % (cmd, hadoop_path))
+        raise IOError("cmd[%s] hadoop_path[%s] not file" % (cmd, hadoop_path))
+    # check size less than 100M
+    _size = globals()["size"](hadoop_path)
+    if int(_size)/1024.0 > size:
+        logging.error("cmd[%(cmd)s] hadoop_path[%(hadoop_path)s] size[%(_size)s] greater than max_size[%(size)sM]" % locals())
+        raise IOError("cmd[%(cmd)s] hadoop_path[%(hadoop_path)s] size[%(_size)s] greater than max_size[%(size)sM]" % locals())
+    else:
+        ret, stdout, stderr = _raise_error_hadoop_command(cmd)
+        return stdout.rstrip("\n").split("\n")
+
+def put(local_path, hadoop_path, force=False, **kws):
+    """Return: put status
+    """
+    hadoop_bin = _get_hadoop_bin(**kws)
+    hadoop_file = hadoop_path
+    if local_path.endswith("/"):
+        raise Exception("hadoop put local_path[%(local_path)s] is dir" % locals())
+    if testd(hadoop_path) or hadoop_path.endswith("/"):
+        hadoop_file = os.path.join(hadoop_path, os.path.basename(local_path))
+    cmd = "%s fs -put %s %s" % (hadoop_bin, local_path, hadoop_file)
+
+    if not os.path.isfile(local_path):
+        raise IOError("cmd[%(cmd)s] local_path[%(local_path)s] not file" % locals())
+
+    if testd(hadoop_file):
+        raise IOError("cmd[%(cmd)s] hadoop_file[%(hadoop_file)s] not file" % locals())
+    if teste(hadoop_file):
+        if not force:
+            raise IOError("cmd[%(cmd)s] hadoop_file[%(hadoop_file)s] exist" % locals())
+        logging.info("cmd[%(cmd)s] hadoop_file[%(hadoop_file)s] exist, force delete it" % locals())
+        rmr(hadoop_file)
+
+    ret, stdout, stderr = _raise_error_hadoop_command(cmd)
+    return ret
+
+def get(hadoop_path, local_path, force=False, **kws):
+    hadoop_bin = _get_hadoop_bin(**kws)
+
+    if not teste(hadoop_path):
+        raise Exception("hadoop get hadoop_path[%(hadoop_path)s] not exist" % locals())
+
+    striped_local_path = local_path.rstrip("/")  # incase local_path is file
+    if not os.path.exists(striped_local_path):
+        if local_path.endswith("/"):
+            if os.system("mkdir -p %(local_path)s" % locals()) != 0:
+                raise Exception("hadoop get mkdir -p local_path[%(local_path)s] error" % locals())
+        cmd = "%s fs -get %s %s" % (hadoop_bin, hadoop_path, local_path)
+    elif os.path.isfile(striped_local_path):
+        if not force:
+            raise Exception("hadoop get local_path[%(local_path)s is file" % locals())
+        logging.info("hadoop get local_file[%(striped_local_path)s] exist, force to delete it ..." % locals())
+        if os.system("rm -rf %(striped_local_path)s" % locals()) != 0:
+            raise Exception("hadoop get rm -rf local_path[%(striped_local_path)s] error" % locals())
+        if local_path.endswith("/"):
+            if os.system("mkdir -p %(local_path)s" % locals()) != 0:
+                raise Exception("hadoop get mkdir -p local_path[%(local_path)s] error" % locals())
+        cmd = "%s fs -get %s %s" % (hadoop_bin, hadoop_path, local_path)
+    elif os.path.isdir(striped_local_path):
+        real_local_path = os.path.join(local_path, os.path.basename(hadoop_path.rstrip("/")))
+        if os.path.exists(real_local_path):
+            if not force:
+                raise Exception("hadoop get local_file[%(real_local_path)s] exist" % locals())
+            logging.info("hadoop get local_file[%(real_local_path)s] exist, force to delete it ..." % locals())
+            if os.system("rm -rf %(real_local_path)s" % locals()) != 0:
+                raise Exception("hadoop get rm -rf local_path[%(real_local_path)s] error" % locals())
+            cmd = "%s fs -get %s %s" % (hadoop_bin, hadoop_path, real_local_path)
+        else:
+            cmd = "%s fs -get %s %s" % (hadoop_bin, hadoop_path, local_path)
+    else:
+        raise Exception("hadoop get error file type, local_path[%(local_path)s]" % locals())
+
+    ret, stdout, stderr = _raise_error_hadoop_command(cmd)
+
+def getmerge(hadoop_path, local_path, force=False, **kws):
+    hadoop_bin = _get_hadoop_bin(**kws)
+    striped_local_path = local_path.rstrip("/")  # incase local_path is file
+    if local_path.endswith("/"):
+        if os.path.isfile(striped_local_path):
+            if not force:
+                raise Exception("hadoop getmerge local_file[%(striped_local_path)s] exist" % locals())
+            if os.system("rm -rf %(striped_local_path)s" % locals()) != 0:
+                raise Exception("hadoop getmerge rm -rf local_path[%(striped_local_path)s] error" % locals())
+        if os.system("mkdir -p %s" % local_path) != 0:
+            raise Exception("hadoop getmerge mkdir -p local_path[%(local_path)s] error" % locals())
+
+    if not teste(hadoop_path):
+        raise Exception("hadoop getmerge hadoo_path[%(hadoo_path)s] not exist" % locals())
+
+    if testd(hadoop_path):
+        cmd = "%s fs -getmerge %s %s" % (hadoop_bin, hadoop_path, local_path)
+        if os.path.isdir(local_path):
+            real_local_path = os.path.join(local_path, os.path.basename(hadoop_path))
+            if os.path.exists(real_local_path):
+                if not force:
+                    raise Exception("hadoop getmerge local_file[%(real_local_path)s] exist" % locals())
+                logging.info("hadoop getmerge local_file[%(real_local_path)s] exist, force delete it" % locals())
+                os.system("rm -rf %(real_local_path)s" % locals())
+            cmd = "%s fs -getmerge %s %s" % (hadoop_bin, hadoop_path, real_local_path)
+        ret, stdout, stderr = _raise_error_hadoop_command(cmd)
+    else:
+        get(hadoop_path, local_path, force, **kws)
+
+
+def shell_run_cmd(cmd):
+    if os.system(cmd) != 0:
+        raise Exception("run shell[%s] error" % ())
+
+
+def makedone(hadoop_data_path,
+        local_done_file=None,
+        hadoop_done_path=None,
+        force=False,
+        **kws):
+    if local_done_file is None:
+        local_done_file = "./done.txt"
+    if os.path.isdir(local_done_file):
+        raise Exception("local_done_file [%s] is dir" % local_done_file)
+    elif os.path.isfile(local_done_file):
+        shell_run_cmd("rm -rf %(local_done_file)s.bak" % locals())
+        shell_run_cmd("mv %(local_done_file)s %(local_done_file)s.bak" % locals())
+    fd = open(local_done_file, "w")
+    print>>fd, "%s\t%s" % (hadoop_data_path, time.strftime('%Y-%m-%d %H:%M:%S',time.localtime(time.time())))
+    fd.close()
+    if hadoop_done_path is None:
+        hadoop_done_path = os.path.dirname(hadoop_data_path.rstrip("/")) +"/"+ os.path.basename(local_done_file)
+    put(local_done_file, hadoop_done_path, force)
+
+def add_parser(parser, func, *args, **kws):
+    p = parser.add_parser(func.__name__, **kws)
+    for arg in args:
+        if isinstance(arg, str):
+            p.add_argument(arg)
+            logging.debug("parser cmd[%(func)s] add arg[%(arg)s]" % locals())
+        elif isinstance(arg, list):
+            if isinstance(arg[-1], dict):
+                p.add_argument(*(arg[:-1]), **(arg[-1]))
+            else:
+                p.add_argument(*arg)
+            logging.debug("parser cmd[%(func)s] add arg[%(arg)s]" % locals())
+        else:
+            raise Exception("error add_parser for cmd[%(cmd)s] args[%(args)s]" % locals())
+    p.set_defaults(func=func)
+    return p
+
+if __name__ == '__main__':
+    common_parser = argparse.ArgumentParser(description='hadoop for python')
+    common_parser.add_argument("--hadoop_bin", nargs=1, required=False, default=_get_hadoop_bin())
+    common_parser.add_argument("-v", "--verbose", dest="debug", action="store_const", required=False,
+            const=logging.DEBUG,
+            default=logging.WARNING)
+    subparsers = common_parser.add_subparsers()
+
+    add_parser(subparsers, ls, "hadoop_path",
+            ["--size", "-S", {"action":"store_true", "default":False,
+                "help":"sort by file size, largest first"}],
+            ["--time", "-t", {"action":"store_true", "default":False,
+                "help":"sort by modification time, newest first"}],
+            ["--human", "-H", {"action":"store_true", "default":False,
+                "help":"with -l, print human readable sizes (e.g., 1K 234M 2G)"}],
+            ["--reverse", "-r", {"action":"store_true", "default":False,
+                "help":"reverse order while sorting"}],
+            description="sort order:size, time, then reverse, raise exception"
+            )
+    add_parser(subparsers, files, "hadoop_path",
+            ["--size", "-S", {"action":"store_true", "default":False,
+                "help":"sort by file size, largest first"}],
+            ["--time", "-t", {"action":"store_true", "default":False,
+                "help":"sort by modification time, newest first"}],
+            ["--human", "-H", {"action":"store_true", "default":False,
+                "help":"with -l, print human readable sizes (e.g., 1K 234M 2G)"}],
+            ["--reverse", "-r", {"action":"store_true", "default":False,
+                "help":"reverse order while sorting"}],
+            description="sort order:size, time, then reverse, raise exception"
+            )
+    add_parser(subparsers, dirs, "hadoop_path",
+            ["--time", "-t", {"action":"store_true", "default":False,
+                "help":"sort by modification time, newest first"}],
+            ["--reverse", "-r", {"action":"store_true", "default":False,
+                "help":"reverse order while sorting"}],
+            )
+
+    add_parser(subparsers, teste, "hadoop_path")
+    add_parser(subparsers, testd, "hadoop_path")
+    add_parser(subparsers, testz, "hadoop_path")
+    add_parser(subparsers, testf, "hadoop_path")
+    add_parser(subparsers, mkdir, "hadoop_path",
+            ["--force", "-f", {"action":"store_true", "default":False,
+                "help":"if local file exist, delete it"}],
+            )
+    add_parser(subparsers, rmr, "hadoop_path")
+    add_parser(subparsers, mv, "hadoop_from_path", "hadoop_to_path",
+            ["--force", "-f", {"action":"store_true", "default":False,
+                "help":"if hadoop_to_path exist, delete it"}],
+            )
+    add_parser(subparsers, cp, "hadoop_from_path", "hadoop_to_path",
+            ["--force", "-f", {"action":"store_true", "default":False,
+                "help":"if hadoop_to_path exist, delete it"}],
+            )
+
+    add_parser(subparsers, cat, "hadoop_path")
+    add_parser(subparsers, dus, "hadoop_path",
+            ["--human", "-H", {"action":"store_true", "default":False,
+                "help":"print human readable sizes (e.g., 1K 234M 2G)"}],
+            description="raise exception"
+            )
+    add_parser(subparsers, cat, "hadoop_path",
+            ["--size", "-s", {"type":int, "default":100,
+                "help":"MB, if the size of file great large than [size] then stop"}],
+            ["--force", "-f", {"action":"store_true", "default":False,
+                "help":"force print to stdin if the size of file too large"}],
+            )
+
+    add_parser(subparsers, put, "local_path", "hadoop_path",
+            ["--force", "-f", {"action":"store_true", "default":False,
+                "help":"if file in hdfs exist, delete it"}],
+            )
+
+    add_parser(subparsers, get, "hadoop_path", "local_path",
+            ["--force", "-f", {"action":"store_true", "default":False,
+                "help":"if local file exist, delete it"}],
+            )
+    add_parser(subparsers, getmerge, "hadoop_path", "local_path",
+            ["--force", "-f", {"action":"store_true", "default":False,
+                "help":"if local file exist, delete it"}],
+            )
+
+    add_parser(subparsers, makedone, "hadoop_data_path",
+            ["--local_done_file","-d", {"required":False}],
+            ["--hadoop_done_path","-p", {"required":False}],
+            ["--force", "-f", {"action":"store_true", "default":False,
+                "help":"if file in hdfs exist, delete it"}],
+            )
+    args = common_parser.parse_args(sys.argv[1:])
+    logging.getLogger().setLevel(args.debug)
+    logging.debug(vars(args))
+    import pprint
+    pprint.pprint(args.func(**vars(args)))

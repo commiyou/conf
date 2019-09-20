@@ -1,0 +1,16 @@
+/zsh/paths
+/zsh/zplug
+/zsh/.zsh_history
+/zsh/.cache
+/zsh/.zcompdump*
+/vim/.netrwhist
+/vim/.viminfo
+/vim/plugged/
+/vim/.cache/
+/tmux/plugins/
+/mac/karabiner/asserts
+/mac/karabiner/assets/complex_modifications/*.json
+/mac/karabiner/automatic_backups/
+*.pyc
+*.un~
+lib/

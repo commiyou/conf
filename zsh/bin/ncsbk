@@ -1,0 +1,116 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+"""Calc Sum By Key cols
+
+Usage: csbk [options] [FILE] ...
+
+-k KEY_COLS, --key KEY_COLS          sum up via KEY_COLS . idx start from 0,
+                                     Example: 1,3-5,-1   (1,3,4,-1)
+-v VALUE_COLS, --value VALUE_COLS    the cols to sum up.
+-d DELIM, --delim DELIM              use DELIM as field delimiter [default: TAB]
+-s, --sorted                         FILE is already sorted.
+
+if KYE_COLS are not specifed, csbk just sum up the VALUE_COLS
+if VALUE_COLS are not specified, csbk just count the occurance of key in KEY_COLS
+"""
+
+import sys
+import itertools
+import better_exchook
+import 
+better_exchook.install()  # will just do: sys.excepthook = better_exchook
+
+def sum_haskey_hassum(fd_list, dem,key_cols,sum_cols):
+    if key_cols is None:
+        if sum_cols is None:
+            sum_cols = [0]
+        sum = [0.0] * len(sum_cols)
+        for ins in fd_list:
+            for line in ins:
+                line = line.rstrip("\n")
+                ll = line.split(dem)
+                try:
+                    tmp = [ ll[index] for index in sum_cols]
+                except:
+                    print>>sys.stderr, line
+                    exit(1)
+                sum = [float(x)+y for x,y in zip(tmp,sum)]
+        sum = [ int(x) if x.is_integer() else x for x in sum]
+        print "\t".join(map(str,sum))
+
+    elif sum_cols is None:
+        result = {}
+        for ins in fd_list:
+            for line in ins:
+                line = line.strip("\n")
+                ll = line.split(dem)
+                key = tuple( [ ll[index] for index in key_cols])
+                if key not in result:
+                    result[key] = 0
+                result[key] += 1
+        for key in result:
+            print "\t".join(map(str,list(key) + [result[key]]))
+    else:
+        result = {}
+        for ins in fd_list:
+            for line in ins:
+                line = line.strip("\n")
+                ll = line.split(dem)
+                key = tuple( [ ll[index] for index in key_cols])
+                sum = [ ll[index] for index in sum_cols]
+                if key not in result:
+                    result[key] = [0.0] * len(sum_cols)
+                result[key] = [float(x)+y for x,y in zip(sum,result[key])]
+
+        for key in result:
+            value = result[key]
+            result[key] = [ int(x) if x.is_integer() else x for x in value]
+            print "\t".join(map(str,list(key) + list(result[key])))
+
+def get_columns(col_str):
+    """parse column arguments
+    >>> get_columns("1-3")
+    [1, 2, 3]
+    >>> get_columns("1,3,4")
+    [1, 3, 4]
+    >>> get_columns("2-3,1")
+    [2, 3, 1]
+    """
+    tmp = col_str.split(",")
+    res = []
+    for e in tmp:
+        try:
+            i, j = map(int, e.split('-'))
+            res += range(i,j+1)
+        except:
+            res.append(int(e))
+    return res
+
+if __name__ == "__main__":
+    from docopt import docopt
+    arguments = docopt(__doc__, version='Naval Fate 2.0')
+    debug(arguments)
+
+    # 遍历文件列表
+    fd_list = []
+    for FILE in arguments["FILE"]:
+        if FILE != "-":
+            fd_list.append(open(FILE))
+        else:
+            fd_list.append(sys.stdin)
+    if not fd_list:
+        fd_list.append(sys.stdin)
+    it = itertools.chain.from_iterable(fd_list)
+    DELIM = arguments["DELIM"]
+    if DELIM == "TAB":
+        DELIM = "\t"
+    KEY_COLS = get_columns(arguments["KEY_COLS"])
+    VALUE_COLS = get_columns(arguments["VALUE_COLS"])
+    if not KEY_COLS and not VALUE_COLS:
+        fatal(
+
+    sum_haskey_hassum(it, DELIM, KEY_COLS, VALUE_COLS)
+    for fd in fd_list:
+        if fd is not sys.stdin:
+            fd.close()

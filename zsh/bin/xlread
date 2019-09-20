@@ -1,0 +1,35 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+import sys
+
+import xlrd
+
+
+def fmt_x(x, encoding):
+    if isinstance(x, unicode):
+        return x.encode(encoding)
+    return str(x)
+
+
+def xlread(rf=None, encoding="gb18030", sheed_idx=0):
+    if rf is None:
+        book = xlrd.open_workbook(rf)
+    else:
+        book = xlrd.open_workbook(rf)
+    sh = book.sheet_by_index(sheed_idx)
+    for rx in range(sh.nrows):
+        print "\t".join(map(lambda x: fmt_x(x, encoding), sh.row_values(rx)))
+
+
+if __name__ == "__main__":
+    rf = sys.argv[1]
+    try:
+        e = sys.argv[2]
+    except:
+        e = "gb18030"
+
+    if rf in ("-h", "--help"):
+        print >> sys.stderr, "Usage: %s <xlfile> [to_encoding=gb18030]" % sys.argv[0]
+        exit(0)
+
+    xlread(rf=rf, encoding=e)

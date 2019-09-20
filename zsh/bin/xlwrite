@@ -1,0 +1,39 @@
+#!/home/work/.jumbo/bin/python
+import xlwt
+import sys
+
+
+def xlwrite(rf=None, wf="example.xls", encoding="gb18030"):
+    if rf is None:
+        rf = sys.stdin
+    wb = xlwt.Workbook()
+    ws = wb.add_sheet('sheet1')
+
+    for row, line in enumerate(rf):
+        if encoding == "unicode":
+            line = line.rstrip('\n')
+        else:
+            line = line.rstrip('\n').decode(encoding)
+        ll = line.split("\t")
+        for col, e in enumerate(ll):
+            try:
+                e = float(e)
+                if e.is_integer():
+                    e = int(e)
+            except:
+                pass
+            ws.write(row, col, e)
+    wb.save(wf)
+
+
+if __name__ == "__main__":
+    try:
+        wf = sys.argv[1]
+    except:
+        wf = "example.xls"
+
+    if wf in ("-h", "--help"):
+        print >>sys.stderr, "Usage: cat textfile | %s xlfile" % sys.argv[0]
+        exit(0)
+
+    xlwrite(wf=wf)

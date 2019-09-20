@@ -1,0 +1,59 @@
+#!/bin/bash
+
+hadoop=~/hadoop-client-khan-adx/hadoop/bin/hadoop
+
+function modify_nmg() {
+	local nmg=$1
+	[[ -z $nmg ]] && echo "Warning: from set default as khan" >&2 && echo khan && return
+	[[ $nmg == on ]] && echo khan && return
+	[[ $nmg == off ]] && echo mulan && return
+	[[ $nmg == thang ]] && echo taihang && return
+	echo $nmg
+}
+
+function getopts_act(){
+	usage() { echo -e "Usage: $0 [-f <khan|on|taihang|thang|mulan|off>] \
+ [-t <khan|on|taihang|thang|mulan|off>] \
+ [-p <task_priority>]  \
+ <from_path> <to_path> \n -f default khan \n -t default taihang \n -p default HIGH" 1>&2; exit 1; }
+	while getopts :f:t:p: nmg
+	do
+		case $nmg in
+			f)  from=$OPTARG
+				;;
+			t)  to=$OPTARG
+				;;
+			p) priority=$OPTARG
+				;;
+			*) usage
+				;;
+		esac
+	done
+	shift $((OPTIND-1))
+	src_path=$1
+	dest_path=$2
+	[[ -z "$src_path" || -z "$dest_path" ]] && echo "Error: no src/dest path" >&2 && exit -1
+	from=$(modify_nmg $from)
+	to=$(modify_nmg $to)
+	from_ugi=$(eval echo \$${from}_ugi)
+	to_ugi=$(eval echo \$${to}_ugi)
+	from_fs_name=$(eval echo \$${from}_fs_name)
+	to_fs_name=$(eval echo \$${to}_fs_name)
+	[[ -z "$from" || -z "$to" || -z "$from_ugi" || -z "$to_ugi" || -z "$to_fs_name" || -z "$from_fs_name" ]] \
+		&& echo "Error hadoop name from [$from] to [$to]" >&2 && exit -1
+	[[ -z $priority ]] && priority=HIGH
+
+
+
+
+	${hadoop} distcp \
+		-D mapred.job.map.capacity=500 \
+		-D distcp.map.speed.kb=40000  \
+		-D property=$priority \
+		-i \
+		-su "$from_ugi" -du "$to_ugi" \
+		"${from_fs_name}${src_path}" \
+		"${to_fs_name}${dest_path}"
+}
+
+getopts_act   $*

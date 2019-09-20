@@ -1,0 +1,4 @@
+# use ctrl-0~9 to cycle between windows in iterm2
+# https://unix.stackexchange.com/questions/96884/using-ctrl0-9-to-cycle-between-windows-using-tmux
+
+# iterm settings - profile - keys - left option key - select ESC+

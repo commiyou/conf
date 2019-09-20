@@ -1,0 +1,300 @@
+#!/bin/bash
+
+# find hadoop jobid from files
+function fj() {
+	cat $* | egrep 'INFO.*http.*jobid=' | sed 's/\(.*\) INFO.* \(http:.*jobid=\(.*\)\)/\1\t\2\t\3/' | sort
+}
+
+## hadoop env
+{ [ -f ~/hadoop-client-khan/hadoop/bin/hadoop ] && export khan=~/hadoop-client-khan/hadoop/bin/hadoop; } \
+	|| { [ -f ~/hadoop-client-nmg/hadoop/bin/hadoop ] && export khan=~/hadoop-client-nmg/hadoop/bin/hadoop; }
+
+{ [ -f ~/hadoop-client-mulan/hadoop/bin/hadoop ] && export mulan=~/hadoop-client-mulan/hadoop/bin/hadoop; } \
+	|| { [ -f ~/hadoop-client-off/hadoop/bin/hadoop ] && export mulan=~/hadoop-client-off/hadoop/bin/hadoop; } \
+	|| { [ -f ~/hadoop-client-nmg-off/hadoop/bin/hadoop ] && export mulan=~/hadoop-client-nmg-off/hadoop/bin/hadoop; }
+
+{ [ -f ~/hadoop-client-thang/hadoop/bin/hadoop ] && export thang=~/hadoop-client-thang/hadoop/bin/hadoop; } \
+	|| { [ -f ~/hadoop-client-taihang/hadoop/bin/hadoop ] && export thang=~/hadoop-client-taihang/hadoop/bin/hadoop; } \
+	|| { [ -f ~/hadoop-client-nmg-thang/hadoop/bin/hadoop ] && export thang=~/hadoop-client-nmg-thang/hadoop/bin/hadoop; } \
+	|| { [ -f ~/hadoop-client-nmg-taihang/hadoop/bin/hadoop ] && export thang=~/hadoop-client-nmg-taihang/hadoop/bin/hadoop; }
+
+{ [ -f ~/hadoop-client-khan-adx/hadoop/bin/hadoop ] && export adx=~/hadoop-client-khan-adx/hadoop/bin/hadoop; } \
+	|| { [ -f ~/hadoop-client-adx/hadoop/bin/hadoop ] && export adx=~/hadoop-client-adx/hadoop/bin/hadoop; } \
+
+if [[ -f "${khan}" ]]
+then
+	alias khan=$khan
+	export nmg_khan="$khan"
+	export nmg_hadoop="$khan"
+
+	alias nmg_khan="$khan"
+	alias nmg_hadoop="$khan"
+	alias nf='nmg_hadoop fs'
+	alias nfls="nmg_hadoop fs -ls"
+	alias nfdu="nmg_hadoop fs -du"
+	alias nfdus="nmg_hadoop fs -dus"
+	alias nfrm="nmg_hadoop fs -rm"
+	alias nfrmr="nmg_hadoop fs -rmr"
+	alias nfget="nmg_hadoop fs -get"
+	alias nfmv="nmg_hadoop fs -mv"
+	alias nfmd="nmg_hadoop fs -mkdir"
+	alias nfgm="nmg_hadoop fs -getmerge"
+	alias nfcat="nmg_hadoop fs -cat"
+	alias nftail="nmg_hadoop fs -tail"
+	alias nfput="nmg_hadoop fs -put"
+	alias njk="nmg_hadoop job -kill"
+	alias njsp="nmg_hadoop job -set-priority"
+
+	# nmg set job VERY_HIGH
+	# nmg_hadoop job -set-priority JOBID1 JOBID2  ... 
+	function njspvh(){
+		if [[ $# -eq 0 ]]
+		then
+			cat - | xargs -n1 -i  $nmg_hadoop job -set-priority {} VERY_HIGH
+		else
+			local jobid
+			for jobid in $*
+			do
+				$nmg_hadoop job -set-priority $jobid VERY_HIGH
+			done
+		fi
+	}
+
+	# nmg set job map capacity
+	# nmg_hadoop job -set-map-capacity JOBID1 JOBID2  ... MAP_CAPACITY
+	function njsmc(){
+		# get last arg
+		local cnt="${@: -1}"
+		local jobid
+		for jobid in "${@:1:-1}"
+		do
+			$nmg_hadoop job -set-map-capacity $jobid $cnt
+		done
+	}
+	function njsrc(){
+		# get last arg
+		local cnt="${@: -1}"
+		local jobid
+		for jobid in "${@:1:-1}"
+		do
+			$nmg_hadoop job -set-reduce-capacity $jobid $cnt
+		done
+	}
+
+	function nfup() {
+		local put_file=${1:?no file}
+		local put_path=${2:?no path}
+		$nmg_hadoop fs -test -d $put_path
+		if [[ $? == 0 ]]
+		then
+			local real_path=${put_path%/}/$put_file
+		else
+			local real_path=${put_path}
+		fi
+		$nmg_hadoop fs -rm ${real_path}.bak
+		$nmg_hadoop fs -mv $real_path ${real_path}.bak
+		$nmg_hadoop fs -put $put_file $real_path
+	}
+fi
+
+if [[ -f "${mulan}" ]]
+then
+	alias mulan=$mulan
+	export nmg_mulan="$mulan"
+	export nmg_off="$mulan"
+
+	alias nmg_mulan="$mulan"
+	alias nmg_off="$mulan"
+	alias of="nmg_off fs"
+	alias ofls="nmg_off fs -ls"
+	alias ofdus="nmg_off fs -dus"
+	alias ofdu="nmg_off fs -du"
+	alias ofrm="nmg_off fs -rm"
+	alias ofrmr="nmg_off fs -rmr"
+	alias ofget="nmg_off fs -get"
+	alias ofmv="nmg_off fs -mv"
+	alias ofmd="nmg_off fs -mkdir"
+	alias ofgm="nmg_off fs -getmerge"
+	alias ofcat="nmg_off fs -cat"
+	alias oftail="nmg_off fs -tail"
+	alias ofput="of -put"
+	alias ojk="nmg_off job -kill"
+	alias ojsp="nmg_off job -set-priority"
+
+	function ojspvh(){
+		if [[ $# -eq 0 ]]
+		then
+			cat - | xargs -n1 -i  $nmg_off job -set-priority {} VERY_HIGH
+		else
+			local jobid
+			for jobid in $*
+			do
+				$nmg_off job -set-priority $jobid VERY_HIGH
+			done
+		fi
+	}
+	function ojsmc(){
+		# get last arg
+		local cnt="${@: -1}"
+		local jobid
+		for jobid in "${@:1:-1}"
+		do
+			$mulan job -set-map-capacity $jobid $cnt
+		done
+	}
+	function ojsrc(){
+		# get last arg
+		local cnt="${@:-1}"
+		local jobid
+		for jobid in "${@:1:-1}"
+		do
+			$mulan job -set-reduce-capacity $jobid $cnt
+		done
+	}
+fi
+
+# nmg taihang
+if [[ -f "${thang}" ]]
+then
+	alias thang=$thang
+	alias taihang=$thang
+	export nmg_thang="$thang"
+	export nmg_taihang="$thang"
+
+	alias nmg_thang="$thang"
+	alias nmg_taihang="$thang"
+	alias tf="nmg_taihang fs"
+	alias tfls="nmg_taihang fs -ls"
+	alias tfdu="nmg_taihang fs -du"
+	alias tfdus="nmg_taihang fs -dus"
+	alias tfrm="nmg_taihang fs -rm"
+	alias tfrmr="nmg_taihang fs -rmr"
+	alias tfget="nmg_taihang fs -get"
+	alias tfmv="nmg_taihang fs -mv"
+	alias tfmd="nmg_taihang fs -mkdir"
+	alias tfgm="nmg_taihang fs -getmerge"
+	alias tfcat="nmg_taihang fs -cat"
+	alias tftail="nmg_taihang fs -tail"
+	alias tfput="nmg_taihang fs -put"
+	alias tjk="nmg_taihang job -kill"
+	alias tjsp="nmg_taihang job -set-priority"
+
+	function tjspvh(){
+		if [[ $# -eq 0 ]]
+		then
+			cat - | xargs -n1 -i  $nmg_thang job -set-priority {} VERY_HIGH
+		else
+			local jobid
+			for jobid in $*
+			do
+				$nmg_thang job -set-priority $jobid VERY_HIGH
+			done
+		fi
+	}
+	function tjsmc(){
+		# get last arg
+		local cnt="${@: -1}"
+		local jobid
+		for jobid in "${@:1:-1}"
+		do
+			$thang job -set-map-capacity $jobid $cnt
+		done
+	}
+	function tjsrc(){
+		# get last arg
+		local cnt="${@: -1}"
+		local jobid
+		for jobid in "${@:1:-1}"
+		do
+			$thang job -set-reduce-capacity $jobid $cnt
+		done
+	}
+	function tfup() {
+		local put_file=${1:?no file}
+		local put_path=${2:?no path}
+		$nmg_thang fs -test -d $put_path
+		if [[ $? == 0 ]]
+		then
+			local real_path=${put_path%/}/$put_file
+		else
+			local real_path=${put_path}
+		fi
+		$nmg_thang fs -rm ${real_path}.bak
+		$nmg_thang fs -mv $real_path ${real_path}.bak
+		$nmg_thang fs -put $put_file $real_path
+	}
+fi
+
+
+if [[ -f "${adx}" ]]
+then
+	export nmg_adx="$adx"
+
+	alias nmg_adx="$adx"
+	alias nxf='nmg_adx fs'
+	alias nxfls="nmg_adx fs -ls"
+	alias nxfdu="nmg_adx fs -du"
+	alias nfdus="nmg_adx fs -dus"
+	alias nxfrm="nmg_adx fs -rm"
+	alias nxfrmr="nmg_adx fs -rmr"
+	alias nfget="nmg_adx fs -get"
+	alias nxfmv="nmg_adx fs -mv"
+	alias nxfmd="nmg_adx fs -mkdir"
+	alias nxfgm="nmg_adx fs -getmerge"
+	alias nxfcat="nmg_adx fs -cat"
+	alias nxftail="nmg_adx fs -tail"
+	alias nxfput="nmg_adx fs -put"
+	alias nxjk="nmg_adx job -kill"
+	alias nxjsp="nmg_adx job -set-priority"
+
+	# nmg set job VERY_HIGH
+	# nmg_hadoop job -set-priority JOBID1 JOBID2  ... 
+	function nxjspvh(){
+		if [[ $# -eq 0 ]]
+		then
+			cat - | xargs -n1 -i  $nmg_adx job -set-priority {} VERY_HIGH
+		else
+			local jobid
+			for jobid in $*
+			do
+				$nmg_adx job -set-priority $jobid VERY_HIGH
+			done
+		fi
+	}
+
+	# nmg set job map capacity
+	# nmg_hadoop job -set-map-capacity JOBID1 JOBID2  ... MAP_CAPACITY
+	function nxjsmc(){
+		# get last arg
+		local cnt="${@: -1}"
+		local jobid
+		for jobid in "${@:1:-1}"
+		do
+			$nmg_adx job -set-map-capacity $jobid $cnt
+		done
+	}
+	function nxjsrc(){
+		# get last arg
+		local cnt="${@: -1}"
+		local jobid
+		for jobid in "${@:1:-1}"
+		do
+			$nmg_adx job -set-reduce-capacity $jobid $cnt
+		done
+	}
+
+	function nxfup() {
+		local put_file=${1:?no file}
+		local put_path=${2:?no path}
+		$nmg_adx fs -test -d $put_path
+		if [[ $? == 0 ]]
+		then
+			local real_path=${put_path%/}/$put_file
+		else
+			local real_path=${put_path}
+		fi
+		$nmg_adx fs -rm ${real_path}.bak
+		$nmg_adx fs -mv $real_path ${real_path}.bak
+		$nmg_adx fs -put $put_file $real_path
+	}
+fi

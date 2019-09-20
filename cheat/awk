@@ -1,0 +1,32 @@
+# sum integers from a file or stdin, one integer per line:
+printf '1\n2\n3\n' | awk '{ sum += $1} END {print sum}'
+
+# using specific character as separator to sum integers from a file or stdin
+printf '1:2:3' | awk -F ":" '{print $1+$2+$3}'
+
+# print a multiplication table
+seq 9 | sed 'H;g' | awk -v RS='' '{for(i=1;i<=NF;i++)printf("%dx%d=%d%s", i, NR, i*NR, i==NR?"\n":"\t")}'
+
+# Specify output separator character
+printf '1 2 3' | awk 'BEGIN {OFS=":"}; {print $1,$2,$3}'
+
+# sum up the 4th colmuns
+awk -F"\t" '{arr[$4]+=1} END { for (e in arr ) { print e,arr[e];} }'
+
+# pritn to stderr every 2 lines
+seq 10 | awk '{print} NR%2==0 {print 123>"/dev/stderr"}
+
+# print human readble size of number
+awk '{ split( "B KB MB GB TB" , v ); s=1;size=int($1); while( size>1024 && s<5){ size/=1024; s++ } printf("%.1f%s\t%s",size, v[s],$0) }' 
+
+# process by range of regex patten
+awk '/start_pattern/,/stop_pattern/' file.txt 
+
+# uniq by colums
+awk '!x[$1,$2]++' files
+
+# add doc for python file
+cat 1.py | awk '{print $0} $0~/^def / || $0~/^class /  {getline; if (!($0~/    ""/)) {print  "    \"\"\"doc\"\"\"}; print $0}  (NR<4 && $0~/^#.*coding/) {getline; if (!($0~/""/))  print "\"\"\"doc\"\"\"; print $0}''"}"}"))}' 
+
+# copy column $5 to $2
+head nnlog_with_try_cnt_20181015-0350 | awkt '{OFS="\t"; $2=$2"\t"$5}1'

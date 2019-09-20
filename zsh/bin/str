@@ -1,0 +1,45 @@
+#!/usr/bin/env python
+# coding:utf8
+import collections
+from collections import defaultdict
+import itertools
+import json
+import os
+import re
+import sys
+
+
+def detect_str_encoding(line, try_encodings=("utf8", "gb18030")):
+    for encoding in try_encodings:
+        try:
+            line = line.decode(encoding)
+        except:
+            continue
+        return encoding
+    return None
+
+
+def main():
+    """
+    main
+    """
+    for __arg in sys.argv[1:]:
+        arg = __arg
+        _arg = __arg[:40] + "..." if len(__arg) > 40 else __arg
+        if r'\x' in arg:
+            arg = arg.decode("string-escape")
+        if r'\u' in arg:
+            encoding = "unicode-escape"
+            string = arg.decode(encoding).encode(sys.stdin.encoding)
+            print>>sys.stderr, "%s (%s): %s" % (__arg, encoding, string)
+            return
+        encoding = detect_str_encoding(arg)
+        if not encoding:
+            print>>sys.stderr, "%s no encoding..." % __arg
+        else:
+            string = arg.decode(encoding).encode(sys.stdin.encoding)
+            print>>sys.stderr, "%s (%s): %s" % (__arg, encoding, string)
+
+
+if __name__ == "__main__":
+    main()

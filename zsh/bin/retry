@@ -1,0 +1,25 @@
+#!/bin/bash
+
+echo_help() {
+	echo "usage: retry RETRY_CNT  SLEEP_TIME CMD ..." >&2
+}
+
+if [[ $# -eq 0 || "$1" == "-h" || "$1" == "--help" ]]
+then
+	echo_help
+fi
+
+retry_cnt=$1; shift
+sleep_time=$2; shift
+cmd="$@"
+attempt_cnt=1
+
+until $cmd 
+do
+	if [[ $attempt_cnt -eq $retry_cnt ]]
+	then
+		exit 1
+	else
+	   sleep $(( attempt_cnt++ ))
+   fi
+done

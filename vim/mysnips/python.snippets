@@ -1,0 +1,36 @@
+snippet perr "print stderr" b
+print>>std.stderr, "${1:%s}" % ($0)
+endsnippet
+
+snippet jd "json dumps" b
+${2:jss} = json.dumps(${1:js}, ensure_ascii=False)${0:.encode("gb18030")}
+endsnippet
+
+snippet jl "json loads" b
+${2:js} = json.loads(${1:jss}${0:.decode("gb18030")})
+endsnippet
+
+snippet iunicode "future unicode" b
+from __future__ import unicode_literals
+endsnippet
+
+
+snippet icommon "import common libs" b
+from __future__ import unicode_literals
+
+import collections
+import itertools
+import json
+import logging
+import os
+import sys
+import urllib2
+
+logging.basicConfig()
+LOGGER = logging.getLogger(__name__)
+LOGGER.setLevel(logging.DEBUG)
+endsnippet
+
+snippet iskip "isort skip file" b
+isort:skip_file
+endsnippet

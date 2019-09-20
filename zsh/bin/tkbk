@@ -1,0 +1,94 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+# Last modified: 
+
+"""docstring
+"""
+
+__revision__ = '0.1'
+
+import sys
+from optparse import OptionParser
+import heapq
+
+
+def topK_sum(ins,dem,key_cols,value_col, K):
+    dd ={}
+    K = float(K)
+    value_col = int(value_col)-1
+    sum = 0.0
+    key_col  = [int(x)-1 for x in key_cols.split(",") ]
+    for line in ins:
+        ll = map(lambda x:x.strip(),line.strip().split(dem))
+        key = tuple( [ ll[index] for index in key_col])
+        value = ll[value_col]
+        if key not in dd:
+            dd[key] = 0.0
+        dd[key]+=float(value)
+        sum+=float(value)
+    ll = sorted(dd.items(), key = lambda x:x[1],reverse= True)
+    #print dd,ll
+    if K<1:
+        tmp = 0.0
+        for key,value in ll:
+            tmp+=value
+            print "\t".join(map(str,list(key) + [value,sum]))
+            if tmp>=sum*K:
+                break
+    else:
+        #print K,ll
+        for key,value in ll[:int(K)]:
+            print "\t".join(map(str,list(key) + [value,sum]))
+
+def topK_nosum(ins,dem,key_col,K):
+    dd =[]
+    sum = 0
+    for line in ins:
+        ll = map(lambda x:x.strip(),line.strip().split(dem))
+        key = ll[key_col]
+        dd.append(key)
+        sum+=1
+    #print>>sys.stderr,dd,K
+    if K<1:
+        tmp = 0
+        #print sum * K
+        for key in dd:
+            tmp+=1
+            print "\t".join(map(str,[key]))
+            if tmp >= sum * K:
+                break
+    else:
+        #print K
+        for key in dd[:int(K)]:
+            print "\t".join(map(str,[key]))
+
+def topK(ins, options):
+    for line in ins:
+        pass
+if __name__ == "__main__":
+    """
+    针对key(1列或者多列), 以value（1列)为准则排序，取 top k
+    输出 key，value
+    """
+    parser = OptionParser(usage="usage:%prog [options] [file]")
+    parser.add_option("-k", dest="key_cols",help="cols to specify key",default = "1")
+    parser.add_option("-v", dest="value_col",help="the value col to sum up",default= "-1")
+    parser.add_option("-d", dest="dem",help="delimeter",default="\t")
+    parser.add_option("-n", dest="cnt",help="the percent or cnt line for topK")
+    (options,args) = parser.parse_args()
+    #print options,args
+    #input = options.input
+    if len(args) == 0:
+        file = None
+    else:
+        file = args[0]
+
+    if file == None:
+        ins = sys.stdin
+    else:
+        ins = open(file)
+
+
+    topK_sum(ins,options.dem,options.key_cols,options.value_col, options.cnt)
+        #topK_nosum(ins,dem,key_col, float(cnt))
+

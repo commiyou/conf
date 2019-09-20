@@ -1,0 +1,60 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+# Last modified:
+
+"""docstring
+"""
+
+__revision__ = '0.1'
+
+from optparse import OptionParser
+import sys
+import json
+
+
+def discard(key_col, dem, ins):
+
+    if key_col is None:
+        for line in ins:
+            ll = line.strip().split(dem)
+            for e in ll:
+                # print e
+                try:
+                    e = json.loads(e, encoding=None)
+                except:
+                    try:
+                        e = eval(e)
+                    except:
+                        e = e
+                try:
+                    print json.dumps(e, sort_keys=True, indent=4, ensure_ascii=False)
+                except:
+                    print e
+            # print json.dumps(line, sort_keys=True,indent=4,ensure_ascii=False)
+    else:
+        key_field = int(key_col) - 1
+        for line in ins:
+            line = line.strip()
+            ll = line.split(dem)
+            if len(ll) > key_field:
+                print json.dumps(eval(ll[key_field]), sort_keys=True, indent=4, ensure_ascii=False)
+            else:
+                print>>sys.stderr, "error line field cnt %d" % len(ll)
+
+
+if __name__ == "__main__":
+    parser = OptionParser(usage="usage:%prog [options] [file]")
+    parser.add_option("-k", dest="key_col", help="key col")
+    parser.add_option("-d", dest="dem", help="dem")
+    (options, args) = parser.parse_args()
+    # print options,args
+    key_col = options.key_col
+    # input = options.input
+    if len(args) == 0:
+        ins = sys.stdin
+    else:
+        ins = open(args[0])
+
+    dem = options.dem if options.dem else "\t"
+
+    discard(key_col, dem, ins)

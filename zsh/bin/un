@@ -1,0 +1,2 @@
+#!/bin/sh
+bash -c "export LANG=en_US.utf8; source $CONF_DIR/shrc; zsh"

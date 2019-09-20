@@ -1,0 +1,19 @@
+#!/bin/bash
+
+USAGE="USAGE: $0 <dist dir> <edited dir>"
+
+[ '--help' == "$1" ] && { echo $USAGE; exit 0; }
+[ 2 -eq $# ] || { echo $USAGE; exit 1; }
+
+# trim starting './' and trailing /'/
+original=$(echo $1 | sed 's-^\./--;s-/$--')
+changed=$(echo $2 | sed 's-^\./--;s-/$--')
+
+[ -d $original ] || { echo "ERROR: Directory $original does not exist" >&2 ; exit 2; }
+[ -d $changed ] || { echo "ERROR: Directory $changed does not exist" >&2; exit 3; }
+
+#command="ls -l"
+command="diff -Naur"
+command="git --no-pager diff --no-index"
+
+find $original -name '*.[ch]' -o -name '*.cpp' -o -name '*.sh' -o -name '*.py' | sed 's-^[^/]*/--' | { while read file; do $command  $original/$file $changed/$file; done; }

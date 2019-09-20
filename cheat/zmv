@@ -1,0 +1,5 @@
+# mv  a123b to a456b
+zmv '(*)123(*)' '${1}456${2}' 
+autoload zmv # (in ~/.zshrc)
+# image1.jpg -> image0.jpg
+zmv -Qf -n 'image(<->).jpg(n)' 'image$(($1-1)).jpg'

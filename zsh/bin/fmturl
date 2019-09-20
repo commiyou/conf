@@ -1,0 +1,48 @@
+#! /usr/bin/env python
+# -*- coding: gb18030 -*-
+#
+#
+
+"""
+
+"""
+import sys
+import urllib2
+import click
+try:
+    import cutil
+except:
+    pass
+
+
+def format_url(url, unquote=False):
+    if unquote:
+        url = urllib2.unquote(url)
+    url = url.split("#")[0]
+    url = url.rstrip("/")
+    return url
+
+
+@click.command()
+@click.option("-k", "--key", multiple=True, default=[0], help="column to unquote")
+@click.option("-d", "--input-delim", default='\t', help="delim of input lines, default \\t")
+@click.option("-D", "--out-delim", default='\t', help="delim of output lines, default \\t")
+@click.option("-u", "--unquote", is_flag=True, help="urlli2.unquote key cols?")
+@click.argument("files", nargs=-1, type=click.File())
+def cli(key, input_delim, out_delim, unquote, files):
+    if not files:
+        files = [sys.stdin]
+    input_delim = str(input_delim)
+    out_delim = str(out_delim)
+
+    for fd in files:
+        for line in fd:
+            ll = line.rstrip("\n").split(input_delim)
+            for k in key:
+                k = int(k)
+                ll[k] = format_url(ll[k], unquote=unquote).replace(out_delim, " ")
+            print out_delim.join(ll)
+
+
+if __name__ == "__main__":
+    cli()

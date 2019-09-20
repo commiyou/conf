@@ -1,0 +1,135 @@
+#!/usr/bin/env python
+# coding:utf8
+import copy
+import json
+import logging
+import re
+import sys
+from datetime import datetime
+
+
+def main(args):
+    """
+    main
+    """
+    logging.basicConfig()
+    log = logging.getLogger()
+
+    if args.verbose:
+        log.setLevel(logging.DEBUG)
+
+    log.debug("args: %s", args)
+
+    if args.done_file is None:
+        infile = sys.stdin
+        outfile = sys.stdout
+    else:
+        infile = args.done_file
+        outfile = args.done_file
+
+    input_lines = infile.readlines()
+
+    for input_line in input_lines[::-1]:
+        input_line = input_line.strip()
+
+        if input_line:
+            break
+
+    if not input_line:
+        argparse.error("input file <%s> is empty" % infile.name)
+
+    log.debug("line to process from file <%s>: %s", infile.name, input_line)
+
+    js = json.loads(input_line)
+
+    # update input
+    input_content = js[args.input_field]
+    log.debug("input field > %s", input_content)
+    tmp_input = copy.deepcopy(input_content)
+
+    if not isinstance(tmp_input, list):
+        tmp_input = [tmp_input]
+
+    result_input = []
+
+    for value in tmp_input:
+        target_value = []
+
+        for k, v in args.contain_match:
+            if k in value:
+                target_value.append(["contain", k, v])
+
+        for k, v in args.regex_match:
+            if re.search(k, value):
+                target_value.append(["regex", k, v])
+
+        if not target_value:
+            result_input.append(value)
+            log.debug("input value %s not match, keep", value)
+
+            continue
+
+        if len(set(x[-1] for x in target_value)) == 1:
+            result_input.append(target_value[0][-1])
+            log.debug("input value %s match %s,  replace", value, target_value[0][-1])
+        else:
+            raise Exception(
+                "input value %s match multiple:\n%s" % (value, json.dumps(target_value)))
+
+    if len(set(result_input)) != len(result_input):
+        raise Exception("result input has repeat value:\n%s" % json.dumps(result_input))
+
+    remain_value = (set(x[1] for x in args.contain_match)
+                    | set(x[1] for x in args.regex_match)) - set(result_input)
+
+    if remain_value:
+        result_input += list(remain_value)
+        log.debug("remain value %s, just append", remain_value)
+
+    js["input"] = result_input
+
+    # update id
+
+    if args.id_field not in js:
+        log.warning("id filed <%s> not in json!", args.id_field)
+    else:
+        js[args.id_field] = datetime.now().strftime("%Y%m%d%H%M%S")
+
+    outfile.write(json.dumps(js) + "\n")
+    outfile.close()
+
+
+if __name__ == "__main__":
+    import argparse
+    parser = argparse.ArgumentParser(
+        description=('update done file\n'
+                     'read last line, update and append to the file'
+                     'contain or regex only match once!'))
+
+    parser.add_argument('-v', '--verbose', action="store_true", help="show detail")
+    parser.add_argument(
+        '-i', '--input-field', default='input', help="the input field, default input")
+    parser.add_argument('-d', '--id-field', default='id', help='the id field, default id')
+
+    parser.add_argument(
+        'done_file', nargs='?', type=argparse.FileType('a+'), help='done file with input/id')
+
+    parser.add_argument(
+        '-r',
+        '--regex-match',
+        nargs=2,
+        metavar=('regex', 'rvalue'),
+        action='append',
+        default=[],
+        help='the old value should match regex')
+    parser.add_argument(
+        '-c',
+        '--contain-match',
+        nargs=2,
+        metavar=('contain', 'cvalue'),
+        action='append',
+        default=[],
+        help='the old value should contain ')
+
+    args = parser.parse_args()
+    main(args)

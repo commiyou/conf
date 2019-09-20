@@ -1,0 +1,12 @@
+[[ $OSTYPE =~ "linux" ]] || return
+zplug "junegunn/fzf-bin", \
+    from:gh-r, \
+    as:command, \
+    rename-to:fzf, \
+    use:"*linux*amd64*", \
+	hook-load:"source $ZDOTDIR/zsh.rcs/fzf"
+
+zplug "sharkdp/fd", \
+    from:gh-r, \
+    as:command, \
+    use:"*x86*linux*musl*", \

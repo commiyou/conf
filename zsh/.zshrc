@@ -33,4 +33,6 @@ if [ -d $ZDOTDIR/zsh.after/ ]; then
     for config_file ($ZDOTDIR/zsh.after/*.zsh) source $config_file
   fi
 fi
+
+[ -f $ZDOTDIR/myrc ] && source $ZDOTDIR/myrc
 #zprof

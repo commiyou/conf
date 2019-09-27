@@ -60,6 +60,8 @@ gconfig() {
 	git config  alias.rh reset HEAD
 	git config  alias.st status
 	git config  color.grep.filename magenta
+  git config pull.rebase true
+  git config rebase.autoStash true
 }
 
 alias ginit="git init; gconfig"
@@ -72,13 +74,17 @@ vignore() {
 }
 
 
+myip() {
+  /sbin/ifconfig eth0 | grep 'inet addr' | cut -f12 -d ' ' | cut -f2 -d':'
+}
+
 # run a web server whit port in 8000~8999 in 10 minutes
 websvr() {
   LPORT=8000;
   UPORT=1000;
   MPORT=$[$LPORT + ($RANDOM % $UPORT)];
   timeout 10m python -m SimpleHTTPServer $MPORT > /dev/null 2>&1   &
-  echo http://$(hostname):$MPORT starting...
+  echo http://$(myip):$MPORT starting...
 }
 
 # re escape, useful for awk/grep

@@ -37,7 +37,12 @@ else
 	" set pyxversion=3
 	Plug 'roxma/vim-hug-neovim-rpc' 
 	Plug 'roxma/nvim-yarp', { 'do': 'sudo pip3 install neovim'}
-	Plug 'Shougo/deoplete.nvim', { 'do': 'sudo pip3 install --user pynvim' }
+	let pyver = execute(':pythonx import sys;sys.version.split(" ")')
+	if pyver < '3.6.1'
+		Plug 'Shougo/deoplete.nvim', { 'tag':'4.1', 'do': 'sudo pip3 install --user pynvim' }
+	else
+		Plug 'Shougo/deoplete.nvim', { 'do': 'sudo pip3 install --user pynvim' }
+	endif
 	Plug 'Shougo/neco-syntax'
 	Plug 'zchee/deoplete-jedi'
 	Plug 'wellle/tmux-complete.vim'
@@ -309,5 +314,7 @@ try
 	" debug deoplete
 	" call deoplete#custom#option('profile', v:true)
 	" call deoplete#enable_logging('DEBUG', 'deoplete.log')
+	"let $NVIM_PYTHON_LOG_FILE="/data1/youbin/nvim_log"
+	" let $NVIM_PYTHON_LOG_LEVEL="DEBUG"
 catch
 endtry

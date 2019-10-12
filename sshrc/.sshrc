@@ -1,5 +1,6 @@
 export VIMINIT="let \$MYVIMRC='$SSHHOME/.sshrc.d/vimrc' | source \$MYVIMRC"
+git config --global color.ui auto 2>/dev/null
 for f in $SSHHOME/.sshrc.d/*.sh
 do
-	source $SSHHOME/.sshrc.d/$f
+	source $f
 done

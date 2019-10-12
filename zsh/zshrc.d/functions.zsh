@@ -1,8 +1,8 @@
 # get the ftp path of files, defalut CWD
 fp() {
-	[[ $# = 0 ]] && echo $(hostname):$(realpath .) && return
+	[[ $# = 0 ]] && echo $(myip):$(realpath .) && return
 	for file in "$@"; do
-		[[ -e "$file" ]] && echo $(hostname):$(realpath "$file") \
+		[[ -e "$file" ]] && echo $(myip):$(realpath "$file") \
 			|| echo "can NOT find $file" >&2
 	done
 }
@@ -75,7 +75,11 @@ vignore() {
 
 
 myip() {
-  /sbin/ifconfig eth0 | grep 'inet addr' | cut -f12 -d ' ' | cut -f2 -d':'
+  if [[ -n "$SSH_CONNECTION" ]]; then
+    echo $SSH_CONNECTION | cut -f3 -d' '
+  else 
+    /sbin/ifconfig eth0 | grep 'inet addr' | cut -f12 -d ' ' | cut -f2 -d':'
+  fi
 }
 
 # run a web server whit port in 8000~8999 in 10 minutes
@@ -150,8 +154,7 @@ reload_zshrcs() {
 # args:
 #   $1 -> src file path
 #   $2 -> dst file path
-swap()         
-{
+swap() {
     local TMPFILE=tmp.$$
     mv "$1" $TMPFILE && mv "$2" "$1" && mv $TMPFILE $2
 }

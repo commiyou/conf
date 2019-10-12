@@ -1,0 +1,267 @@
+" must come first
+set nocompatible 
+
+set viminfo+=n$vimdir/.viminfo
+set history=500
+
+let mapleader = " "
+let g:mapleader = " "
+
+set ruler
+set hid
+
+if !isdirectory(g:cachedir . "/undodir")
+    call mkdir(g:cachedir . "/undodir", "p")
+endif
+set undodir=$cachedir/undodir
+set undofile
+
+set encoding=utf8
+set fileencodings=utf8,gbk
+set nu
+set rnu
+set cul
+set noexpandtab
+set lcs=tab::\|\,trail:-\,eol:$
+set gdefault
+set noeol
+
+filetype plugin on
+filetype indent on
+
+" Set to auto read when a file is changed from the outside
+set autoread
+
+" Set 7 lines to the cursor - when moving vertically using j/k
+set so=7
+set wildmenu
+
+" Ignore compiled files
+set wildignore=*.o,*~,*.pyc,*log,*.bak,*.swp,*.so,*.swp
+if has("win16") || has("win32")
+    set wildignore+=.git\*,.hg\*,.svn\*
+else
+    set wildignore+=*/.git/*,*/.hg/*,*/.svn/*,*/.DS_Store
+endif
+
+" Configure backspace so it acts as it should act
+set backspace=eol,start,indent
+set whichwrap+=<,>,h,l
+" Ignore case when searching
+set ignorecase
+
+" When searching try to be smart about cases
+set smartcase
+
+" Highlight search results
+set hlsearch
+
+" Makes search act like search in modern browsers
+set incsearch
+
+" Show matching brackets when text indicator is over them
+set showmatch
+" How many tenths of a second to blink when matching brackets
+set mat=2
+
+" No annoying sound on errors
+set noerrorbells
+set novisualbell
+" Enable syntax highlighting
+syntax enable
+
+
+set background=dark
+
+set nobackup
+set nowb
+set noswapfile
+
+set shiftwidth=4
+set tabstop=4
+set ai "Auto indent
+set si "Smart indent
+set wrap "Wrap lines
+
+
+" Specify the behavior when switching between buffers
+try
+  set switchbuf=useopen,usetab,newtab
+  set stal=2
+catch
+endtry
+
+" Return to last edit position when opening files (You want this!)
+au BufReadPost * if line("'\"") > 1 && line("'\"") <= line("$") | exe "normal! g'\"" | endif
+
+
+set tags=./tags;,tags;
+au FileType python syn keyword pythonDecorator True None False self
+au FileType python let indent_guides_guide_size = 4
+autocmd FileType python,sh,zsh,c,cpp setlocal expandtab
+autocmd FileType sh,zsh setlocal shiftwidth=2
+autocmd FileType sh,zsh setlocal tabstop=2
+autocmd FileType python setlocal colorcolumn=120
+autocmd FileType yaml setlocal ts=2 sts=2 sw=2 expandtab indentkeys-=0# indentkeys-=<:>
+" autocmd CursorMoved *.cpp,*.py,*.sh,*.conf,*.proto exe printf('match CtrlParrow1 /\V\<%s\>/', escape(expand('<cword>'), '/\'))
+
+
+function! IsDiff(opt)
+    let isdiff = 0
+
+    if v:progname =~ "diff"
+        let isdiff = isdiff + 1
+    endif
+
+    if &diff == 1
+        let isdiff = isdiff + 1
+    endif
+
+    if a:opt =~ "scrollopt"
+        if &scrollopt =~ "hor"
+            let isdiff = isdiff + 1
+        endif
+    endif
+
+    return isdiff
+endfunction
+function! ShowTaglist()
+    if line("$") > 200 && !IsDiff(expand('<amatch>'))
+        echom IsDiff(expand('<amatch>'))
+        :call tagbar#autoopen(0)
+    endif
+endfunction
+au FileType cpp,python call ShowTaglist()
+augroup vimrc_todo
+    au!
+    au Syntax * syn match MyTodo /\v<(FIXME|NOTE|TODO|OPTIMIZE|XXX|COMMI)>/
+          \ containedin=.*Comment,vimCommentTitle
+    au Syntax * syn match MyTodo /\v<(FIXME|NOTE|TODO|OPTIMIZE|XXX|COMMI):/
+          \ containedin=.*Comment,vimCommentTitle
+augroup END
+hi def link MyTodo Todo
+
+set timeout           " for mappings
+set timeoutlen=1000   " default value
+set ttimeout          " for key codes
+set ttimeoutlen=10    " unnoticeable small value
+
+set formatoptions-=t  " no auto line break in text
+
+set dictionary+=$vimdir/dict/comm.dict
+set spell
+
+
+
+nnoremap <leader>u :e ++enc=utf8<CR>
+nnoremap <leader>g :e ++enc=gbk<CR>
+nnoremap <c-g> 1<c-g>
+
+inoremap <c-]> <Esc>
+inoremap <c-b> <left>
+inoremap <c-f> <right>
+nnoremap <c-b> <left>
+nnoremap <c-f> <right>
+
+
+" Opens a new tab with the current buffer's path
+" Super useful when editing files in the same directory
+nnoremap <leader>te :tabedit <c-r>=expand("%:p:h")<cr>/
+
+" Remap VIM 0 to first non-blank character
+nnoremap 0 ^
+
+" qf
+nnoremap <leader>qf :botright cope<cr>
+
+" Toggle paste mode on and off
+nnoremap <leader>pp :setlocal paste!<cr>
+" Format Jump, go to last changes
+nnoremap <silent> g; g;zz
+nnoremap <silent> g, g,zz
+
+" Split fast
+nnoremap <leader>\ :vs<CR>
+nnoremap <leader>\| :vs<CR>
+nnoremap <leader>- :sp<CR>
+nnoremap <c-w><c-f> :vsplit <cfile><cr>
+" Quickly open/reload vim
+nnoremap <leader>sv :source $vimdir/vimrc<CR>
+nnoremap <leader>ev :Files $vimdir<CR>
+autocmd BufWritePost $vimdir/vimrc source %
+autocmd BufWritePost $vimdir/vimrc.d/*.vim source %
+
+cno $c e <C-\>eCurrentFileDir("tabe")<cr>
+cno $q <C-\>eDeleteTillSlash()<cr>
+func! DeleteTillSlash()
+    let g:cmd = getcmdline()
+
+    if has("win16") || has("win32")
+        let g:cmd_edited = substitute(g:cmd, "\\(.*\[\\\\]\\).*", "\\1", "")
+    else
+        let g:cmd_edited = substitute(g:cmd, "\\(.*\[/\]\\).*", "\\1", "")
+    endif
+
+	    if g:cmd == g:cmd_edited
+        if has("win16") || has("win32")
+            let g:cmd_edited = substitute(g:cmd, "\\(.*\[\\\\\]\\).*\[\\\\\]", "\\1", "")
+        else
+            let g:cmd_edited = substitute(g:cmd, "\\(.*\[/\]\\).*/", "\\1", "")
+        endif
+    endif
+
+    return g:cmd_edited
+endfunc
+
+func! CurrentFileDir(cmd)
+    return a:cmd . " " . expand("%:p:h") . "/"
+endfunc
+
+" Bash like keys for the command line
+cnoremap <C-A>      <Home>
+cnoremap <C-E>      <End>
+cnoremap <C-B>      <Left>
+cnoremap <C-F>      <Right>
+cnoremap <C-P> <Up>
+cnoremap <C-N> <Down>
+cnoremap <silent> <C-h> :TmuxNavigateLeft<cr>
+cnoremap <silent> <C-j> :TmuxNavigateDown<cr>
+cnoremap <silent> <C-k> :TmuxNavigateUp<cr>
+cnoremap <silent> <C-l> :TmuxNavigateRight<cr>
+
+nnoremap <leader>l :nohlsearch<cr>:diffupdate<cr>:syntax sync fromstart<cr><c-l>
+
+nnoremap <leader>ts :ts <C-R>=expand("<cword>")<CR><CR>
+nnoremap <leader>] :ts <C-R>=expand("<cword>")<CR><CR>
+" preview tags
+nnoremap <C-]> <Esc>:exe "ptjump " . expand("<cword>")<Esc>
+nnoremap gf <C-W>gF
+
+" n to always search forward and N backward,
+nnoremap <expr> n  'Nn'[v:searchforward]
+nnoremap <expr> N  'nN'[v:searchforward]
+
+" Zoom / Restore window.
+function! s:ZoomToggle() abort
+    if exists('t:zoomed') && t:zoomed
+        execute t:zoom_winrestcmd
+        let t:zoomed = 0
+    else
+        let t:zoom_winrestcmd = winrestcmd()
+        resize
+        vertical resize
+        let t:zoomed = 1
+    endif
+endfunction
+command! ZoomToggle call s:ZoomToggle()
+nnoremap <leader>z :ZoomToggle<CR>
+nnoremap <c-w>z :ZoomToggle<CR>
+
+" {{{ Plug 'vim-scripts/a.vim' fix unmap
+	silent! iu <Leader>ih
+	silent! nun <Leader>ih 
+	silent! iu <Leader>is 
+	silent! nun <Leader>is
+	silent! iu <Leader>ihn 
+	silent! nun <Leader>ihn 
+" }}}

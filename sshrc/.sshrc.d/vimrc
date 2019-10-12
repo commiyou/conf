@@ -1,7 +1,7 @@
 " must come first
 set nocompatible 
 
-set viminfo+=n$vimdir/.viminfo
+set viminfo+=n~/.viminfo
 set history=500
 
 let mapleader = " "
@@ -10,10 +10,10 @@ let g:mapleader = " "
 set ruler
 set hid
 
-if !isdirectory(g:cachedir . "/undodir")
-    call mkdir(g:cachedir . "/undodir", "p")
+if !isdirectory("~/.tmp/undodir")
+    call mkdir("~/.tmp/undodir", "p")
 endif
-set undodir=$cachedir/undodir
+set undodir=~/.tmp/undodir
 set undofile
 
 set encoding=utf8

@@ -95,9 +95,9 @@ let g:ale_set_quickfix = 1
 let g:ale_maximum_file_size = 1048576
 let g:ale_python_flake8_options="--max-line-length=120 --ignore=E402,E999,E722"
 let g:ale_python_isort_options = '-sl --line-width=120'
-let g:ale_linters = { 'python' : ['flake8'], }
+let g:ale_linters = { 'python' : ['flake8'], 'cpp' : ['all'] }
 
-let g:ale_fixers = {  'python': ['isort', 'yapf', 'trim_whitespace'], 'json': ['jq','remove_trailing_lines', 'trim_whitespace'] }
+let g:ale_fixers = {  'python': ['isort', 'yapf', 'trim_whitespace'], 'json': ['jq','remove_trailing_lines', 'trim_whitespace'], 'cpp':['remove_trailing_lines', 'trim_whitespace']}
 let g:ale_fix_on_save = 1
 let s:yapf_bin =  ""
 if filereadable(s:yapf_bin)

@@ -65,6 +65,9 @@ zplug "rupa/z", use:z.sh, hook-build:"cp  $ZPLUG_REPOS/rupa/z/**/z.1 $ZPLUG_HOME
 zplug "rupa/v", as:command, \
   hook-build:"cp $ZPLUG_REPOS/rupa/v/**/v.1 $ZPLUG_HOME/doc/man/man1"
 zplug "thetic/extract"
+zplug "denisidoro/navi", \
+  hook-build:"$ZPLUG_REPOS/denisidoro/navi/scripts/install $ZPLUG_BIN", \
+  hook-load: "export NAVI_PATH=$ZPLUG_REPOS/denisidoro/navi/cheats:$CONF_DIR/cheat"
 
 zplug "shannonmoeller/up", use:"*.sh"
 # zplug "changyuheng/zsh-interactive-cd", defer:1

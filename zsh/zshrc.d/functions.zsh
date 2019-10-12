@@ -25,7 +25,8 @@ gconfig() {
   do
     echo "git user.email?" 
     read email
-    if [[ "$email" =~ '@.*\.' ]];then
+    if echo "$email" |  grep -E '.+@.+\..+' -q
+    then
       break
     fi
   done

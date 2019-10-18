@@ -138,7 +138,7 @@ Plug 'nathanaelkane/vim-indent-guides'
 "set foldlevelstart=1
 
 Plug 'ConradIrwin/vim-bracketed-paste'
-" Plug 'roxma/vim-paste-easy'
+Plug 'roxma/vim-paste-easy'
 
 Plug 'scrooloose/nerdtree'
 let g:NERDTreeWinPos = "right"

@@ -97,4 +97,5 @@ zstyle ':completion:*' show-ambiguity "$color[fg-red]"
 # Ignore what's already in the line
 zstyle ':completion:*:(rm|cp|mv||kill|diff|vim|cat|less|more|gzip|gunzip|zcat|tar|fg|bg):*' ignore-line yes
 
+autoload -U zmv
 

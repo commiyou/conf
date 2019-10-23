@@ -62,3 +62,4 @@ export CONF_DIR=$(cd $ZDOTDIR/..;pwd)
 export HOME_DIR=$(cd $ZDOTDIR/../..;pwd)
 
 export SSHHOME=$CONF_DIR/sshrc
+export PYTHONSTARTUP="$ZDOTDIR/.pythonrc"

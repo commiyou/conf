@@ -1,19 +1,20 @@
 #!/usr/bin/env python
-import os
-import sys
 import argparse
-import subprocess
 import collections
-import re
-import time
 import logging
+import os
+import re
+import subprocess
+import sys
+import time
+
 logging.basicConfig(level=logging.WARNING,
         format='%(levelname)s: %(asctime)s: [%(pathname)s][%(lineno)d][%(funcName)s] %(message)s',
         datefmt='%Y-%m-%d %H:%M:%S')
         # filename='mypy.log', filemode="w"
 
 
-_hadoop_bin = "/home/work/hadoop/hadoop-client-nmg/hadoop/bin/hadoop"
+_hadoop_bin = "hadoop"
 def _get_hadoop_bin(**kws):
     """get hadoop_bin
         order:
@@ -238,7 +239,7 @@ def cat(hadoop_path, force=False, size=100, **kws):
         logging.error("cmd[%s] hadoop_path[%s] not file" % (cmd, hadoop_path))
         raise IOError("cmd[%s] hadoop_path[%s] not file" % (cmd, hadoop_path))
     # check size less than 100M
-    _size = globals()["size"](hadoop_path)
+    _size = globals()["human_size"](hadoop_path)
     if int(_size)/1024.0 > size:
         logging.error("cmd[%(cmd)s] hadoop_path[%(hadoop_path)s] size[%(_size)s] greater than max_size[%(size)sM]" % locals())
         raise IOError("cmd[%(cmd)s] hadoop_path[%(hadoop_path)s] size[%(_size)s] greater than max_size[%(size)sM]" % locals())

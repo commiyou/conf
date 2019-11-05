@@ -1,6 +1,7 @@
 umask 0022
 
 [ -z $TERM ] && export TERM=screen-256color
+export TERM=screen-256color
 export LC_ALL=en_US.UTF-8
 export LANG=$LC_ALL
 export HISTFILE=$ZDOTDIR/.zsh_history

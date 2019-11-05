@@ -103,6 +103,7 @@ let s:yapf_bin =  ""
 if filereadable(s:yapf_bin)
 	let g:ale_python_yapf_executable = s:yapf_bin
 endif
+
 nmap <silent> <leader>p <Plug>(ale_previous_wrap)
 nmap <silent> <leader>n <Plug>(ale_next_wrap)
 

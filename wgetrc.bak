@@ -1,3 +1,0 @@
-check_certificate = off
-
-secure_protocol =  TLSv1_2

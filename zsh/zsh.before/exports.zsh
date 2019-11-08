@@ -21,10 +21,8 @@ export LESS_TERMCAP_md="${yellow}";
 # Don’t clear the screen after quitting a manual page.
 # export MANPAGER='less -X';
 
-unset WGETRC
-[ -f $ZDOTDIR/../wgetrc ] && wget -h | grep PFS >/dev/null 2>&1 && export WGETRC=$ZDOTDIR/../wgetrc
-unset CURL_HOME
-[ -f $ZDOTDIR/../curlrc ] && export CURL_HOME=$ZDOTDIR/..
+# [ -f $ZDOTDIR/../wgetrc ] && wget -h | grep PFS >/dev/null 2>&1 && export WGETRC=$ZDOTDIR/../wgetrc
+# [ -f $ZDOTDIR/../curlrc ] && export CURL_HOME=$ZDOTDIR/..
 
 # TODO
 export ZSH_CACHE_DIR=$ZDOTDIR/.cache
@@ -62,5 +60,5 @@ export GROUP_ID=$(id -g $USER)
 export CONF_DIR=$(cd $ZDOTDIR/..;pwd)
 export HOME_DIR=$(cd $ZDOTDIR/../..;pwd)
 
-export SSHHOME=$CONF_DIR/sshrc
+[ -z "$SSHHOME" ] && export SSHHOME=$CONF_DIR/sshrc
 export PYTHONSTARTUP="$ZDOTDIR/.pythonrc"

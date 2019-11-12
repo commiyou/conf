@@ -37,7 +37,7 @@ else
 	" set pyxversion=3
 	Plug 'roxma/vim-hug-neovim-rpc' 
 	Plug 'roxma/nvim-yarp', { 'do': 'sudo pip3 install neovim'}
-	let pyver = execute(':pythonx import sys;sys.version.split(" ")')
+	let pyver = execute(':pythonx import sys;print(sys.version.split(" ")[0])')
 	if pyver < '3.6.1'
 		Plug 'Shougo/deoplete.nvim', { 'tag':'4.1', 'do': 'sudo pip3 install --user pynvim' }
 	else

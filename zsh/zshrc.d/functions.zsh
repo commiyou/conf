@@ -1,8 +1,18 @@
 # get the ftp path of files, defalut CWD
+filepath() {
+  local p="${1:-.}"
+  if command -v realpath > /dev/null 2>&1 
+  then
+    realpath "${p}" 
+  else
+    readlink -f "$p"
+  fi
+}
+
 fp() {
-	[[ $# = 0 ]] && echo $(myip):$(realpath .) && return
+	[[ $# = 0 ]] && echo $(myip):$(filepath .) && return
 	for file in "$@"; do
-		[[ -e "$file" ]] && echo $(myip):$(realpath "$file") \
+		[[ -e "$file" ]] && echo $(myip):$(filepath "$file") \
 			|| echo "can NOT find $file" >&2
 	done
 }

@@ -148,5 +148,5 @@ set ttimeoutlen=10    " unnoticeable small value
 
 set formatoptions-=t  " no auto line break in text
 
-set dictionary+=$vimdir/dict/comm.dict
-set spell
+" set dictionary+=$vimdir/dict/comm.dict
+" set spell

@@ -107,7 +107,6 @@ endif
 nmap <silent> <leader>p <Plug>(ale_previous_wrap)
 nmap <silent> <leader>n <Plug>(ale_next_wrap)
 
-Plug 'tomasr/molokai'
 Plug 'SirVer/ultisnips'
 Plug 'honza/vim-snippets'
 let g:UltiSnipsJumpBackwardTrigger="<c-b>"
@@ -157,6 +156,8 @@ let g:airline_theme = 'sol'
 let g:airline#extensions#wordcount#enabled = 0
 let g:airline#extensions#whitespace#enabled = 0
 let g:airline#extensions#ale#enabled = 1
+Plug 'tomasr/molokai'
+Plug 'fmoralesc/molokayo'
 
 " Plug 'machakann/vim-sandwich'
 Plug 'wellle/targets.vim'
@@ -286,7 +287,7 @@ Plug 'rhysd/clever-f.vim'
 Plug 'mzlogin/vim-markdown-toc'
 
 
-let $TERM_PROGRAM = 'iTerm.app'
+"let $TERM_PROGRAM = 'iTerm.app'
 Plug 'jszakmeister/vim-togglecursor'
 Plug 'elzr/vim-json'
 Plug 'will133/vim-dirdiff'

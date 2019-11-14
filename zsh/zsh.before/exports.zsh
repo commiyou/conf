@@ -4,7 +4,7 @@ umask 0022
 export TERM=screen-256color
 export LC_ALL=en_US.UTF-8
 export LANG=$LC_ALL
-export HISTFILE=$ZDOTDIR/.zsh_history
+[ -e "$ZDOTDIR" ] && export HISTFILE="$ZDOTDIR"/.zsh_history
 
 # display ansi color
 export LESS='-R'
@@ -21,15 +21,14 @@ export LESS_TERMCAP_md="${yellow}";
 # Don’t clear the screen after quitting a manual page.
 # export MANPAGER='less -X';
 
-# [ -f $ZDOTDIR/../wgetrc ] && wget -h | grep PFS >/dev/null 2>&1 && export WGETRC=$ZDOTDIR/../wgetrc
-# [ -f $ZDOTDIR/../curlrc ] && export CURL_HOME=$ZDOTDIR/..
+# [ -f "$ZDOTDIR"/../wgetrc ] && wget -h | grep PFS >/dev/null 2>&1 && export WGETRC="$ZDOTDIR"/../wgetrc
+# [ -f "$ZDOTDIR"/../curlrc ] && export CURL_HOME="$ZDOTDIR"/..
 
 # TODO
-export ZSH_CACHE_DIR=$ZDOTDIR/.cache
-[ -d $ZSH_CACHE_DIR ] || mkdir -p $ZSH_CACHE_DIR
+[ -e "$ZDOTDIR" ] && export ZSH_CACHE_DIR="$ZDOTDIR"/.cache && mkdir -p $ZSH_CACHE_DIR
 
 # ssh TODO
-[[ -f ${ZDOTDIR}/ssh/id_rsa ]] && export SSH_KEY_PATH=${ZDOTDIR}/ssh/id_rsa && export GIT_SSH=${ZDOTDIR}/ssh/gitwrap.sh
+[ -e "$ZDOTDIR" ] && [[ -f ${ZDOTDIR}/ssh/id_rsa ]] && export SSH_KEY_PATH=${ZDOTDIR}/ssh/id_rsa && export GIT_SSH=${ZDOTDIR}/ssh/gitwrap.sh
 
 export EDITOR=vim
 
@@ -48,8 +47,8 @@ export PYTHONPATH='.'
 # python better exceptions
 export BETTER_EXCEPTIONS=1
 
-export MYNAME=$(cd $ZDOTDIR; git config user.name)
-export MYEMAIL=$(cd $ZDOTDIR; git config user.email)
+# export MYNAME=$(cd "$ZDOTDIR"; git config user.name)
+# export MYEMAIL=$(cd "$ZDOTDIR"; git config user.email)
 
 export WORDCHARS='*?_-.[]~=&;!#$%^(){}<>'
 
@@ -57,8 +56,8 @@ export GROUP=$USER
 export USER_ID=$(id -u $USER)
 export GROUP_ID=$(id -g $USER)
 
-export CONF_DIR=$(cd $ZDOTDIR/..;pwd)
-export HOME_DIR=$(cd $ZDOTDIR/../..;pwd)
+[ -e "$ZDOTDIR" ] && export CONF_DIR=$(cd "$ZDOTDIR"/..;pwd)
+[ -e "$ZDOTDIR" ] && export HOME_DIR=$(cd "$ZDOTDIR"/../..;pwd)
 
 [ -z "$SSHHOME" ] && export SSHHOME=$CONF_DIR/sshrc
-export PYTHONSTARTUP="$ZDOTDIR/.pythonrc"
+export PYTHONSTARTUP=""$ZDOTDIR"/.pythonrc"

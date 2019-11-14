@@ -37,7 +37,13 @@ else
 	" set pyxversion=3
 	Plug 'roxma/vim-hug-neovim-rpc' 
 	Plug 'roxma/nvim-yarp', { 'do': 'sudo pip3 install neovim'}
-	let pyver = execute(':pythonx import sys;print(sys.version.split(" ")[0])')
+	" only for vim 8+
+	try
+		let pyver = execute(':pythonx import sys;print(sys.version.split(" ")[0])')
+	catch
+		let pyver='2.7'
+	endtry
+	
 	if pyver < '3.6.1'
 		Plug 'Shougo/deoplete.nvim', { 'tag':'4.1', 'do': 'sudo pip3 install --user pynvim' }
 	else
@@ -127,10 +133,14 @@ Plug 'nathanaelkane/vim-indent-guides'
 	let g:indent_guides_color_change_percent = 10
 	let g:indent_guides_guide_size = 2
 	let g:indent_guides_start_level = 2
-	au FileType python IndentGuidesEnable
-	au FileType python let indent_guides_auto_colors = 0
-	au FileType python autocmd BufEnter,Colorscheme * :hi IndentGuidesOdd  guibg=darkgrey   ctermbg=236
-	au FileType python autocmd BufEnter,Colorscheme * :hi IndentGuidesEven guibg=darkgrey   ctermbg=240
+	try
+		" not load error
+		au FileType python silent! IndentGuidesEnable
+		au FileType python let indent_guides_auto_colors = 0
+		au FileType python autocmd BufEnter,Colorscheme * :hi IndentGuidesOdd  guibg=darkgrey   ctermbg=236
+		au FileType python autocmd BufEnter,Colorscheme * :hi IndentGuidesEven guibg=darkgrey   ctermbg=240
+	catch
+	endtry
 " }}}
 
 "Plug 'tmhedberg/SimpylFold'

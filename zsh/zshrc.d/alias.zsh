@@ -52,42 +52,43 @@ alias awkt='LC_ALL=C awk -F"\t"'
 alias cutt="cut -d$'\t'"
 alias sortt="LC_ALL=C sort -t$'\t'"
 
-# vim last modified file in current dir
-alias -g NF='*(.om[1])'  # newest file
-alias -g ND='*(/om[1])'  # newest directory
-alias vn='vim *(.om[1]^D)'
-
-alias -g L=" | less"
-alias -g G=" | \grep -i --color=auto -a"
-alias -g P=" | pprint | less"
-alias -g NE="2> /dev/null"
-alias -g NUL="> /dev/null 2>&1"
-alias -g GBK=" | iconv -f utf8 -t gb18030 -c"
-alias -g UTF=" | iconv -f gb18030 -t utf8 -c"
-alias -g LU=" | iconv -f utf8 -t gb18030 -c | less"
-alias -g LG=" | iconv -f gb18030 -t utf8 -c | less"
-alias -g TR1=" | tr '' '\t'"
-alias -g TR,=" | tr ',' '\t'"
-alias -g CSV=" | tr '\t' ',' "
-
-alias -g E="luit -encoding gb18030"  # env gb18030 to utf
-
-alias dud='du -d 1 -h'
+alias dud='du -m -h -s -c -- * | sort -h'
 alias sortnr='sort -n -r -k'
 alias sortnrt="sort -n -r -t$'\t' -k"
 
 # TODO auto
-alias valias="vim $ZDOTDIR/zshrc.d/alias.zsh"
-alias vfunctions="vim $ZDOTDIR/zshrc.d/functions.zsh"
-alias vexports="vim $ZDOTDIR/zsh.before/exports.zsh"
-alias vzsh="(cd $ZDOTDIR; f)"
+if [ -e "$ZDOTDIR" ]; then
+  alias valias="vim $ZDOTDIR/zshrc.d/alias.zsh"
+  alias vfunctions="vim $ZDOTDIR/zshrc.d/functions.zsh"
+  alias vexports="vim $ZDOTDIR/zsh.before/exports.zsh"
+  alias vzsh="(cd $ZDOTDIR; f)"
 
-hash -d conf=$ZDOTDIR/..
-hash -d vim=$ZDOTDIR/../vim
-hash -d tmux=$ZDOTDIR/../tmux
-hash -d zsh=$ZDOTDIR
-hash -d bin=$ZDOTDIR/bin
-hash -d h=$ZDOTDIR/../..
+  hash -d conf=$ZDOTDIR/..
+  hash -d vim=$ZDOTDIR/../vim
+  hash -d tmux=$ZDOTDIR/../tmux
+  hash -d zsh=$ZDOTDIR
+  hash -d bin=$ZDOTDIR/bin
+  hash -d h=$ZDOTDIR/../..
+  # vim last modified file in current dir
+  alias -g NF='*(.om[1])'  # newest file
+  alias -g ND='*(/om[1])'  # newest directory
+  alias vn='vim *(.om[1]^D)'
+
+  alias -g L=" | less"
+  alias -g G=" | \grep -i --color=auto -a"
+  alias -g P=" | pprint | less"
+  alias -g NE="2> /dev/null"
+  alias -g NUL="> /dev/null 2>&1"
+  alias -g GBK=" | iconv -f utf8 -t gb18030 -c"
+  alias -g UTF=" | iconv -f gb18030 -t utf8 -c"
+  alias -g LU=" | iconv -f utf8 -t gb18030 -c | less"
+  alias -g LG=" | iconv -f gb18030 -t utf8 -c | less"
+  alias -g TR1=" | tr '' '\t'"
+  alias -g TR,=" | tr ',' '\t'"
+  alias -g CSV=" | tr '\t' ',' "
+
+  alias -g E="luit -encoding gb18030"  # env gb18030 to utf
+fi
 
 alias ..="cd .."
 alias ...="cd ../.."

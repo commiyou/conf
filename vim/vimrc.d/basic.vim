@@ -127,7 +127,7 @@ function! IsDiff(opt)
 endfunction
 function! ShowTaglist()
     if line("$") > 200 && !IsDiff(expand('<amatch>'))
-        echom IsDiff(expand('<amatch>'))
+        " echom IsDiff(expand('<amatch>'))
         :call tagbar#autoopen(0)
     endif
 endfunction

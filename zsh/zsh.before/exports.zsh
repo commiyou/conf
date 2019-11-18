@@ -1,5 +1,9 @@
 umask 0022
 
+current_shell() {
+  sh -c 'ps -p $$ -o ppid=' | xargs ps -o comm= -p
+}
+
 [ -z $TERM ] && export TERM=screen-256color
 export TERM=screen-256color
 export LC_ALL=en_US.UTF-8

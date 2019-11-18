@@ -57,7 +57,7 @@ alias sortnr='sort -n -r -k'
 alias sortnrt="sort -n -r -t$'\t' -k"
 
 # TODO auto
-if [ -e "$ZDOTDIR" ]; then
+if [ $(current_shell) = "zsh" ]; then
   alias valias="vim $ZDOTDIR/zshrc.d/alias.zsh"
   alias vfunctions="vim $ZDOTDIR/zshrc.d/functions.zsh"
   alias vexports="vim $ZDOTDIR/zsh.before/exports.zsh"

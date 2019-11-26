@@ -254,3 +254,11 @@ extractd() {
 escape_string() {
     echo "$1" | sed "s/'/'\\\''/g;s/^\(.*\)$/'\1'/"
 }
+
+bash-set-title() {
+  if [[ -z "$ORIG" ]]; then
+    ORIG=$PS1
+  fi
+  TITLE="\[\e]2;$*\a\]"
+  PS1=${ORIG}${TITLE}
+}

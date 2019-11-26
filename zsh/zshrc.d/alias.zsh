@@ -102,3 +102,17 @@ alias rgp='rg -t py'
 alias rgs='rg -t sh'
 alias rga='rg -t sh -t cpp -t py -t protobuf -t c'
 alias ipython="BETTER_EXCEPTIONS=0 ipython"  # better exceptions raise exceptions in ipython
+
+alias gst="git status"
+alias gl="git pull"
+alias gco="git checkout"
+alias gcb='git checkout -b'
+alias grbc='git rebase --continue'
+alias gc='git commit -v'
+alias 'gc!'='git commit -v --amend'
+alias gd='git diff'
+alias gdca='git diff --cached'
+alias glog='git log --oneline --decorate --graph'
+alias gau='git add --update'
+alias gcmsg='git commit -m'
+alias ga='git add'

@@ -15,3 +15,6 @@
 *.pyc
 *.un~
 lib/
+/sshrc/.sshrc.d/vim/.cache/
+/sshrc/.sshrc.d/vim/.netrwhist
+/sshrc/.sshrc.d/vim/.viminfo

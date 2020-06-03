@@ -1,0 +1,34 @@
+# DESC: vim recent files
+# vim: filetype=zsh
+v() {
+  local files
+  setopt localoptions extendedglob
+  if [ $# -eq 1 ] && [ -f "$1" ]; then
+    ${vim:-vim} ${1/#\~/$HOME}
+    return
+  fi
+  if [ $# -gt 1 ] && [ $1 = '..' ]; then # project root/parent dir
+    shift
+    local parent_dir=$(z -e -b 2>/dev/null || echo ..)  
+
+    files=$( print -l $parent_dir/(^.git/)#/*(.om) |
+      while read line; do
+        [ -f "${line/\~/$HOME}" ] && echo "$line"
+      done | fzf-tmux -d -m -q "$*" -1) && ${vim:-vim} ${files/#\~/$HOME}
+
+      return
+  fi
+  if [ $# -gt 1 ] && [ $1 = '.' ]; then  # current dir
+    shift
+    files=$( print -l (^.git/)#/*(.om) |
+      while read line; do
+        [ -f "${line/\~/$HOME}" ] && echo "$line"
+      done | fzf-tmux -d -m -q "$*" -1) && ${vim:-vim} ${files/#\~/$HOME}
+      return
+
+  fi
+  files=$(grep '^>' ${viminfo:-"${${ZDOTDIR/%zsh/vim}:-$HOME}/.viminfo"} | cut -c3- |
+    while read line; do
+      [ -f "${line/\~/$HOME}" ] && echo "$line"
+    done | fzf-tmux -d -m -q "$*" -1) && ${vim:-vim} ${files/#\~/$HOME}
+  }

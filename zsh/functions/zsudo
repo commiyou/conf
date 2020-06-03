@@ -1,0 +1,5 @@
+# DESC: run sudo with 
+
+sudo =zsh -c "$functions[$1]" "$@"
+
+# vim:ft=zsh:et

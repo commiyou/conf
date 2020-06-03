@@ -1,0 +1,7 @@
+{
+	"prettier.printWidth":120,
+	"python.formatting.yapfPath": "yapf",
+	"python.formatting.yapfArgs": []
+
+
+}

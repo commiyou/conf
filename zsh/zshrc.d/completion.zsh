@@ -1,10 +1,6 @@
-#!/usr/bin/env bash
-BASEDIR=$(dirname "$0")
+# vi: set ft=sh
 
-# rm: advanced completion (e.g. bak files first)
-zstyle ':completion::*:rm:*:*' file-patterns '*.o:object-files:object\ file *(~|.(old|bak|BAK|log)):backup-files:backup\ files *~*(~|.(o|old|bak|BAK)):all-files:all\ files'
-
-# vim: advanced completion (e.g. tex and rc files first)
+## vim advanced completion (e.g. tex and rc files first)
 zstyle ':completion::*:vim:*:*' file-patterns '*Makefile|*(rc|log)|*.(php|tex|bib|sql|zsh|ini|sh|vim|rb|sh|js|tpl|csv|rdf|txt|phtml|tex|py|n3):vi-files:vim\ likes\ these\ files *~(Makefile|*(rc|log)|*.(log|rc|php|tex|bib|sql|zsh|ini|sh|vim|rb|sh|js|tpl|csv|rdf|txt|phtml|tex|py|n3)):all-files:other\ files'
 
 zstyle ':completion:*:*:vim:*:*files' ignored-patterns '*?.o' "*?.pyc"

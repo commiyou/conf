@@ -1,22 +1,25 @@
 SHELL=zsh
 
 typeset -A ZINIT=(
-  BIN_DIR         $ZDOTDIR/zinit/bin
-  HOME_DIR        $ZDOTDIR/zinit
+  BIN_DIR         ${XDG_DATA_HOME:-$HOME/.local/share}/zinit/bin
+  HOME_DIR        ${XDG_DATA_HOME:-$HOME/.local/share}/zinit
+  ZCOMPDUMP_PATH  ${XDG_CACHE_HOME:-$HOME/.cache}/zcompdump-${(%):-%n}
   COMPINIT_OPTS   -C
 )
 
+hash -d zinit=$ZINIT[HOME_DIR]
+
 ### Added by Zinit's installer
-if [[ ! -f $ZDOTDIR/zinit/bin/zinit.zsh ]]; then
+if [[ ! -f $ZINIT[BIN_DIR]/zinit.zsh ]]; then
   print -P "%F{33}▓▒░ %F{220}Installing %F{33}DHARMA%F{220} Initiative Plugin Manager (%F{33}zdharma/zinit%F{220})…%f"
-  command mkdir -p "$ZDOTDIR/zinit" && command chmod g-rwX "$ZDOTDIR/zinit"
-  command git clone https://github.com/zdharma/zinit "$ZDOTDIR/zinit/bin" && \
+  command mkdir -p "$ZINIT[HOME_DIR]" && command chmod g-rwX "$ZINIT[HOME_DIR]"
+  command git clone https://github.com/zdharma/zinit "$ZINIT[BIN_DIR]" && \
     print -P "%F{33}▓▒░ %F{34}Installation successful.%f%b" || \
     print -P "%F{160}▓▒░ The clone has failed.%f%b"
 fi
 
 
-source "$ZDOTDIR/zinit/bin/zinit.zsh"
+source $ZINIT[BIN_DIR]/zinit.zsh
 
 typeset -g ABSD=${${(M)OSTYPE:#*(darwin|bsd)*}:+1}
 
@@ -30,21 +33,9 @@ typeset -g ABSD=${${(M)OSTYPE:#*(darwin|bsd)*}:+1}
 
 autoload -Uz allopt zed zmv zcalc colors
 colors
-alias pl='print -rl --'
-
-alias n1ip="dig +short myip.opendns.com @resolver1.opendns.com"
-alias n1ips="ifconfig -a | grep -o 'inet6\? \(addr:\)\?\s\?\(\(\([0-9]\+\.\)\{3\}[0-9]\+\)\|[a-fA-F0-9:]\+\)' | awk '{ sub(/inet6? (addr:)? ?/, \"\"); print }'"
-
-alias zmv='noglob zmv -w'
-alias recently_changed='find . -newerct "15 minute ago" -print'
-recently_changed_x() { find . -newerct "$1 minute ago" -print; }
-alias -g SPRNG=" | curl -F 'sprunge=<-' http://sprunge.us"
-
-fpath+=( $ZDOTDIR/functions )
-autoload -Uz $ZDOTDIR/functions/*(:t)
-
 
 #### plugins
+load=light
 
 zinit light-mode for \
   zinit-zsh/z-a-submods \
@@ -66,6 +57,10 @@ zinit light-mode wait"2" lucid for \
   OMZP::rsync \
   OMZP::systemadmin \
   OMZP::urltools \
+  OMZL::clipboard.zsh \
+  OMZL::completion.zsh \
+  OMZL::functions.zsh \
+  OMZL::grep.zsh \
   #OMZP::vi-mode 
 
 #zplugin ice wait'1' lucid
@@ -78,8 +73,7 @@ zinit light-mode wait lucid for \
   urbainvaes/fzf-marks \
   wfxr/forgit \
   sbin'bin/fzf-tmux' src'shell/key-bindings.zsh'  bindmap='^T -> ^X^T; \ec -> ^X\ec' commiyou/fzf \
-  atload'ZSH_TMUX_FIXTERM=false' \
-  svn OMZP::tmux
+  atload'ZSH_TMUX_FIXTERM=false ZSH_TMUX_CONFIG=${XDG_CONFIG_HOME:-$HOME/.config}/tmux/tmux.conf'  svn OMZP::tmux
 
 zinit light-mode wait"1" lucid for \
   atinit"local zew_word_style=whitespace" \
@@ -92,7 +86,7 @@ zinit light-mode wait"2" lucid as"null" from"gh-r" for \
   sbin"fzf" bpick"$BPICK" junegunn/fzf-bin 
 
 zinit light-mode wait"2" lucid for \
-  atload'_ZL_DATA=$ZDOTDIR/.zlua; alias zh="z -I -t ."; alias zb="z -b" ' skywind3000/z.lua \
+  atload'export _ZL_DATA=$XDG_CACHE_HOME/.zlua; alias zh="z -I -t ."; alias zb="z -b" ' skywind3000/z.lua \
   atload'function _z() { _zlua "$@"; }' changyuheng/fz
 # light-mode within zshrc – for the instant prompt
 zinit ice atload"!source ${ZDOTDIR:-$HOME}/.p10k.zsh" lucid nocd
@@ -100,8 +94,10 @@ zinit light romkatv/powerlevel10k
 
 # completions
 zinit wait lucid blockf for \
-  zsh-users/zsh-completions 
-
+  zsh-users/zsh-completions \
+  as"completion" svn OMZP::fd \
+  as"completion" svn OMZP::docker \
+  as"completion" svn OMZP::ripgrep \
 
 
 zpcompinit; zpcdreplay

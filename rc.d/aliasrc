@@ -1,0 +1,147 @@
+# vim: set ft=sh
+
+alias pl='print -rl --'
+
+alias n1ip="dig +short myip.opendns.com @resolver1.opendns.com"
+alias n1ips="ifconfig -a | grep -o 'inet6\? \(addr:\)\?\s\?\(\(\([0-9]\+\.\)\{3\}[0-9]\+\)\|[a-fA-F0-9:]\+\)' | awk '{ sub(/inet6? (addr:)? ?/, \"\"); print }'"
+alias recently_changed='find . -newerct "15 minute ago" -print'
+recently_changed_x() { find . -newerct "$1 minute ago" -print; }
+# Detect which `ls` flavor is in use
+if ls --color > /dev/null 2>&1; then # GNU `ls`
+	colorflag="--color"
+else # macOS `ls`
+	colorflag="-G"
+	export LSCOLORS='BxBxhxDxfxhxhxhxhxcxcx'
+fi
+alias ls=" ls ${colorflag}"
+alias l="ls -lF"
+alias ll="ls -lhF"
+alias la="ls -lhFa"
+alias lrt="ls -lrth"
+alias lrs="ls -lrSh"
+alias ld="ls -lF | grep --color=never '^d'"
+alias l.="ls -ld .*"
+
+alias cp="cp -i"
+alias mv="mv -i"
+alias md="mkdir -p"
+mdc() {
+  mkdir -p $1 && cd $1
+}
+alias rm="rm -i"
+alias rmr="rm -rf"
+alias which="which -a"
+
+alias history=" history"
+
+alias vi=vim
+alias wcl="wc -l"
+alias df=" df -lh"
+alias pytest="py.test --cache-clear"
+
+alias k1="kill %1"
+alias k2="kill %2"
+alias k3="kill %3"
+alias k4="kill %4"
+alias k91="kill -9 %1"
+alias k92="kill -9 %2"
+alias k93="kill -9 %3"
+alias k94="kill -9 %4"
+alias grep="grep --color -a"
+alias sgrep='grep -R -n -H -C 5 -a exclude-dir={.git,.svn,CVS} '
+alias ack="ack --color"
+
+alias f.d='find . -type d -name'
+alias f.f='find . -type f -name'
+
+
+# fix sort bug
+alias sort="LC_ALL=C sort"  
+alias uniq="LC_ALL=C uniq"
+alias grep="LC_ALL=C grep"
+
+alias awkt='LC_ALL=C awk -F"\t"'
+alias cutt="cut -d$'\t'"
+alias sortt="LC_ALL=C sort -t$'\t'"
+
+alias dud='du -m -h -s -c -- * | sort -h'
+alias sortnr='sort -n -r -k'
+alias sortnrt="sort -n -r -t$'\t' -k"
+
+alias ..="cd .."
+alias ...="cd ../.."
+alias ....="cd ../../.."
+
+alias t="tail -f"
+
+alias ln="ln -si"
+alias lnf="ln -sf"
+alias rgc='rg -t cpp -t protobuf -t c'
+alias rgp='rg -t py'
+alias rgs='rg -t sh'
+alias rga='rg -t sh -t cpp -t py -t protobuf -t c'
+alias ipython="BETTER_EXCEPTIONS=0 ipython"  # better exceptions raise exceptions in ipython
+
+## git
+alias ga='git add'
+alias gau='git add --update'
+
+alias gb='git branch'
+alias gba='git branch -a'
+alias gbd='git branch -d'
+alias gbnm='git branch --no-merged'
+alias gbr='git branch --remote'
+alias gbs='git bisect'
+alias gbsb='git bisect bad'
+alias gbsg='git bisect good'
+alias gbsr='git bisect reset'
+alias gbss='git bisect start'
+
+
+alias gc='git commit -v'
+alias 'gc!'='git commit -v --amend'
+alias 'gcn!'='git commit -v --no-edit --amend'
+alias gcb='git checkout -b'
+alias gcmsg='git commit -m'
+
+alias gco="git checkout"
+alias gcl='git clone --recurse-submodules'
+alias gcm='git checkout master'
+
+alias gd='git diff'
+alias gdca='git diff --cached'
+alias gdcw='git diff --cached --word-diff'
+alias gdct='git describe --tags $(git rev-list --tags --max-count=10)'
+function gdv() { git diff -w "$@" | view - }
+# compdef _git gdv=git-diff
+
+alias gl="git pull"
+alias glog='git log --oneline --decorate --graph'
+alias gllog='git log --pretty=format:"%C(yellow)%h%Cred%d\\ %Creset%s%Cblue\\ [%cn]" --decorate --numstat'
+alias gm='git merge'
+alias gmom='git merge origin/master'
+alias gmt='git mergetool --no-prompt'
+alias gmtvim='git mergetool --no-prompt --tool=vimdiff'
+alias gmum='git merge upstream/master'
+alias gma='git merge --abort'
+
+alias gp='git push'
+alias gprv='git push origin HEAD:refs/for/$(git_current_branch)'
+#alias gpt='git push origin HEAD:refs/tags/$(git_current_branch)'
+
+alias grb='git rebase'
+alias grba='git rebase --abort'
+alias grbc='git rebase --continue'
+alias grhh='git reset --hard'
+alias grt='cd "$(git rev-parse --show-toplevel || echo .)"'
+alias groh='git reset origin/$(git_current_branch) --hard'
+
+alias gsa="git submodule add"
+alias gsb='git status -sb'
+alias gsh='git show'
+alias gst="git status"
+alias gupa='git pull --rebase --autostash'
+alias gup='git pull --rebase'
+
+
+

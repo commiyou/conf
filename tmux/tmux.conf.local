@@ -180,7 +180,7 @@ tmux_conf_theme_right_separator_sub='|'
 #     - #{username}
 #     - #{username_ssh}
 tmux_conf_theme_status_left=' ❐ #S | ↑#{?uptime_y, #{uptime_y}y,}#{?uptime_d, #{uptime_d}d,}#{?uptime_h, #{uptime_h}h,}#{?uptime_m, #{uptime_m}m,} '
-tmux_conf_theme_status_right='#{prefix_highlight}#{pairing}#{synchronized} #{?battery_status, #{battery_status},}#{?battery_bar, #{battery_bar},}#{?battery_percentage, #{battery_percentage},} , %R , %d %b | #{username}#{root} | #{hostname} '
+tmux_conf_theme_status_right='#{prefix_highlight}#{pairing}#{synchronized} #{?battery_status, #{battery_status},}#{?battery_bar, #{battery_bar},}#{?battery_percentage, #{battery_percentage},} , %R , %d %b | #{username}#{root} | #([ -n "$SSH_CONNECTION" ] && echo $SSH_CONNECTION | cut -f3 -d " " || echo "#hostname") '
 
 # status left style
 tmux_conf_theme_status_left_fg='#000000,#e4e4e4,#e4e4e4'  # black, white , white
@@ -305,7 +305,7 @@ bind -n C-7 select-window -t :=7
 bind -n C-8 select-window -t :=8
 bind -n C-9 select-window -t :=9
 bind -n M-- splitw -v -c "#{pane_current_path}"
-bind -n M-| splitw -h -c "#{pane_current_path}"
+bind -n M-\\ splitw -h -c "#{pane_current_path}"
 bind - splitw -v -c "#{pane_current_path}" bash
 bind | splitw -h -c "#{pane_current_path}" bash
 bind C new-session -c "#{pane_current_path}"
@@ -332,7 +332,7 @@ set -g @tpm_plugins {
 	christoomey/vim-tmux-navigator 
 	tmux-plugins/tmux-prefix-highlight 
 	tmux-plugins/tmux-copycat 
-	laktak/extrakto
+	commiyou/extrakto
 	tmux-plugins/tmux-resurrect
 }
 

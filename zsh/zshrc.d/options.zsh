@@ -24,10 +24,9 @@ setopt hist_ignore_space # Ignore commands with a space before
 setopt noHIST_NO_FUNCTIONS               # save function define
 setopt HIST_VERIFY  # perform history expansion and reload the line into the editing buffer
 setopt inc_append_history # Add commands as they are typed, don't wait until shell exit
+setopt share_history
 
 # Input/Output
-CORRECT_IGNORE_FILE='.*'
-setopt correct_all   # CORRECT_IGNORE_FILE to ignore
 setopt NO_FLOW_CONTROL                 # Ignore ^S/^Q
 setopt interactive_comments
 

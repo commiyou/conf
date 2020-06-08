@@ -27,7 +27,7 @@ v() {
       return
 
   fi
-  files=$(grep '^>' ${viminfo:-"${${ZDOTDIR/%zsh/vim}:-$HOME}/.viminfo"} | cut -c3- |
+  files=$(grep '^>' ${viminfo:-"$XDG_CACHE_HOME/vim/viminfo"} | cut -c3- |
     while read line; do
       [ -f "${line/\~/$HOME}" ] && echo "$line"
     done | fzf-tmux -d -m -q "$*" -1) && ${vim:-vim} ${files/#\~/$HOME}

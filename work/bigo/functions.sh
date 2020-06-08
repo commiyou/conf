@@ -23,6 +23,7 @@ function dbls() {
 alias hdls="hadoop fs -ls"
 alias hdrm="hadoop fs -rmr"
 alias hdput="hadoop fs -put"
+
 function down_repo() {
   for repo in ${@}
   do
@@ -96,4 +97,38 @@ function gg() {
   fi
   sshrc -o StrictHostKeyChecking=no -p 10020 $(echo $target | cut -f1 -d' ')
   set +x
+}
+
+conan_build() {
+  cd $(git rev-parse --show-toplevel)
+  [ "$1" == "-f" ] && rm -r build 
+  mkdir -p build && cd build 
+  conan install .. -u --build=missing && cmake .. && make -j 32
+}
+
+gerrit_url() {
+  local repo_name=${1:-$(basename $(git rev-parse --show-toplevel))}
+  echo "http://gerrit.sysop.520hello.com/#/admin/projects/$repo_name,branches"
+}
+
+service_conf() {
+  vim /data/services/*$1*/conf/server.conf
+}
+
+service_gflag() {
+  vim /data/services/*$1*/conf/gflags.conf
+}
+
+service_log() {
+  less /data/yy/log/*$1*/*$1*.log
+}
+
+service_port() {
+  #port, pid
+  sudo netstat -t -l -n -p | awk '/LISTEN/{n = split($4, a, ":"); m = split($7, b, "/"); print a[n]"\t"b[1]  }'
+}
+
+service_debug() {
+
+
 }

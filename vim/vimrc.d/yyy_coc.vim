@@ -17,8 +17,8 @@ endif
 autocmd CursorHold * silent call CocActionAsync('highlight')
 
 
-let g:coc_config_home = g:vimdir
-let g:coc_data_home = g:vimdir . '/plugins/coc'
+let g:coc_config_home = g:confdir
+let g:coc_data_home = $XDG_DATA_HOME . '/coc'
 
 call coc#add_extension("coc-python")
 call coc#add_extension("coc-snippets")
@@ -44,7 +44,7 @@ call coc#add_extension("coc-git")
 call coc#add_extension("coc-prettier")
 command! -nargs=0 Prettier :CocCommand prettier.formatFile
 
-call coc#add_extension("coc-pairs")
+"call coc#add_extension("coc-pairs")
 call coc#add_extension("coc-lists")
 call coc#add_extension("coc-sql")
 call coc#add_extension("coc-markdownlint")
@@ -55,7 +55,7 @@ call coc#add_extension("coc-word")
 call coc#add_extension("coc-cmake")
 call coc#add_extension("coc-highlight")
 autocmd CursorHold * silent call CocActionAsync('highlight')
-call coc#add_extension("coc-sh")
+" call coc#add_extension("coc-sh")
 call coc#add_extension("coc-ultisnips")
 call coc#add_extension("coc-lines")
 Plug 'skywind3000/asynctasks.vim'

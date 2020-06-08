@@ -21,16 +21,6 @@ fi
 
 source $ZINIT[BIN_DIR]/zinit.zsh
 
-typeset -g ABSD=${${(M)OSTYPE:#*(darwin|bsd)*}:+1}
-
-(( ABSD )) && {
-  BPICK='*(darwin|apple|mac)*'
-} || {
-  BPICK='*(linux|musl)*'
-}
-
-
-
 autoload -Uz allopt zed zmv zcalc colors
 colors
 
@@ -41,10 +31,10 @@ zinit light-mode for \
   zinit-zsh/z-a-submods \
   zinit-zsh/z-a-bin-gem-node \
 
-zinit ice atclone"dircolors -b LS_COLORS > clrs.zsh" \
-  atpull'%atclone' pick"clrs.zsh" nocompile'!' \
-  atload'zstyle ":completion:*" list-colors "${(s.:.)LS_COLORS}"' \
-  zinit light-mode trapd00r/LS_COLORS
+zinit ice atclone"dircolors -b LS_COLORS | sed '1  aLS_COLORS=\"\$LS_COLORS:di=01;34\"' > c.zsh" \
+  atpull'%atclone' pick"c.zsh" nocompile'!' \
+  atload'zstyle ":completion:*" list-colors "${(s.:.)LS_COLORS}"' 
+zinit $load trapd00r/LS_COLORS
 
   #OMZP::sudo \
 zinit light-mode wait"2" lucid for \
@@ -81,9 +71,10 @@ zinit light-mode wait"1" lucid for \
 
 zinit light-mode wait"2" lucid as"null" from"gh-r" for \
   mv"exa* -> exa" sbin ogham/exa \
-  mv"fd* -> fd" sbin"fd/fd" bpick"$BPICK" @sharkdp/fd \
-  mv"ripgrep* -> rg" sbin"rg/rg" bpick"$BPICK"  BurntSushi/ripgrep \
-  sbin"fzf" bpick"$BPICK" junegunn/fzf-bin 
+  mv"fd* -> fd" sbin"fd/fd" @sharkdp/fd \
+  mv"ripgrep* -> rg" sbin"rg/rg" BurntSushi/ripgrep \
+  sbin"fzf" junegunn/fzf-bin 
+
 
 zinit light-mode wait"2" lucid for \
   atload'export _ZL_DATA=$XDG_CACHE_HOME/.zlua; alias zh="z -I -t ."; alias zb="z -b" ' skywind3000/z.lua \

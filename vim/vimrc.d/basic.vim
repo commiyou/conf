@@ -1,7 +1,7 @@
 " must come first
 set nocompatible 
 
-let &viminfo .= ',n' . g:vimdir . '/.viminfo'
+" let &viminfo .= ',n' . g:vimdir . '/.viminfo'
 
 set history=200 " history of previous command/search
 
@@ -11,10 +11,10 @@ let g:mapleader = " "
 set ruler " show cusor position
 set hidden " buffer become hidden when it is abandoned
 
-if !isdirectory(g:cachedir . "/undodir")
-    call mkdir(g:cachedir . "/undodir", "p")
-endif
-let &undodir= g:cachedir . '/undodir'
+"if !isdirectory(g:cachedir . "/undodir")
+"    call mkdir(g:cachedir . "/undodir", "p")
+"endif
+"let &undodir= g:cachedir . '/undodir'
 set undofile
 
 set encoding=utf8

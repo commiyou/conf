@@ -1,12 +1,12 @@
 set encoding=utf-8
 
-if empty(glob(g:vimdir . '/autoload/plug.vim'))
-	  silent exec '!curl -fLo ' . g:vimdir . '/autoload/plug.vim --create-dirs
+if empty(glob(g:confdir . '/autoload/plug.vim'))
+	  silent exec '!curl -fLo ' . g:confdir . '/autoload/plug.vim --create-dirs
 	     \  https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim'
       autocmd VimEnter * PlugInstall --sync | source $MYVIMRC
 endif
 
-call plug#begin(g:vimdir . "/plugged")
+call plug#begin(g:datadir . "/plugged")
 
 let hostname = system('hostname')
 if 0

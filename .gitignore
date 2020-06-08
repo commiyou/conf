@@ -32,3 +32,4 @@ zsdoc/data
 .zhistory
 zinit
 .path
+vim/autoload

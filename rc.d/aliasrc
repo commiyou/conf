@@ -126,8 +126,8 @@ alias gmum='git merge upstream/master'
 alias gma='git merge --abort'
 
 alias gp='git push'
-alias gprv='git push origin HEAD:refs/for/$(git_current_branch)'
-#alias gpt='git push origin HEAD:refs/tags/$(git_current_branch)'
+alias gpcr='git push origin HEAD:refs/for/$(git_current_branch)'
+alias gpnt='git push origin HEAD:refs/tags/$(( git describe --tags $(git rev-list --tags --max-count=20) 2>/dev/null || echo 0.0.0 ) | sort -rV | head -1 | awk -F. -v OFS=. \{\$NF++\;print\})'
 
 alias grb='git rebase'
 alias grba='git rebase --abort'
@@ -140,6 +140,10 @@ alias gsa="git submodule add"
 alias gsb='git status -sb'
 alias gsh='git show'
 alias gst="git status"
+
+alias gtd="git tag --delete"
+alias gtdr="_gtdr(){git push origin :refs/tags/$1}; _gtdr"
+
 alias gupa='git pull --rebase --autostash'
 alias gup='git pull --rebase'
 

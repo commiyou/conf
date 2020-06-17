@@ -9,6 +9,8 @@ hash -d vim=$XDG_CONFIG_HOME/vim
 hash -d tmux=$XDG_CONFIG_HOME/tmux
 hash -d zsh=$XDG_CONFIG_HOME/zsh
 hash -d rc=$XDG_CONFIG_HOME/rc.d
+hash -d cache=$XDG_CACHE_HOME
+hash -d data=$XDG_DATA_HOME
 
 # vim last modified file in current dir
 alias -g NF='*(.om[1])'  # newest file

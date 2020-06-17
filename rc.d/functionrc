@@ -21,3 +21,19 @@ function git_current_branch() {
 function git_current_remote_branch() {
   git status -b --porcelain=v2 | grep -m 1 "^# branch.upstream " | cut -d " " -f 3-
 }
+
+function git_config_user() {
+	local email name
+	if [ $# -eq 0 ]; then
+		email=commiyou@gmail.com
+    name=commiyou
+  elif [ $# -eq 1 ]; then
+    email="$1"
+    name="${email%@*}"
+  elif [ $# -eq 2 ]; then
+    email="$1"
+    name="$2"
+  fi
+  git config user.email $email
+  git config user.name $name
+}

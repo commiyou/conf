@@ -8,7 +8,7 @@ alias recently_changed='find . -newerct "15 minute ago" -print'
 recently_changed_x() { find . -newerct "$1 minute ago" -print; }
 # Detect which `ls` flavor is in use
 if ls --color > /dev/null 2>&1; then # GNU `ls`
-	colorflag="--color"
+	colorflag="--color=auto"
 else # macOS `ls`
 	colorflag="-G"
 	export LSCOLORS='BxBxhxDxfxhxhxhxhxcxcx'

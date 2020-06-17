@@ -1,7 +1,6 @@
-" must come first
-set nocompatible 
-
 " let &viminfo .= ',n' . g:vimdir . '/.viminfo'
+set modeline
+set modelines=5
 
 set history=200 " history of previous command/search
 

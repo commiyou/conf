@@ -1,6 +1,6 @@
 # get the ftp path of files, defalut CWD
 #
-[ -f $XDG_CONFIG_HOME/rc.d/functionrc ] && source $XDG_CONFIG_HOME/rc.d/functionrc
+[ -f "$XDG_CONFIG_HOME/rc.d/functionrc" ] && source $XDG_CONFIG_HOME/rc.d/functionrc
 
 fpath+=( $ZDOTDIR/functions )
 autoload -Uz $ZDOTDIR/functions/*(:t)

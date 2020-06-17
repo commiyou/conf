@@ -24,13 +24,6 @@ alias hdls="hadoop fs -ls"
 alias hdrm="hadoop fs -rmr"
 alias hdput="hadoop fs -put"
 
-function down_repo() {
-  for repo in ${@}
-  do
-    git clone ssh://youbin@gerrit.sysop.520hello.com:29418/$repo && scp -p -P 29418 youbin@gerrit.sysop.520hello.com:hooks/commit-msg $repo/.git/hooks/
-  done
-}
-
 alias ssh="ssh -o StrictHostKeyChecking=no -p 10020"
 
 unalias go 2>/dev/null
@@ -100,7 +93,7 @@ function gg() {
 }
 
 conan_build() {
-  cd $(git rev-parse --show-toplevel)
+  cd $(git rev-parse --show-toplevel 2>/dev/null || echo .) 
   [ "$1" == "-f" ] && rm -r build 
   mkdir -p build && cd build 
   conan install .. -u --build=missing && cmake .. && make -j 32

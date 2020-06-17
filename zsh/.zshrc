@@ -1,3 +1,10 @@
+# Enable Powerlevel10k instant prompt. Should stay close to the top of ~/confn/zsh/.zshrc.
+# Initialization code that may require console input (password prompts, [y/n]
+# confirmations, etc.) must go above this block; everything else may go below.
+if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
+  source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
+fi
+
 # vim: set filetype=zsh
 #
 
@@ -20,3 +27,6 @@ if [[ "$ZSH_DEBUG" ]]; then
   unsetopt xtrace
   exec 2>&3 3>&-
 fi
+
+# To customize prompt, run `p10k configure` or edit ~/confn/zsh/.p10k.zsh.
+[[ ! -f ~/confn/zsh/.p10k.zsh ]] || source ~/confn/zsh/.p10k.zsh

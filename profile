@@ -1,4 +1,4 @@
-# vim : set ft=sh
+# vi : syntax=sh
 #
 export XDG_CONFIG_HOME=~/confn
 export XDG_CACHE_HOME="${HOME}/.cache"
@@ -17,3 +17,9 @@ export TERM="xterm-256color"
 unset TMOUT
 
 umask 022
+
+# auto install
+AUTO_INSTALL=true
+
+# load work rcfiles
+WORK_ENV=bigo

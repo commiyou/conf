@@ -1,5 +1,6 @@
 " what is the name of the directory containing this file?
 "
+set nocompatible
 let g:vimrc = resolve(expand('<sfile>:p'))
 let g:vimdir = fnamemodify(g:vimrc, ':h')
 "let g:cachedir = g:vimdir . '/.cache'
@@ -12,4 +13,3 @@ let g:vimdir = fnamemodify(g:vimrc, ':h')
 for f in split(glob(g:vimdir . "/vimrc.d/*.vim"), '\n')
     exe 'source' f
 endfor
-

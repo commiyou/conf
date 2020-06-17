@@ -8,6 +8,8 @@ endif
 
 call plug#begin(g:datadir . "/plugged")
 
+let g:netrw_home= g:cachedir
+
 let hostname = system('hostname')
 if 0
 	set pyxversion=2

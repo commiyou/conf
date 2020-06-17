@@ -1,4 +1,5 @@
 SHELL=zsh
+[ -n "$AUTO_INSTALL" ] || return
 
 typeset -A ZINIT=(
   BIN_DIR         ${XDG_DATA_HOME:-$HOME/.local/share}/zinit/bin
@@ -18,11 +19,7 @@ if [[ ! -f $ZINIT[BIN_DIR]/zinit.zsh ]]; then
     print -P "%F{160}▓▒░ The clone has failed.%f%b"
 fi
 
-
 source $ZINIT[BIN_DIR]/zinit.zsh
-
-autoload -Uz allopt zed zmv zcalc colors
-colors
 
 #### plugins
 load=light
@@ -30,14 +27,14 @@ load=light
 zinit light-mode for \
   zinit-zsh/z-a-submods \
   zinit-zsh/z-a-bin-gem-node \
+  zinit-zsh/z-a-man
 
 zinit ice atclone"dircolors -b LS_COLORS | sed '1  aLS_COLORS=\"\$LS_COLORS:di=01;34\"' > c.zsh" \
   atpull'%atclone' pick"c.zsh" nocompile'!' \
   atload'zstyle ":completion:*" list-colors "${(s.:.)LS_COLORS}"' 
 zinit $load trapd00r/LS_COLORS
 
-  #OMZP::sudo \
-zinit light-mode wait"2" lucid for \
+zinit light-mode wait lucid for \
   OMZP::fancy-ctrl-z \
   OMZP::colored-man-pages \
   OMZP::command-not-found \
@@ -56,7 +53,6 @@ zinit light-mode wait"2" lucid for \
 #zplugin ice wait'1' lucid
 #zplugin light laggardkernel/zsh-thefuck
 
-# zsh-autopair
 # fzf-marks, at slot 0, for quick Ctrl-G accessibility
 zinit light-mode wait lucid for \
   hlissner/zsh-autopair \
@@ -79,8 +75,9 @@ zinit light-mode wait"2" lucid as"null" from"gh-r" for \
 zinit light-mode wait"2" lucid for \
   atload'export _ZL_DATA=$XDG_CACHE_HOME/.zlua; alias zh="z -I -t ."; alias zb="z -b" ' skywind3000/z.lua \
   atload'function _z() { _zlua "$@"; }' changyuheng/fz
+
 # light-mode within zshrc – for the instant prompt
-zinit ice atload"!source ${ZDOTDIR:-$HOME}/.p10k.zsh" lucid nocd
+zinit ice atload"!source ${ZDOTDIR:-$HOME}/.p10k.zsh" lucid nocd depth=1
 zinit light romkatv/powerlevel10k
 
 # completions
@@ -122,3 +119,16 @@ zinit light-mode wait lucid for \
   atload"!_zsh_autosuggest_start" \
   zsh-users/zsh-autosuggestions 
 
+local cf
+if [ -n "$WORK_ENV" ] && [ -d $XDG_CONFIG_HOME/work/$WORK_ENV/ ]; then
+  #source $config_file
+  #for cf ($XDG_CONFIG_HOME/work/$WORK_ENV/*.sh) zinit snippet $cf
+  zinit light-mode wait lucid is-snippet for \
+    $XDG_CONFIG_HOME/work/$WORK_ENV/functions.sh \
+    $XDG_CONFIG_HOME/work/$WORK_ENV/bigo.sh \
+    as"completion" $XDG_CONFIG_HOME/work/$WORK_ENV/_bigo
+  
+
+  #zinit light-mode wait"2"  as"completion" for \
+  #  $XDG_CONFIG_HOME/work/$WORK_ENV
+fi

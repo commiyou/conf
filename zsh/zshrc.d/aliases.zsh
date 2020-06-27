@@ -2,6 +2,7 @@
 
 
 alias zmv='noglob zmv -w'
+# paste online
 alias -g SPRNG=" | curl -F 'sprunge=<-' http://sprunge.us"
 
 hash -d conf=$XDG_CONFIG_HOME

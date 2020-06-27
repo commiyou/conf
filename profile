@@ -19,7 +19,7 @@ unset TMOUT
 umask 022
 
 # auto install
-AUTO_INSTALL=true
+export AUTO_INSTALL=true
 
 # load work rcfiles
-WORK_ENV=bigo
+export WORK_ENV=bigo

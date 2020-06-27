@@ -2,7 +2,7 @@
 set modeline
 set modelines=5
 
-set history=200 " history of previous command/search
+set history=2000 " history of previous command/search
 
 let mapleader = " "
 let g:mapleader = " "
@@ -21,7 +21,7 @@ set fileencodings=utf8,gbk
 set number
 set rnu  " relativenumber
 set cul  " cursorline
-set noexpandtab
+set expandtab
 set lcs=tab::\|\,trail:-\,eol:$   " listchars
 set gdefault " the :substitute flag 'g' is default on
 set noeol " no auto add <EOL>

@@ -334,10 +334,10 @@ set -g @tpm_plugins {
 
 	#tmux-plugins/tmux-resurrect
 
-if "test ! -d #{TMUX_PLUGIN_MANAGER_PATH}/tpm" \
+if 'test ! -d #{TMUX_PLUGIN_MANAGER_PATH}/tpm && test -n "$AUTO_INSTALL"'\
 	"run 'git clone https://github.com/tmux-plugins/tpm #{TMUX_PLUGIN_MANAGER_PATH}/tpm && #{TMUX_PLUGIN_MANAGER_PATH}/tpm/bin/install_plugins'"
 
-run -b '#{TMUX_PLUGIN_MANAGER_PATH}/tpm/tpm'
+if 'test -d #{TMUX_PLUGIN_MANAGER_PATH}/tpm ' "run -b '#{TMUX_PLUGIN_MANAGER_PATH}/tpm/tpm'"
 
 #set-option -g @tmux_conf ~/.tmux.conf
 # move status line to top

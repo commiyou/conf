@@ -22,19 +22,20 @@ fi
 source $ZINIT[BIN_DIR]/zinit.zsh
 
 #### plugins
-load=light
+load=load
+[[ $load == light ]] && lightmode=light-mode || lightmode=
 
-zinit light-mode for \
+zinit $lightmode for \
   zinit-zsh/z-a-submods \
   zinit-zsh/z-a-bin-gem-node \
   zinit-zsh/z-a-man
 
-zinit ice atclone"dircolors -b LS_COLORS | sed '1  aLS_COLORS=\"\$LS_COLORS:di=01;34\"' > c.zsh" \
+zinit ice atclone"!dircolors -b LS_COLORS | sed '1  aLS_COLORS=\"\$LS_COLORS:di=01;34\"' > c.zsh" \
   atpull'%atclone' pick"c.zsh" nocompile'!' \
-  atload'zstyle ":completion:*" list-colors "${(s.:.)LS_COLORS}"' 
+  atload'!zstyle ":completion:*" list-colors "${(s.:.)LS_COLORS}"' 
 zinit $load trapd00r/LS_COLORS
 
-zinit light-mode wait lucid for \
+zinit $lightmode wait lucid for \
   OMZP::fancy-ctrl-z \
   OMZP::colored-man-pages \
   OMZP::command-not-found \
@@ -54,41 +55,41 @@ zinit light-mode wait lucid for \
 #zplugin light laggardkernel/zsh-thefuck
 
 # fzf-marks, at slot 0, for quick Ctrl-G accessibility
-zinit light-mode wait lucid for \
+zinit $lightmode wait lucid for \
   hlissner/zsh-autopair \
   urbainvaes/fzf-marks \
   wfxr/forgit \
-  sbin'bin/fzf-tmux' src'shell/key-bindings.zsh'  bindmap='^T -> ^X^T; \ec -> ^X\ec' commiyou/fzf \
-  atload'ZSH_TMUX_FIXTERM=false ZSH_TMUX_CONFIG=${XDG_CONFIG_HOME:-$HOME/.config}/tmux/tmux.conf'  svn OMZP::tmux
+  sbin'bin/fzf-tmux' src'shell/key-bindings.zsh'  trackbinds bindmap='^T -> ^X^T; \ec -> ^X\ec' commiyou/fzf \
+  sbin"sshrc" atload'export SSHHOME=$XDG_CONFIG_HOME' commiyou/sshrc \
+  atload'!ZSH_TMUX_FIXTERM=false ZSH_TMUX_CONFIG=${XDG_CONFIG_HOME:-$HOME/.config}/tmux/tmux.conf'  svn OMZP::tmux
 
-zinit light-mode wait"1" lucid for \
+zinit $lightmode wait"1" lucid for \
   atinit"local zew_word_style=whitespace" \
   psprint/zsh-editing-workbench
 
-zinit light-mode wait"2" lucid as"null" from"gh-r" for \
+zinit $lightmode wait"2" lucid as"null" from"gh-r" for \
   mv"exa* -> exa" sbin ogham/exa \
   mv"fd* -> fd" sbin"fd/fd" @sharkdp/fd \
   mv"ripgrep* -> rg" sbin"rg/rg" BurntSushi/ripgrep \
   sbin"fzf" junegunn/fzf-bin 
 
 
-zinit light-mode wait"2" lucid for \
-  atload'export _ZL_DATA=$XDG_CACHE_HOME/.zlua; alias zh="z -I -t ."; alias zb="z -b" ' skywind3000/z.lua \
-  atload'function _z() { _zlua "$@"; }' changyuheng/fz
+zinit $lightmode wait"2" lucid for \
+  atload'!export _ZL_DATA=$XDG_CACHE_HOME/.zlua; alias zh="z -I -t ."; alias zb="z -b" ' skywind3000/z.lua \
+  atload'!function _z() { _zlua "$@"; }' changyuheng/fz
 
 # light-mode within zshrc – for the instant prompt
 zinit ice atload"!source ${ZDOTDIR:-$HOME}/.p10k.zsh" lucid nocd depth=1
-zinit light romkatv/powerlevel10k
+zinit $load romkatv/powerlevel10k
 
 # completions
-zinit wait lucid blockf for \
+zinit $lightmode wait lucid blockf atpull'!zinit creinstall -q .' for \
   zsh-users/zsh-completions \
   as"completion" svn OMZP::fd \
   as"completion" svn OMZP::docker \
   as"completion" svn OMZP::ripgrep \
 
 
-zpcompinit; zpcdreplay
 
 # (experimental, may change in the future)
 # some boilerplate code to define the variable `extract` which will be used later
@@ -113,22 +114,19 @@ zstyle ':fzf-tab:*'    extra-opts '--no-sort'
 zstyle ':completion:*' sort       'false'
 
 # Fast-syntax-highlighting & autosuggestions
-zinit light-mode wait lucid for \
+zpcompinit; zpcdreplay
+  #atinit"!zicompinit; zicdreplay" \
+zinit $lightmode wait'0b' lucid for \
   Aloxaf/fzf-tab \
   zdharma/fast-syntax-highlighting \
-  atload"!_zsh_autosuggest_start" \
-  zsh-users/zsh-autosuggestions 
+  atload"!_zsh_autosuggest_start" zsh-users/zsh-autosuggestions 
 
 local cf
 if [ -n "$WORK_ENV" ] && [ -d $XDG_CONFIG_HOME/work/$WORK_ENV/ ]; then
   #source $config_file
   #for cf ($XDG_CONFIG_HOME/work/$WORK_ENV/*.sh) zinit snippet $cf
-  zinit light-mode wait lucid is-snippet for \
+  zinit $lightmode wait'0c' lucid is-snippet for \
     $XDG_CONFIG_HOME/work/$WORK_ENV/functions.sh \
     $XDG_CONFIG_HOME/work/$WORK_ENV/bigo.sh \
-    as"completion" $XDG_CONFIG_HOME/work/$WORK_ENV/_bigo
-  
-
-  #zinit light-mode wait"2"  as"completion" for \
-  #  $XDG_CONFIG_HOME/work/$WORK_ENV
+    $XDG_CONFIG_HOME/work/$WORK_ENV/bigo-completion.sh
 fi

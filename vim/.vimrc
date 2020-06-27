@@ -1,15 +1,11 @@
 " what is the name of the directory containing this file?
 "
 set nocompatible
-let g:vimrc = resolve(expand('<sfile>:p'))
-let g:vimdir = fnamemodify(g:vimrc, ':h')
-"let g:cachedir = g:vimdir . '/.cache'
-"let $vimdir= g:vimdir
-"let $cachedir = g:cachedir
-
-" set default 'runtimepath' (without ~/.vim folders)
-" let &runtimepath = printf('%s,%s', g:vimdir, $VIMRUNTIME)
-
-for f in split(glob(g:vimdir . "/vimrc.d/*.vim"), '\n')
-    exe 'source' f
-endfor
+if !empty($XDG_CONFIG_HOME) && isdirectory($XDG_CONFIG_HOME.'/vim')
+    for f in split(glob($XDG_CONFIG_HOME."/vim/vimrc.d/*.vim"), '[\r\n]')
+        exe 'source' f
+    endfor
+else
+    let g:vimrc = resolve(expand('<sfile>:p'))
+    let g:vimdir = fnamemodify(g:vimrc, ':h')
+endif

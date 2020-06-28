@@ -12,7 +12,7 @@ fi
 export ZDOTDIR=~/conf/zsh
 # export https_proxy=
 # export http_proxy=$https_proxy
-TERM=screen-256color
+# TERM=screen-256color
 
 export PATH=$ZDOTDIR/bin:$PATH
 source $ZDOTDIR/zsh.before/exports.zsh

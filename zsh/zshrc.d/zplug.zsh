@@ -153,6 +153,7 @@ zplug "so-fancy/diff-so-fancy", as:command
 
 zplug "LuRsT/hr", as:command, hook-build:"cp $ZPLUG_REPOS/LuRsT/hr/hr.1 $ZPLUG_HOME/doc/man/man1"
 
+zplug "Aloxaf/fzf-tab", defer:3
 
 if ! zplug check; then
   printf "Install? [y/N]: "

@@ -4,3 +4,5 @@ tablib
 toolz
 bidict
 click
+better_exceptions
+yapf

@@ -4,8 +4,8 @@ current_shell() {
   sh -c 'ps -p $$ -o ppid=' | xargs ps -o comm= -p
 }
 
-[ -z $TERM ] && export TERM=screen-256color
-export TERM=screen-256color
+#[ -z $TERM ] && export TERM=screen-256color
+export TERM=xterm-256color
 export LC_ALL=en_US.UTF-8
 export LANG=$LC_ALL
 [ -e "$ZDOTDIR" ] && export HISTFILE="$ZDOTDIR"/.zsh_history

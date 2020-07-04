@@ -112,7 +112,9 @@ alias gd='git diff'
 alias gdca='git diff --cached'
 alias gdcw='git diff --cached --word-diff'
 alias gdct='git describe --tags $(git rev-list --tags --max-count=10)'
-function gdv() { git diff -w "$@" | view - }
+gdv() {
+    git diff -w "$@" | view - 
+}
 # compdef _git gdv=git-diff
 
 alias gl="git pull"
@@ -146,6 +148,3 @@ alias gtdr="_gtdr(){git push origin :refs/tags/$1}; _gtdr"
 
 alias gupa='git pull --rebase --autostash'
 alias gup='git pull --rebase'
-
-
-

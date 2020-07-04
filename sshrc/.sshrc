@@ -1,12 +1,15 @@
 # vi: ft=sh
-[ -e $SSHHOME/.sshrc.d/.vimrc ] && export VIMINIT="let \$MYVIMRC='$SSHHOME/.sshrc.d/.vimrc' | source \$MYVIMRC"
-for filename in $SSHHOME/.sshrc.d/rc.d/*.sh
+[ -e $SSHHOME/.sshrc.d/vim/vimrc ] && export VIMINIT="let \$MYVIMRC='$SSHHOME/.sshrc.d/vim/vimrc' | source \$MYVIMRC"
+for filename in $SSHHOME/.sshrc.d/rc.d/*rc
 do
   source $filename
 done
-for filename in $SSHHOME/.sshrc.d/work/$WORK_ENV/*.sh
+for filename in $SSHHOME/.sshrc.d/work/*.sh
 do
   source $filename
 done
+unset filename
 export EDITOR=vim
+HISTFILESIZE=10000
+HISTSIZE=10000
 

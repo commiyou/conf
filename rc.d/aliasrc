@@ -51,8 +51,8 @@ alias grep="grep --color -a"
 alias sgrep='grep -R -n -H -C 5 -a exclude-dir={.git,.svn,CVS} '
 alias ack="ack --color"
 
-alias f.d='find . -type d -name'
-alias f.f='find . -type f -name'
+alias fdd='find . -type d -name'
+alias fdf='find . -type f -name'
 
 
 # fix sort bug

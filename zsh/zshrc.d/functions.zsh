@@ -5,35 +5,6 @@
 fpath+=( $ZDOTDIR/functions )
 autoload -Uz $ZDOTDIR/functions/*(:t)
 
-filepath() {
-  local p="${1:-.}"
-  if command -v realpath > /dev/null 2>&1 
-  then
-    realpath "${p}" 
-  else
-    readlink -f "$p"
-  fi
-}
-
-fp() {
-	[[ $# = 0 ]] && echo $(myip):$(filepath .) && return
-	for file in "$@"; do
-		[[ -e "$file" ]] && echo $(myip):$(filepath "$file") \
-			|| echo "can NOT find $file" >&2
-	done
-}
-# human size
-human() {
-	for arg in "$@"
-	do
-		echo "$arg" | awk '{ split( "B KB MB GB TB" , v ); s=1;size=int($1); while( size>1024 && s<5){ size/=1024; s++ } printf("%s\t%.1f%s\n", $0, size, v[s]) }'
-	done
-}
-
-# calc expresion
-C() {
-	python -c "from __future__ import division;print '%.3f' % ($@)"
-}
 
 gconfig() {
   local email name tmp_name
@@ -121,10 +92,6 @@ websvr() {
   echo http://$(myip):$MPORT starting...
 }
 
-# re escape, useful for awk/grep
-reescape() {
-  echo "$1" | python -c 'import re,sys;print re.escape(sys.stdin.readline().rstrip("\n"));'
-}
 
 # symbokic files under TARGET to DEST dir
 # args:
@@ -270,9 +237,6 @@ extractd() {
 }
 
 
-escape_string() {
-    echo "$1" | sed "s/'/'\\\''/g;s/^\(.*\)$/'\1'/"
-}
 
 bash-set-title() {
   if [[ -z "$ORIG" ]]; then

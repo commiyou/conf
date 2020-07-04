@@ -55,7 +55,11 @@ function go() {
     ip=$(echo "$ips" | sed -n "${NO}p")
     target=$ip
   fi
-  ssh -o StrictHostKeyChecking=no -p 10020 $(echo $target | cut -f1 -d' ')
+  if command -v sshrc &> /dev/null; then
+    sshrc -o StrictHostKeyChecking=no -p 10020 $(echo $target | cut -f1 -d' ')
+  else
+    ssh -o StrictHostKeyChecking=no -p 10020 $(echo $target | cut -f1 -d' ')
+  fi
   set +x
 }
 
@@ -122,6 +126,5 @@ service_port() {
 }
 
 service_debug() {
-
-
+:
 }

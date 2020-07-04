@@ -1,0 +1,12 @@
+# vi: ft=sh
+[ -e $SSHHOME/.sshrc.d/.vimrc ] && export VIMINIT="let \$MYVIMRC='$SSHHOME/.sshrc.d/.vimrc' | source \$MYVIMRC"
+for filename in $SSHHOME/.sshrc.d/rc.d/*.sh
+do
+  source $filename
+done
+for filename in $SSHHOME/.sshrc.d/work/$WORK_ENV/*.sh
+do
+  source $filename
+done
+export EDITOR=vim
+

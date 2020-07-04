@@ -1,13 +1,26 @@
-# vim: set ft=sh
+# vim: ft=sh
 
-function git_repo_name() {
+die() {
+  echo "$@" 1>&2 ; exit 1;
+}
+err() {
+  echo "$@" 1>&2 
+}
+
+# check to see if the variable name passed exists and holds a value.
+# Die if it does not.
+check_or_die() {
+  [[ ${!1} ]] || die "Environment variable ${1} is not set."
+}
+
+git_repo_name() {
   local repo_path
   if repo_path="$(git rev-parse --show-toplevel 2>/dev/null)" && [[ -n "$repo_path" ]]; then
     echo ${repo_path:t}
   fi
 }
 
-function git_current_branch() {
+git_current_branch() {
   local ref
   ref=$(command git symbolic-ref --quiet HEAD 2> /dev/null)
   local ret=$?
@@ -18,11 +31,11 @@ function git_current_branch() {
   echo ${ref#refs/heads/}
 }
 
-function git_current_remote_branch() {
+git_current_remote_branch() {
   git status -b --porcelain=v2 | grep -m 1 "^# branch.upstream " | cut -d " " -f 3-
 }
 
-function git_config_user() {
+git_config_user() {
 	local email name
 	if [ $# -eq 0 ]; then
 		email=commiyou@gmail.com
@@ -37,3 +50,73 @@ function git_config_user() {
   git config user.email $email
   git config user.name $name
 }
+
+filepath() {
+  local p="${1:-.}"
+  if command -v realpath > /dev/null 2>&1 
+  then
+    realpath "${p}" 
+  else
+    readlink -f "$p"
+  fi
+}
+
+fp() {
+	[[ $# = 0 ]] && echo $(myip):$(filepath .) && return
+	for file in "$@"; do
+		[[ -e "$file" ]] && echo $(myip):$(filepath "$file") \
+			|| echo "can NOT find $file" >&2
+	done
+}
+# human size
+human() {
+	for arg in "$@"
+	do
+		echo "$arg" | awk '{ split( "B KB MB GB TB" , v ); s=1;size=int($1); while( size>1024 && s<5){ size/=1024; s++ } printf("%s\t%.1f%s\n", $0, size, v[s]) }'
+	done
+}
+
+# calc expresion
+C() {
+	python -c "from __future__ import division;print '%.3f' % ($@)"
+}
+
+# re escape, useful for awk/grep
+reescape() {
+  echo "$1" | python -c 'import re,sys;print re.escape(sys.stdin.readline().rstrip("\n"));'
+}
+escape_string() {
+    echo "$1" | sed "s/'/'\\\''/g;s/^\(.*\)$/'\1'/"
+}
+
+#   buf:  back up file with timestamp
+#   ---------------------------------------------------------
+buf () {
+  local filename filetime newest_buf  bufs
+  filename="$1"
+  [ -e "$filename" ] || { err file $filename not exists; return 1; }
+  filetime=$(date +%Y%m%d_%H%M%S)
+  cp -a "${filename}" "${filename}_${filetime}"
+}
+
+
+#   unbuf:  restore back up file
+#   ---------------------------------------------------------
+unbuf () {
+  local filename filetime
+  filename=$1
+  [ -e "$filename" ] || { err file $filename not exists; return 1; }
+
+  if [ -z "$2" ]; then
+    bufs=($1*)
+    [ "${#bufs[@]}" -lt 2 ] && return 1
+    newest_buf=${bufs[-1]}
+  else
+    newest_buf="$2"
+    [ -e "$newest_buf" ] || { err file $newest_buf not exists; return 1; }
+  fi
+  filetime=$(date +%Y%m%d_%H%M%S)
+  mv "${filename}" "${filename}_${filetime}"
+  mv "$newest_buf" "$filename"
+}
+

@@ -35,8 +35,5 @@
 [core]
   # Don't consider trailing space change as a cause for merge conflicts
   whitespace = -trailing-space
-
-[merge]
-  ff = false
 [credential]
   helper = cache --timeout=3600

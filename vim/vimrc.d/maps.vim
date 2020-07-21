@@ -110,3 +110,10 @@ nnoremap <c-w>z :ZoomToggle<CR>
 	silent! iu <Leader>ihn 
 	silent! nun <Leader>ihn 
 " }}}
+"
+" For local replace
+nnoremap gr gd[{V%::s/<C-R>///gc<left><left><left>
+
+" For global replace
+nnoremap gR gD:%s/<C-R>///gc<left><left><left>
+

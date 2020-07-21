@@ -135,7 +135,7 @@ if g:config.vimrc.plugin_on
     "set foldlevelstart=1
 
     Plug 'ConradIrwin/vim-bracketed-paste'
-    Plug 'roxma/vim-paste-easy'
+    "Plug 'roxma/vim-paste-easy'
 
     "Plug 'scrooloose/nerdtree'
     let g:NERDTreeWinPos = "left"

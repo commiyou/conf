@@ -36,7 +36,9 @@ _bigo() {
       return 0
       ;;
     conf)
-      if [[ "$cur" == -* ]]; then
+      if [[ -z "$service" ]]; then
+        COMPREPLY=($(compgen -W '--service -s' -- "$cur"))
+      elif [[ "$cur" == -* ]]; then
         COMPREPLY=($(compgen -W '-l --list -s --service -e --edit' -- "$cur"))
       else
         COMPREPLY=($(compgen -W "$(bigo__conf -s $service -V)" -- "$cur"))
@@ -44,7 +46,9 @@ _bigo() {
       return 0
       ;;
     log)
-      if [[ "$cur" == -* ]]; then
+      if [[ -z "$service" ]]; then
+        COMPREPLY=($(compgen -W '--service -s' -- "$cur"))
+      elif [[ "$cur" == -* ]]; then
         COMPREPLY=($(compgen -W '-l --list -s --service -e --edit -t --tail ' -- "$cur"))
       else
         COMPREPLY=($(compgen -W "$(bigo__log -s $service -V)" -- "$cur"))
@@ -52,7 +56,15 @@ _bigo() {
       return 0
       ;;
     url)
-      COMPREPLY=( $(compgen -W "-d --deploy -g --gerrit -j --jenkins -a --all" -- ${cur}) )
+      if [[ "$cur" == -* ]]; then
+        COMPREPLY=( $(compgen -W "-d --deploy -g --gerrit -j --jenkins -a --all" -- ${cur}) )
+      else
+        COMPREPLY=( $(compgen -W "$(bigo__service -m -c -g -n)" -- ${cur}) )
+      fi
+      return 0
+      ;;
+    port)
+      COMPREPLY=( $(compgen -W "$(bigo__service -m -c -g -n)" -- ${cur}) )
       return 0
       ;;
   esac

@@ -74,10 +74,12 @@ bigo__service() {
 }
 
 bigo__build() {
-  cd $(git rev-parse --show-toplevel 2>/dev/null || echo .) 
+  local cwd=$PWD
+  pushd $(git rev-parse --show-toplevel 2>/dev/null || echo .) 
   [ "$1" == "-f" ] && rm -rf build 
   mkdir -p build 2>/dev/null && cd build 
   conan install .. -u --build=missing && cmake .. && make -j 32
+  popd
 }
 
 bigo__clone() {
@@ -254,6 +256,14 @@ bigo__url() {
 
 bigo__debug() {
   :
+}
+
+bigo__port() {
+  #port, pid
+  # sudo netstat -t -l -n -p | awk '/LISTEN/{n = split($4, a, ":"); m = split($7, b, "/"); print a[n]"\t"b[1]  }'
+  local sn=${1?no service name}
+  sn=${sn:0:15}
+  sudo lsof -a -i -c ${sn} | grep LISTEN | sed  's,\*,http://'$(echo $SSH_CONNECTION | cut -f3 -d ' '),
 }
 
 bigo() {

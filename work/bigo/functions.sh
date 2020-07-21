@@ -1,9 +1,10 @@
 function dbls() {
-  local db rpath
+  local db rpath f
   for db in "$@"; do
     rpath=
     if [ "$db" =~ ^bigolive\.* ]; then
       rpath="/flume/bigolive/${db#*.}"
+      rpath=$rpath" /user/hive/warehouse/bigolive.db/${db#*.}"
     elif [ "$db" =~ ^report_tb\.* ]; then
       rpath="/data/hive/report_tb.db/${db#*.}"
     elif [ "$db" =~ ^algo\.* ]; then
@@ -15,7 +16,9 @@ function dbls() {
     fi
     echo "> $db : $rpath"
     if [ -n "$rpath" ]; then
-      hadoop fs -ls "$rpath"| tail -10
+      for f in $(echo $rpath); do
+        hadoop fs -ls "$f"| tail -10
+      done
     fi
   done
 }
@@ -122,7 +125,10 @@ service_log() {
 
 service_port() {
   #port, pid
-  sudo netstat -t -l -n -p | awk '/LISTEN/{n = split($4, a, ":"); m = split($7, b, "/"); print a[n]"\t"b[1]  }'
+  # sudo netstat -t -l -n -p | awk '/LISTEN/{n = split($4, a, ":"); m = split($7, b, "/"); print a[n]"\t"b[1]  }'
+  local sn=${1?no service name}
+  sn=${sn:0:15}
+  sudo lsof -a -i -c ${sn} | grep LISTEN | sed  's,\*,http://'$(echo $SSH_CONNECTION | cut -f3 -d ' '),
 }
 
 service_debug() {

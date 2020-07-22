@@ -288,7 +288,7 @@ bigo__debug() {
 
   echo /data/services/$service* 1>&1
   cp -r /data/services/$service* .
-  cd $(\ls $service* | tail -1)
+  cd $(\ls -rtd $service* | tail -1)
   return 0
 }
 

@@ -93,7 +93,7 @@ bigo__clone() {
 }
 
 bigo__conf() {
-  local usage="bigo conf [-s] [-e|-l] [file] [-V]"
+  local usage="bigo conf [-s service] [-e|-l] [file] [-V]"
   local TEMP=$(getopt -o s:elhV --long service:,edit,list,noverbose,help -- "$@")
   [ $? != 0 ] && echo "$usage"
   eval set -- "$TEMP"
@@ -141,7 +141,7 @@ bigo__conf() {
 }
 
 bigo__log() {
-  local usage="bigo log [-s] [-e|-l|-t [linecnt]] [file] [-V]"
+  local usage="bigo log [-s service] [-e|-l|-t [linecnt]] [file] [-V]"
   local TEMP=$(getopt -o s:elt::Vh --long service:,edit,list,tail::,noverbose,help -- "$@")
   [ $? != 0 ] && echo "$usage"
   eval set -- "$TEMP"
@@ -255,7 +255,41 @@ bigo__url() {
 }
 
 bigo__debug() {
-  :
+  local usage="bigo debug -s service"
+  local TEMP=$(getopt -o s:h --long service:,help -- "$@")
+  [ $? != 0 ] && echo "$usage"
+  eval set -- "$TEMP"
+
+  local service cmd noverbose linecnt
+  while true; do
+    case "$1" in
+      -h|--help)
+        echo "$usage"
+        return 0
+        ;;
+      -s|--service)
+        service="$2"
+        shift
+        ;;
+      --)
+        shift
+        break
+        ;;
+      *)
+        echo "Internal error!" ;
+        return 1
+    esac
+    shift
+  done
+
+  if [ -z "$service" ]; then
+    service=$(bigo__service -c -n)
+  fi
+
+  echo /data/service/$service* 1>&1
+  cp -r /data/service/$service* .
+  cd $(\ls $service* | tail -1)
+  return 0
 }
 
 bigo__port() {

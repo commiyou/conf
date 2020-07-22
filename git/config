@@ -37,3 +37,5 @@
   whitespace = -trailing-space
 [credential]
   helper = cache --timeout=3600
+[pull]
+	rebase = true

@@ -235,6 +235,9 @@ bigo__url() {
   if [ -z "$urls" ]; then
     urls+=(gerrit jenkins deploy)
   fi
+  if [ $# -eq 0 ]; then
+    eval set -- "$(git rev-parse --show-toplevel 2>/dev/null)"
+  fi
 
   for service in "$@"; do
     echo "$service --"
@@ -244,7 +247,12 @@ bigo__url() {
           echo "http://gerrit.sysop.520hello.com/#/admin/projects/$service"
           ;;
         deploy)
-          echo "http://deploy.sysop.bigo.sg/jpack/version?search=$service&exact=0"
+          local tmp=$(\ls $(git rev-parse --show-toplevel 2>/dev/null)/build/bin 2>/dev/null | grep -i '_d$')
+          if [ -n "$tmp" ]; then
+            echo "http://deploy.sysop.bigo.sg/jpack/version?search=$tmp&exact=0"
+          else
+            echo "http://deploy.sysop.bigo.sg/jpack/version?search=$service&exact=0"
+          fi
           ;;
         jenkins)
           echo "http://jenkins.sysop.bigo.sg/job/$service/"

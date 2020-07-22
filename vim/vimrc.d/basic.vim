@@ -151,3 +151,6 @@ set formatoptions-=t  " no auto line break in text
 " set dictionary+=$vimdir/dict/comm.dict
 " set spell
 set noconfirm  " quit confirm"
+
+set isfname-=:
+set isfname-==

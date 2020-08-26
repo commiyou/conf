@@ -79,6 +79,7 @@ bigo__build() {
   [ "$1" == "-f" ] && rm -rf build 
   mkdir -p build 2>/dev/null && cd build 
   conan install .. -u --build=missing && cmake .. && make -j 32
+  (cd bin && websvr)
   popd
 }
 
@@ -189,8 +190,8 @@ bigo__log() {
     service=$(bigo__service -c -n)
   fi
 
-  [ $# -eq 0 ] && [ -z "$cmd" ] && cmd="ls"
-  [ $# -gt 0 ] && [ -z "$cmd" ] && cmd="cat"
+  [ -z "$cmd" ] && cmd="ls"
+  [ $# -eq 0 ] && set -- "$service.log"
   [ -n "$noverbose" ] || echo $cmd /data/yy/log/$service/"$@" 1>&2
   eval $cmd /data/yy/log/$service/"$@"
   return 0
@@ -236,7 +237,7 @@ bigo__url() {
     urls+=(gerrit jenkins deploy)
   fi
   if [ $# -eq 0 ]; then
-    eval set -- "$(git rev-parse --show-toplevel 2>/dev/null)"
+    eval set -- "$(basename $(git rev-parse --show-toplevel 2>/dev/null))"
   fi
 
   for service in "$@"; do
@@ -297,6 +298,13 @@ bigo__debug() {
   echo /data/services/$service* 1>&1
   cp -r /data/services/$service* .
   cd $(\ls -rtd $service* | tail -1)
+#  cat > bin/run.sh <<EOF
+#: > ../log/$service.log
+#sudo killall -u \$USER $service
+#./$service -flagfile=../conf/gflags.conf --service_name=$service-tt # --logtostderr
+#EOF 
+  sed -i 's:^--log_dir.*:--log_dir='$(pwd)/log: conf/gflags.conf
+
   return 0
 }
 

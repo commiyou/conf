@@ -5,6 +5,7 @@ function dbls() {
     if [ "$db" =~ ^bigolive\.* ]; then
       rpath="/flume/bigolive/${db#*.}"
       rpath=$rpath" /user/hive/warehouse/bigolive.db/${db#*.}"
+      rpath=$rpath" /data/apps/bigolive/common_event/data/${db#*.}"
     elif [ "$db" =~ ^report_tb\.* ]; then
       rpath="/data/hive/report_tb.db/${db#*.}"
     elif [ "$db" =~ ^algo\.* ]; then

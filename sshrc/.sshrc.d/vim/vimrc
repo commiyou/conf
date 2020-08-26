@@ -188,8 +188,8 @@ set foldmethod=indent
 set foldnestmax=3
 set nofoldenable
 
-" Enable mouse for scrolling and window resizing.
-set mouse=a
+" disable mouse 
+set mouse-=a
 
 " Disable swap to prevent annoying messages.
 set noswapfile
@@ -310,3 +310,6 @@ if !empty($SSHHOME)
   let &runtimepath = $SSHHOME . '.sshrc.d/vim,'.$VIMRUNTIME   
 endif
  let &runtimepath = $XDG_CONFIG_HOME . '/vim,' . $XDG_CONFIG_HOME . '/vim/after,'.$VIM.','.$VIMRUNTIME   
+
+ set isfname-=:
+ set isfname-==

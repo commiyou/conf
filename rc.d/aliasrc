@@ -1,4 +1,5 @@
-# vim: set ft=sh
+# vim: ft=sh
+shopt expand_aliases 2>/dev/null # bash 
 
 alias pl='print -rl --'
 

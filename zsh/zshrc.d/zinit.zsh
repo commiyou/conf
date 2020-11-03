@@ -1,5 +1,9 @@
+# vim: filetype=zsh
+
 SHELL=zsh
 [ -n "$AUTO_INSTALL" ] || return
+command -v ruby > /dev/null && command -v gem >/dev/null || return
+[ -n "$USE_ZPLUG" ] && return
 
 typeset -A ZINIT=(
   BIN_DIR         ${XDG_DATA_HOME:-$HOME/.local/share}/zinit/bin
@@ -33,7 +37,7 @@ zinit $lightmode for \
 zinit ice atclone"!dircolors -b LS_COLORS | sed '1  aLS_COLORS=\"\$LS_COLORS:di=01;34\"' > c.zsh" \
   atpull'%atclone' pick"c.zsh" nocompile'!' \
   atload'!zstyle ":completion:*" list-colors "${(s.:.)LS_COLORS}"' 
-zinit $load trapd00r/LS_COLORS
+zinit $load commiyou/LS_COLORS
 
 zinit $lightmode wait lucid for \
   OMZP::fancy-ctrl-z \
@@ -105,7 +109,7 @@ realpath=\${(Qe)~realpath}
 "
 
 # give a preview of commandline arguments when completing `kill`
-zstyle ':completion:*:*:*:*:processes' command "ps -u $USER -o pid,user,comm,cmd -w -w"
+zstyle ':completion:*:*:*:*:processes' command "ps ax  -o ppid,pid,user,comm,cmd,time"
 zstyle ':fzf-tab:complete:kill:argument-rest' extra-opts --preview=$extract'ps --pid=$in[(w)1] -o cmd --no-headers -w -w' --preview-window=down:3:wrap
 
 # give a preview of directory by exa when completing cd

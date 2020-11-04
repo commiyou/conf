@@ -16,35 +16,46 @@ if g:config.vimrc.plugin_on
 
     call plug#begin(g:plug.base)
 
+    try
+    	let pyver = execute(':pythonx import sys;print(sys.version.split(" ")[0])')
+    catch
+    	let pyver='2.7'
+    endtry
+
     let g:netrw_home= g:cachedir
 
-    "Plug 'Valloric/YouCompleteMe'
-    " Plug 'ervandew/supertab'
-    "
-    "Plug 'roxma/vim-hug-neovim-rpc' 
-    "Plug 'roxma/nvim-yarp', { 'do': 'pip3 install --user neovim'}
-    "try
-    "	let pyver = execute(':pythonx import sys;print(sys.version.split(" ")[0])')
-    "catch
-    "	let pyver='2.7'
-    "endtry
-    "
-    "if pyver < '3.6.1'
-    "	Plug 'Shougo/deoplete.nvim', { 'tag':'4.1', 'do': 'pip3 install --user pynvim' }
-    "else
-    "	Plug 'Shougo/deoplete.nvim', { 'do': 'pip3 install --user pynvim' }
-    "endif
-    "Plug 'Shougo/neco-syntax'
-    "Plug 'tbodt/deoplete-tabnine', { 'do': './install.sh' }
-    "Plug 'autozimu/LanguageClient-neovim', { 'branch': 'next', 'do': 'bash install.sh' } 
-    " Plug 'deoplete-plugins/deoplete-dictionary'
-    "Plug 'Shougo/context_filetype.vim'
-    "Plug 'Shougo/neopairs.vim'
-    "Plug 'Shougo/echodoc.vim'
-    "Plug 'Shougo/neoinclude.vim'
+    if has("python3") && pyver > '3.0'
+
+        Plug 'roxma/vim-hug-neovim-rpc', { 'do': 'pip3 intall --user pynvim' }
+        Plug 'roxma/nvim-yarp', { 'do': 'pip3 install --user neovim'}
+        
+        if pyver < '3.6.1'
+            Plug 'Shougo/deoplete.nvim', { 'tag':'4.1', 'do': 'pip3 install --user pynvim' }
+        else
+            Plug 'Shougo/deoplete.nvim', { 'do': 'pip3 install --user pynvim' }
+        endif
+        Plug 'Shougo/neco-syntax'
+        Plug 'tbodt/deoplete-tabnine', { 'do': './install.sh' }
+        Plug 'autozimu/LanguageClient-neovim', { 'branch': 'next', 'do': 'bash install.sh' } 
+        Plug 'deoplete-plugins/deoplete-dictionary'
+        Plug 'Shougo/context_filetype.vim'
+        Plug 'Shougo/neopairs.vim'
+        Plug 'Shougo/echodoc.vim'
+        Plug 'Shougo/neoinclude.vim'
+    endif
+
+
 
     Plug 'wellle/tmux-complete.vim'
-    Plug 'neoclide/coc.nvim', {'branch': 'release'}
+    let nodejs_version = system('node -v')
+    if nodejs_version >= 'v10.12'
+        let g:coc_config_home = g:config.path.config
+        let g:coc_data_home = g:config.path.data . '/coc'
+        Plug 'neoclide/coc.nvim', {'branch': 'release'}
+        if &rtp =~ 'coc.nvim'
+            exec 'source'  s:spath . '/plugins/yyy_coc.vim'
+        endif
+    endif
 
 
     " Plug 'ludovicchabant/vim-gutentags'
@@ -328,5 +339,4 @@ if g:config.vimrc.plugin_on
         " let $NVIM_PYTHON_LOG_LEVEL="DEBUG"
     catch
     endtry
-    exec 'source'  s:spath . '/plugins/yyy_coc.vim'
 endif

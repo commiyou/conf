@@ -46,11 +46,7 @@ function! s:config()
     " tmux
     let config.is_tmux_running = !empty($TMUX)
     let config.tmux_proc = system('tmux display-message -p "#W"')
-    if !empty($AUTO_INSTALL)
-        let s:plugin_on = 1
-    else
-        let s:plugin_on = 0
-    endif
+    let s:plugin_on = 1
 
 
     let config.vimrc = {

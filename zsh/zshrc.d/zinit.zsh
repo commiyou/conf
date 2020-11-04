@@ -1,7 +1,6 @@
 # vim: filetype=zsh
 
 SHELL=zsh
-[ -n "$AUTO_INSTALL" ] || return
 command -v ruby > /dev/null && command -v gem >/dev/null || return
 [ -n "$USE_ZPLUG" ] && return
 

@@ -16,10 +16,6 @@ else
 endif
 autocmd CursorHold * silent call CocActionAsync('highlight')
 
-
-let g:coc_config_home = g:config.path.config
-let g:coc_data_home = g:config.path.data . '/coc'
-
 call coc#add_extension("coc-python")
 call coc#add_extension("coc-snippets")
 inoremap <silent><expr> <TAB>

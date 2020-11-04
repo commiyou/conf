@@ -2,8 +2,6 @@
 #
 #
 SHELL=zsh
-[ -n "$AUTO_INSTALL" ] || return
-[ -z "$ZINIT" ] || return
 
 export ZPLUG_HOME=${XDG_DATA_HOME:-$HOME/.local/share}/zplug
 
@@ -69,13 +67,13 @@ zplug "BurntSushi/ripgrep", \
 zplug "skywind3000/z.lua", hook-load:"export _ZL_DATA=$XDG_CACHE_HOME/.zlua; alias zh='z -I -t .'; alias zb='z -b';", if:'lua -v'
 zplug "changyuheng/fz", hook-load:'function _z() { _zlua \"\$@\"; }', on:"skywind3000/z.lua"
 
-zplug 'romkatv/powerlevel10k', as:theme, depth:1, if:'[[ $(zsh --version | cut -f2 -d " ") > 5.3 ]]'
+[[ $(zsh --version | cut -f2 -d " ") > 5.3  && -n "$ENABLE_P10K" ]] && zplug 'romkatv/powerlevel10k', as:theme, depth:1
 zplug "zsh-users/zsh-completions"
 
 zplug "LuRsT/hr", as:command, hook-build:"cp $ZPLUG_REPOS/LuRsT/hr/hr.1 $ZPLUG_HOME/doc/man/man1"
 zplug "Aloxaf/fzf-tab", on:"junegunn/fzf-bin", defer:3
 zplug 'zdharma/fast-syntax-highlighting', defer:3
-zplug 'zsh-users/zsh-autosuggestions', hook-load:'ZSH_AUTOSUGGEST_STRATEGY=(history completion); _zsh_autosuggest_start', defer:3
+zplug 'zsh-users/zsh-autosuggestions', hook-load:'_zsh_autosuggest_start', defer:3
 
 zstyle ':completion:*:*:*:*:processes' command "ps ax -o ppid,pid,user,comm,cmd,time"
 zstyle ':fzf-tab:*' fzf-flags '--no-sort'

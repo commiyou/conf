@@ -2,3 +2,4 @@
 typeset -U path
 
 [ -r ${ZDOTDIR:-$HOME}/.path ] && path=(${(f)"$(<${ZDOTDIR:-$HOME}/.path)"} $path)
+path=("$HOME/bin" "$HOME/.local/bin" $path)

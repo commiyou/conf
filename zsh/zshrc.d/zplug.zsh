@@ -86,5 +86,5 @@ fi
 zplug load 
 
 if zplug check commiyou/LS_COLORS; then
-  zstyle ":completion:*" list-colors "${(s.:.)LS_COLORS}"
+  zstyle ":completion:*" list-colors ${(s.:.)LS_COLORS}
 fi

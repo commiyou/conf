@@ -109,7 +109,9 @@ if g:config.vimrc.plugin_on
     nmap <silent> <leader>p <Plug>(ale_previous_wrap)
     nmap <silent> <leader>n <Plug>(ale_next_wrap)
 
-    Plug 'SirVer/ultisnips'
+    if pyver >= '3.5'
+	    Plug 'SirVer/ultisnips'
+    endif
     Plug 'honza/vim-snippets'
     let g:UltiSnipsJumpBackwardTrigger="<c-b>"
     let g:UltiSnipsSnippetDirectories=["mysnips", "UltiSnips"]

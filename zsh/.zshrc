@@ -29,4 +29,4 @@ if [[ "$ZSH_DEBUG" ]]; then
 fi
 
 # To customize prompt, run `p10k configure` or edit 
-[[ -z "$ENABLE_P10K" ||  ! -f $ZDOTDIR/.p10k.zsh ]] || source $ZDOTDIR/.p10k.zsh
+[[ -z "$ENABLE_P10K" ||  ! -f $ZDOTDIR/.p10k.zsh ]] || { source $ZDOTDIR/.p10k.zsh; }

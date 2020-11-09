@@ -70,8 +70,8 @@ zinit $lightmode wait"1" lucid for \
 
 zinit $lightmode wait"2" lucid from"gh-r" as"program" for \
   mv"exa* -> exa" pick'exa' ogham/exa \
-  mv"fd* -> fd"  pick'fd' @sharkdp/fd \
-  mv"ripgrep* -> rg" pick'rg' BurntSushi/ripgrep \
+  mv"fd* -> fd"  pick'fd/fd' @sharkdp/fd \
+  mv"ripgrep* -> rg" pick'rg/rg' BurntSushi/ripgrep \
   junegunn/fzf-bin 
 
 

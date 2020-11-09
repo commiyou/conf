@@ -52,23 +52,26 @@ zinit $lightmode wait lucid for \
 #zplugin ice wait'1' lucid
 #zplugin light laggardkernel/zsh-thefuck
 
+zinit ice lucid from"gh-r" as"program" pick'bin/tmux' if'[[ $(tmux -V | cut -f2 -d " ") < "3.0" ]]'
+zinit $load romkatv/tmux-bin
+
 # fzf-marks, at slot 0, for quick Ctrl-G accessibility
 zinit $lightmode wait lucid for \
   hlissner/zsh-autopair \
   urbainvaes/fzf-marks \
   wfxr/forgit \
-  src'shell/key-bindings.zsh'  trackbinds bindmap='^T -> ^X^T; \ec -> ^X\ec' commiyou/fzf \
-  atload'export SSHHOME=$XDG_CONFIG_HOME' commiyou/sshrc \
+  as"program" src'shell/key-bindings.zsh'  trackbinds bindmap='^T -> ^X^T; \ec -> ^X\ec' commiyou/fzf \
+  as"program" atload'export SSHHOME=$XDG_CONFIG_HOME' pick'sshrc' commiyou/sshrc \
   has"tmux" atload'!ZSH_TMUX_FIXTERM=false ZSH_TMUX_CONFIG=${XDG_CONFIG_HOME:-$HOME/.config}/tmux/tmux.conf'  svn OMZP::tmux
 
 zinit $lightmode wait"1" lucid for \
   atinit"local zew_word_style=whitespace" \
   psprint/zsh-editing-workbench
 
-zinit $lightmode wait"2" lucid as"null" from"gh-r" as"program" for \
-  mv"exa* -> exa" ogham/exa \
-  mv"fd* -> fd"  @sharkdp/fd \
-  mv"ripgrep* -> rg" BurntSushi/ripgrep \
+zinit $lightmode wait"2" lucid from"gh-r" as"program" for \
+  mv"exa* -> exa" pick'exa' ogham/exa \
+  mv"fd* -> fd"  pick'fd' @sharkdp/fd \
+  mv"ripgrep* -> rg" pick'rg' BurntSushi/ripgrep \
   junegunn/fzf-bin 
 
 
@@ -91,7 +94,7 @@ zinit $lightmode wait lucid blockf atpull'!zinit creinstall -q .' for \
 zpcompinit; zpcdreplay
   #atinit"!zicompinit; zicdreplay" \
 zinit $lightmode wait'0b' lucid for \
-  Aloxaf/fzf-tab atload"!zstyle ':fzf-tab:complete:cd:*' fzf-preview 'exa -1 --color=always \$realpath';  zstyle ':fzf-tab:complete:z:*' fzf-preview 'exa -1 --color=always \$realpath'"\
+  Aloxaf/fzf-tab atload"!zstyle ':fzf-tab:complete:cd:*' fzf-preview 'exa -1 --color=always \$realpath'; zstyle ':fzf-tab:complete:z:*' fzf-preview 'exa -1 --color=always \$realpath';" \
   zdharma/fast-syntax-highlighting \
   atload"!_zsh_autosuggest_start" zsh-users/zsh-autosuggestions 
 

@@ -8,8 +8,9 @@ alias mkdir='nocorrect mkdir'
 alias mv='nocorrect mv -i'
 alias mysql='nocorrect mysql'
 alias sudo='nocorrect sudo'
-alias which='nocorrect which'
+alias which='nocorrect which -a'
 alias touch='nocorrect touch'
+alias hadoop='nocorrect hadoop'
 
 CORRECT_IGNORE_FILE='.*'
 setopt correct_all   # CORRECT_IGNORE_FILE to ignore

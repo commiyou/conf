@@ -2,7 +2,7 @@
 
 kernel="$(uname -s | tr '[A-Z]' '[a-z]')"
 arch="$(uname -m | tr '[A-Z]' '[a-z]')"
-INSTALL_DIR=~/.local/tmp
+INSTALL_DIR=~/.local/bin
 
 if [[ $(node -v) < 'v10.12' ]]; then
   case "$arch" in
@@ -22,3 +22,17 @@ fi
 if [[ $(zsh --version | cut -f2 -d ' ') < '5.4' ]]; then
   sh -c "$(curl -fsSL https://raw.githubusercontent.com/romkatv/zsh-bin/master/install)" -- -d $INSTALL_DIR -e no
 fi
+
+if ! command -v svn &> /dev/null; then
+  if command -v apt-get &> /dev/null; then
+    echo sudo apt-get install subversion
+  elif command -v yum &> /dev/null; then
+    echo sudo yum install subversion
+  else
+    echo no subversion, should install...
+  fi
+
+fi
+echo 'export PATH="/data1/youbin/.local/bin/bin:$PATH"' >> ~/.bashrc
+
+

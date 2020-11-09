@@ -28,7 +28,8 @@ alias hdls="hadoop fs -ls"
 alias hdrm="hadoop fs -rmr"
 alias hdput="hadoop fs -put"
 
-alias ssh="ssh -o StrictHostKeyChecking=no -p 10020"
+#alias ssh="ssh -o StrictHostKeyChecking=no -p 10020"
+alias cnjump="ssh -p26890 cnjump.weihuitel.com"
 
 unalias go 2>/dev/null
 function go() {

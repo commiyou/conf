@@ -43,11 +43,11 @@ zinit $lightmode wait lucid for \
   OMZP::rsync \
   OMZP::systemadmin \
   OMZP::urltools \
+  OMZP::extract \
   OMZL::clipboard.zsh \
   OMZL::completion.zsh \
   OMZL::functions.zsh \
   OMZL::grep.zsh \
-  OMZP::extract
 
 #zplugin ice wait'1' lucid
 #zplugin light laggardkernel/zsh-thefuck

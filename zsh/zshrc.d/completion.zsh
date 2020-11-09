@@ -7,7 +7,9 @@ zstyle ':completion:*:*:vim:*:*files' ignored-patterns '*?.o' "*?.pyc"
 zstyle ':completion:*:*:vi:*:*files' ignored-patterns '*?.o' "*?.pyc"
 
 #zstyle ':completion:*' file-sort access
-zstyle ':completion:*' file-sort 'modification'
+#zstyle ':completion:*' file-sort 'modification'
+zstyle ':completion:*' sort 'modification'
 
 # Ignore what's already in the line
 zstyle ':completion:*:(rm|cp|mv||kill|diff|vim|cat|less|more|gzip|gunzip|zcat|tar|fg|bg):*' ignore-line yes
+zstyle ':completion:*:*:*:*:processes' command "ps ax -o ppid,pid,user,comm,cmd,time"

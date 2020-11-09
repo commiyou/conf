@@ -1,6 +1,7 @@
 # vim: filetype=zsh
 #
 #
+return
 SHELL=zsh
 
 export ZPLUG_HOME=${XDG_DATA_HOME:-$HOME/.local/share}/zplug

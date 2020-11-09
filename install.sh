@@ -11,8 +11,12 @@ if [[ $(node -v) < 'v10.12' ]]; then
     *) node_arch=$arch;;
   esac
   mkdir -p $INSTALL_DIR && cd $INSTALL_DIR 
-  wget https://nodejs.org/dist/latest/node-v*-$kernel-$node_arch.tar.gz && tar xzf node-v*-$kernel-$node_arch.tar.gz -C $INSTALL_DIR --strip-components 1
-  #ln -s $INSTALL_DIR/node-v*-$kernel-$node_arch/bin/nodejs
+  tar_name=$(curl -fsSL https://nodejs.org/dist/latest/ | grep $kernel-$node_arch.tar.gz | head -1 | cut -f2 -d'"')
+  if [ -n "$tar_name" ]; then
+    wget https://nodejs.org/dist/latest/$tar_name && tar xzf $tar_name -C $INSTALL_DIR --strip-components 1
+  else
+    echo "can not find $kernel-$node_arch.tar.gz in https://nodejs.org/dist/latest/ " >& 2
+  fi
 fi
 
 if [[ $(zsh --version | cut -f2 -d ' ') < '5.4' ]]; then

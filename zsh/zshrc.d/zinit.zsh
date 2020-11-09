@@ -47,7 +47,7 @@ zinit $lightmode wait lucid for \
   OMZL::completion.zsh \
   OMZL::functions.zsh \
   OMZL::grep.zsh \
-  #OMZP::vi-mode 
+  OMZP::extract
 
 #zplugin ice wait'1' lucid
 #zplugin light laggardkernel/zsh-thefuck

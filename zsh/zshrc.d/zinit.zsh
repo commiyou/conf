@@ -1,7 +1,7 @@
 # vim: filetype=zsh
 
 SHELL=zsh
-command -v ruby > /dev/null && command -v gem >/dev/null || return
+#command -v ruby > /dev/null && command -v gem >/dev/null || return
 [ -n "$USE_ZPLUG" ] && return
 
 typeset -A ZINIT=(
@@ -28,13 +28,8 @@ source $ZINIT[BIN_DIR]/zinit.zsh
 load=load
 [[ $load == light ]] && lightmode=light-mode || lightmode=
 
-zinit $lightmode for \
-  zinit-zsh/z-a-submods \
-  zinit-zsh/z-a-bin-gem-node \
-  zinit-zsh/z-a-man
-
-zinit ice atclone"!dircolors -b LS_COLORS | sed '1  aLS_COLORS=\"\$LS_COLORS:di=01;34\"' > c.zsh" \
-  atpull'%atclone' pick"c.zsh" nocompile'!' \
+zinit ice atclone"!bash install.sh" \
+  atpull'%atclone' pick"$XDG_DATA_HOME/lscolors.sh" nocompile'!' \
   atload'!zstyle ":completion:*" list-colors "${(s.:.)LS_COLORS}"' 
 zinit $load commiyou/LS_COLORS
 
@@ -62,22 +57,22 @@ zinit $lightmode wait lucid for \
   hlissner/zsh-autopair \
   urbainvaes/fzf-marks \
   wfxr/forgit \
-  sbin'bin/fzf-tmux' src'shell/key-bindings.zsh'  trackbinds bindmap='^T -> ^X^T; \ec -> ^X\ec' commiyou/fzf \
-  sbin"sshrc" atload'export SSHHOME=$XDG_CONFIG_HOME' commiyou/sshrc \
-  atload'!ZSH_TMUX_FIXTERM=false ZSH_TMUX_CONFIG=${XDG_CONFIG_HOME:-$HOME/.config}/tmux/tmux.conf'  svn OMZP::tmux
+  src'shell/key-bindings.zsh'  trackbinds bindmap='^T -> ^X^T; \ec -> ^X\ec' commiyou/fzf \
+  atload'export SSHHOME=$XDG_CONFIG_HOME' commiyou/sshrc \
+  has"tmux" atload'!ZSH_TMUX_FIXTERM=false ZSH_TMUX_CONFIG=${XDG_CONFIG_HOME:-$HOME/.config}/tmux/tmux.conf'  svn OMZP::tmux
 
 zinit $lightmode wait"1" lucid for \
   atinit"local zew_word_style=whitespace" \
   psprint/zsh-editing-workbench
 
-zinit $lightmode wait"2" lucid as"null" from"gh-r" for \
-  mv"exa* -> exa" sbin ogham/exa \
-  mv"fd* -> fd" sbin"fd/fd" @sharkdp/fd \
-  mv"ripgrep* -> rg" sbin"rg/rg" BurntSushi/ripgrep \
-  sbin"fzf" junegunn/fzf-bin 
+zinit $lightmode wait"2" lucid as"null" from"gh-r" as"program" for \
+  mv"exa* -> exa" ogham/exa \
+  mv"fd* -> fd"  @sharkdp/fd \
+  mv"ripgrep* -> rg" BurntSushi/ripgrep \
+  junegunn/fzf-bin 
 
 
-zinit $lightmode wait"2" lucid for \
+zinit $lightmode wait"2" lucid has'lua' for \
   atload'!export _ZL_DATA=$XDG_CACHE_HOME/.zlua; alias zh="z -I -t ."; alias zb="z -b" ' skywind3000/z.lua \
   atload'!function _z() { _zlua "$@"; }' changyuheng/fz
 
@@ -92,35 +87,11 @@ zinit $lightmode wait lucid blockf atpull'!zinit creinstall -q .' for \
   as"completion" svn OMZP::docker \
   as"completion" svn OMZP::ripgrep \
 
-
-
-# (experimental, may change in the future)
-# some boilerplate code to define the variable `extract` which will be used later
-# please remember to copy them
-local extract="
-# trim input(what you select)
-local in=\${\${\"\$(<{f})\"%\$'\0'*}#*\$'\0'}
-# get ctxt for current completion(some thing before or after the current word)
-local -A ctxt=(\"\${(@ps:\2:)CTXT}\")
-# real path
-local realpath=\${ctxt[IPREFIX]}\${ctxt[hpre]}\$in
-realpath=\${(Qe)~realpath}
-"
-
-# give a preview of commandline arguments when completing `kill`
-zstyle ':completion:*:*:*:*:processes' command "ps ax  -o ppid,pid,user,comm,cmd,time"
-zstyle ':fzf-tab:complete:kill:argument-rest' extra-opts --preview=$extract'ps --pid=$in[(w)1] -o cmd --no-headers -w -w' --preview-window=down:3:wrap
-
-# give a preview of directory by exa when completing cd
-zstyle ':fzf-tab:complete:cd:*' extra-opts --preview=$extract'exa -1 --color=always $realpath'
-zstyle ':fzf-tab:*'    extra-opts '--no-sort'
-zstyle ':completion:*' sort       'false'
-
 # Fast-syntax-highlighting & autosuggestions
 zpcompinit; zpcdreplay
   #atinit"!zicompinit; zicdreplay" \
 zinit $lightmode wait'0b' lucid for \
-  Aloxaf/fzf-tab \
+  Aloxaf/fzf-tab atload"!zstyle ':fzf-tab:complete:cd:*' fzf-preview 'exa -1 --color=always \$realpath';  zstyle ':fzf-tab:complete:z:*' fzf-preview 'exa -1 --color=always \$realpath'"\
   zdharma/fast-syntax-highlighting \
   atload"!_zsh_autosuggest_start" zsh-users/zsh-autosuggestions 
 

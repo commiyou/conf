@@ -19,7 +19,7 @@ if [[ $(node -v) < 'v10.12' ]]; then
   fi
 fi
 
-if [[ $(zsh --version | cut -f2 -d ' ') < '5.4' ]]; then
+if [[ $(zsh --version | cut -f2 -d ' ') < '5.5' ]]; then
   sh -c "$(curl -fsSL https://raw.githubusercontent.com/romkatv/zsh-bin/master/install)" -- -d $INSTALL_DIR -e no
 fi
 

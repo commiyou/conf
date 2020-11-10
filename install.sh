@@ -2,7 +2,7 @@
 
 kernel="$(uname -s | tr '[A-Z]' '[a-z]')"
 arch="$(uname -m | tr '[A-Z]' '[a-z]')"
-INSTALL_DIR=~/.local/bin
+INSTALL_DIR=~/.local
 
 if [[ $(node -v) < 'v10.12' ]]; then
   case "$arch" in

@@ -59,8 +59,8 @@ zinit $load romkatv/tmux-bin
 zinit $lightmode wait lucid for \
   hlissner/zsh-autopair \
   urbainvaes/fzf-marks \
-  wfxr/forgit \
-  as"program" src'shell/key-bindings.zsh'  trackbinds bindmap='^T -> ^X^T; \ec -> ^X\ec' commiyou/fzf \
+  wfxr/forgit atload'!alias gdca="forgit::diff --cached"; alias glog="forgit::log --oneline --decorate --graph";'\
+  as"program" pick'bin/fzf-tmux' src'shell/key-bindings.zsh'  trackbinds bindmap='^T -> ^X^T; \ec -> ^X\ec' commiyou/fzf \
   as"program" atload'export SSHHOME=$XDG_CONFIG_HOME' pick'sshrc' commiyou/sshrc \
   has"tmux" atload'!ZSH_TMUX_FIXTERM=false ZSH_TMUX_CONFIG=${XDG_CONFIG_HOME:-$HOME/.config}/tmux/tmux.conf'  svn OMZP::tmux
 

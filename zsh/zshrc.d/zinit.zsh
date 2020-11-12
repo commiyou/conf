@@ -47,22 +47,26 @@ zinit $lightmode wait lucid for \
   OMZL::clipboard.zsh \
   OMZL::completion.zsh \
   OMZL::functions.zsh \
-  OMZL::grep.zsh \
+  OMZL::grep.zsh 
 
 #zplugin ice wait'1' lucid
 #zplugin light laggardkernel/zsh-thefuck
 
-zinit ice lucid from"gh-r" as"program" pick'bin/tmux' if'[[ $(tmux -V | cut -f2 -d " ") < "3.0" ]]'
-zinit $load romkatv/tmux-bin
-
+# $'string'  quote https://stackoverflow.com/questions/1250079/how-to-escape-single-quotes-within-single-quoted-strings/16605140#16605140
 # fzf-marks, at slot 0, for quick Ctrl-G accessibility
 zinit $lightmode wait lucid for \
   hlissner/zsh-autopair \
   urbainvaes/fzf-marks \
-  wfxr/forgit atload'!alias gdca="forgit::diff --cached"; alias glog="forgit::log --oneline --decorate --graph";'\
+  atload$'!FORGIT_LOG_FZF_OPTS=\'--bind="ctrl-e:execute(echo {} |grep -Eo [a-f0-9]+ |head -1 |xargs git show |vim -)"\'; \
+    alias gdca="forgit::diff --cached"; \
+    alias glog="forgit::log --oneline --decorate --graph"; \
+    ' wfxr/forgit \
   as"program" pick'bin/fzf-tmux' src'shell/key-bindings.zsh'  trackbinds bindmap='^T -> ^X^T; \ec -> ^X\ec' commiyou/fzf \
   as"program" atload'export SSHHOME=$XDG_CONFIG_HOME' pick'sshrc' commiyou/sshrc \
-  has"tmux" atload'!ZSH_TMUX_FIXTERM=false ZSH_TMUX_CONFIG=${XDG_CONFIG_HOME:-$HOME/.config}/tmux/tmux.conf'  svn OMZP::tmux
+  has"tmux" atload$'!ZSH_TMUX_FIXTERM=false; \
+    ZSH_TMUX_CONFIG=${XDG_CONFIG_HOME:-$HOME/.config}/tmux/tmux.conf; \
+    compdef _zsh_tmux_plugin_run=tmux; \
+    ' svn OMZP::tmux
 
 zinit $lightmode wait"1" lucid for \
   atinit"local zew_word_style=whitespace" \
@@ -84,19 +88,10 @@ zinit ice atload"!source ${ZDOTDIR:-$HOME}/.p10k.zsh" lucid nocd depth=1
 zinit $load romkatv/powerlevel10k
 
 # completions
-zinit $lightmode wait lucid blockf atpull'!zinit creinstall -q .' for \
-  zsh-users/zsh-completions \
-  as"completion" svn OMZP::fd \
-  as"completion" svn OMZP::docker \
-  as"completion" svn OMZP::ripgrep \
-
-# Fast-syntax-highlighting & autosuggestions
-zpcompinit; zpcdreplay
-  #atinit"!zicompinit; zicdreplay" \
-zinit $lightmode wait'0b' lucid for \
-  Aloxaf/fzf-tab atload"!zstyle ':fzf-tab:complete:cd:*' fzf-preview 'exa -1 --color=always \$realpath'; zstyle ':fzf-tab:complete:z:*' fzf-preview 'exa -1 --color=always \$realpath';" \
-  zdharma/fast-syntax-highlighting \
-  atload"!_zsh_autosuggest_start" zsh-users/zsh-autosuggestions 
+zinit $lightmode wait lucid as"completion" for \
+  svn OMZP::fd \
+  svn OMZP::docker \
+  svn OMZP::ripgrep 
 
 local cf
 if [ -n "$WORK_ENV" ] && [ -d $XDG_CONFIG_HOME/work/$WORK_ENV/ ]; then
@@ -104,6 +99,15 @@ if [ -n "$WORK_ENV" ] && [ -d $XDG_CONFIG_HOME/work/$WORK_ENV/ ]; then
   #for cf ($XDG_CONFIG_HOME/work/$WORK_ENV/*.sh) zinit snippet $cf
   zinit $lightmode wait'0c' lucid is-snippet for \
     $XDG_CONFIG_HOME/work/$WORK_ENV/functions.sh \
-    $XDG_CONFIG_HOME/work/$WORK_ENV/bigo.sh \
-    $XDG_CONFIG_HOME/work/$WORK_ENV/bigo-completion.sh
+    blockf $XDG_CONFIG_HOME/work/$WORK_ENV/bigo.sh \
+    blockf $XDG_CONFIG_HOME/work/$WORK_ENV/bigo-completion.sh
 fi
+
+# Fast-syntax-highlighting & autosuggestions
+#zpcompinit; zpcdreplay
+zinit $lightmode wait'0b' lucid for \
+  atinit"zicompinit; zicdreplay" zdharma/fast-syntax-highlighting \
+  atload"!zstyle ':fzf-tab:complete:(cd|z):*' fzf-preview 'exa -1 --color=always \$realpath';" Aloxaf/fzf-tab \
+  atload"!_zsh_autosuggest_start" zsh-users/zsh-autosuggestions 
+
+zinit $lightmode wait lucid blockf atpull'zinit creinstall -q .' for zsh-users/zsh-completions 

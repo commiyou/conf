@@ -220,21 +220,23 @@ alias f6m="field_match 6 "
 alias ftm="field_match 'NF' "  # NF is global alias of newest file
 
 # extract with new dir
-extractd() {
-  for f in "$@"; do
-    local real_path=$(realpath "$f")
-    local file_name=$(basename "$real_path")
-    local real_file_name="${file_name%%.*}"
-    if ! mkdir "$real_file_name" 
-    then
-      "dir $real_file_name is exist, skip ..."
-      continue
-    fi
-    cd "$real_file_name"
-    extract "$real_path"
-    cd ..
-  done
-}
+if typeset -f extract > /dev/null; then
+  extractd() {
+    for f in "$@"; do
+      local real_path=${f:A}
+      local file_name=${real_path:t}
+      local real_file_name="${file_name:r}"
+      if ! mkdir "$real_file_name" 
+      then
+        "dir $real_file_name is exist, skip ..."
+        continue
+      fi
+      cd "$real_file_name"
+      extract "$real_path"
+      cd ..
+    done
+  }
+fi
 
 
 

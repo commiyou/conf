@@ -104,7 +104,6 @@ if [ -n "$WORK_ENV" ] && [ -d $XDG_CONFIG_HOME/work/$WORK_ENV/ ]; then
 fi
 
 # Fast-syntax-highlighting & autosuggestions
-#zpcompinit; zpcdreplay
 zinit $lightmode wait'0b' lucid for \
   atinit"zicompinit; zicdreplay" zdharma/fast-syntax-highlighting \
   atload"!zstyle ':fzf-tab:complete:(cd|z):*' fzf-preview 'exa -1 --color=always \$realpath';" Aloxaf/fzf-tab \

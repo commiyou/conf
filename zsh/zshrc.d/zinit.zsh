@@ -73,9 +73,9 @@ zinit $lightmode wait"1" lucid for \
   psprint/zsh-editing-workbench
 
 zinit $lightmode wait"2" lucid from"gh-r" as"program" for \
-  mv"exa* -> exa" pick'exa' ogham/exa \
-  mv"fd* -> fd"  pick'fd/fd' @sharkdp/fd \
-  mv"ripgrep* -> rg" pick'rg/rg' BurntSushi/ripgrep \
+  if'[[ ! ${commands[exa]} ]]' mv"exa* -> exa" pick'exa' ogham/exa \
+  if'[[ ! ${commands[fd]} ]]' mv"fd* -> fd"  pick'fd/fd' @sharkdp/fd \
+  if'[[ ! ${commands[rg]} ]]' mv"ripgrep* -> rg" pick'rg/rg' BurntSushi/ripgrep \
   junegunn/fzf-bin 
 
 

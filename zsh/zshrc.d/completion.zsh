@@ -16,7 +16,7 @@ zstyle ':completion::*:(vim|vi):*:*' file-patterns \
 zstyle ':completion:*' file-sort 'modification'
 #zstyle ':completion:*' sort 'modification'
 
-zstyle ':completion:*:(cd|vi|vim|ls):*' ignore-parents pwd
+zstyle ':completion:*:(cd|vi|vim|ls):*' ignore-parents parent pwd
 
 # Ignore what's already in the line
 zstyle ':completion:*:(rm|cp|mv||kill|diff|vim|cat|less|more|gzip|gunzip|zcat|tar|fg|bg):*' ignore-line yes
@@ -27,3 +27,12 @@ zstyle ':completion:*:*:-redirect-,2>,*:*' file-patterns '*.(log|txt)' 'logs/*.l
 zstyle ':completion:*:*:-redirect-,2>>,*:*' file-patterns '*.(log|txt)' 'logs/*.log' '%p:all_files'
 zstyle ':completion:*:*:-redirect-,>,*:*' file-patterns '*.(log|txt)' 'logs/*.log' '%p:all_files'
 zstyle ':completion:*:*:-redirect-,>>,*:*' file-patterns '*.(log|txt)' 'logs/*.log' '%p:all_files'
+
+zstyle ':completion:*' special-dirs true
+
+# disable named-directories autocompletion
+zstyle ':completion:*:cd:*' tag-order local-directories directory-stack path-directories
+
+# Use caching so that commands like apt and dpkg complete are useable
+zstyle ':completion:*' use-cache yes
+#zstyle ':completion:*' cache-path $ZSH_CACHE_DIR

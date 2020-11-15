@@ -81,7 +81,7 @@ zinit $lightmode wait"2" lucid from"gh-r" as"program" for \
 
 zinit $lightmode wait"2" lucid has'lua' for \
   atload'!export _ZL_DATA=$XDG_CACHE_HOME/.zlua; alias zh="z -I -t ."; alias zb="z -b" ' skywind3000/z.lua \
-  atload'!function _z() { _zlua "$@"; }' changyuheng/fz
+  atload'!function _z() { _zlua "$@"; }; alias z="nocorrect _fz"' changyuheng/fz
 
 # light-mode within zshrc – for the instant prompt
 zinit ice atload"!source ${ZDOTDIR:-$HOME}/.p10k.zsh" lucid nocd depth=1

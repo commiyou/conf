@@ -30,14 +30,29 @@ fi
 
 if ! command -v svn &> /dev/null; then
   if command -v apt-get &> /dev/null; then
-    echo sudo apt-get install subversion
+    echo sudo apt-get install -y subversion
   elif command -v yum &> /dev/null; then
-    echo sudo yum install subversion
+    echo sudo yum install -y subversion
   else
     echo no subversion, should install...
   fi
 
 fi
+
+if ! command -v svn &> /dev/null; then
+  if command -v apt-get &> /dev/null; then
+    echo sudo apt-get install -y subversion
+  elif command -v yum &> /dev/null; then
+    echo sudo yum install -y subversion
+  else
+    echo no subversion, should install...
+  fi
+
+fi
+
+echo "sudo add-apt-repository ppa:jonathonf/vim; apt update; apt install -y vim"
+
 echo 'export PATH="/data1/youbin/.local/bin/bin:$PATH"' >> ~/.bashrc
-
-
+[ -e ~/.zshenv ] && mv ~/.zshenv  ~/.zshenv.$(date +%s)
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+echo "source $DIR/profile" > ~/.zshenv

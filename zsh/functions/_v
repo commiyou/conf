@@ -1,3 +1,33 @@
 #compdef v
 
-_files /data1/youbin/
+typeset -A opt_args
+
+local context state line
+local filedir findall
+
+_arguments -S \
+  "(-c)-d-[specify directory]:directory:_files -/" \
+  "(-d)-c[current  directory]" \
+  "-a[find all files]" \
+  "-h[help]" \
+  "--help[help]" \
+  "--debug[show debug info]" \
+  "(-)::args:->file-or-word" \
+  && return 0
+
+(( $+opt_args[-c] )) && filedir=$(pwd)
+(( $+opt_args[-d] )) && filedir=$opt_args[-d]
+(( $+opt_args[-a] )) && findall=1
+
+case "$state" in
+  (file-or-word)
+    if [ "$findall" ]; then
+      [ -d "$filedir" ] && _files -W ${filedir:a} -g "**/*(.)" && return 0
+    else
+      _values 'files' $(v -l ${(k)opt_args} | cut -f2 | tac)
+    fi
+    ;;
+esac
+
+return 1
+

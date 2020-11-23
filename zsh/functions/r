@@ -1,0 +1,57 @@
+# #!/usr/bin/env zsh
+# Interactive search.
+#
+setopt localoptions extendedglob globsubst
+local _pwd="$(command pwd)"
+
+local fnd=() 
+local files=()
+local deleted subdir list edit debug resp i line _cpath _csv_marks
+for x; do
+  case $x in
+    -c) subdir="$_pwd"; ;;
+    -d*) subdir="${x:2}" && [ -z "$subdir" ] && subdir="-d"; ;;
+    --) shift; fnd+=("$@"); break;;
+    *) fnd+=("$x");;
+  esac;
+  shift;
+done
+set -- "${fnd[@]}"
+
+if [ "$subdir" = "-d" ]; then
+  IFS=, read -rA _csv_marks <<< "${_ZL_ROOT_MARKERS:-.git,.svn,.hg,.root}"
+  _cpath=$_pwd
+  while true; do
+    for line in ${_csv_marks[@]}
+    do
+      [ $debug ] && echo csv, "${_cpath}/$line"
+      [ -e "${_cpath}/$line" ] && subdir="$_cpath" && break
+    done
+    _cpath=${_cpath%/*}
+    [ -z "$_cpath" ] && break
+  done
+else
+  subdir=${(~)subdir}
+fi
+
+[ "$subdir" = "-d" ] && subdir="$_pwd"
+
+
+RG_DEFAULT_COMMAND="rg --smart-case -l --hidden --no-ignore-vcs -g '!.git/' -g '!.svn/'"
+
+selected=$(
+FZF_DEFAULT_COMMAND="$RG_DEFAULT_COMMAND --files $subdir" fzf \
+  -m \
+  -e \
+  --ansi \
+  --phony \
+  --reverse \
+  --bind "ctrl-a:select-all" \
+  --bind "change:reload:$RG_DEFAULT_COMMAND {q} $subdir || true" \
+  --preview "rg -i --pretty --context 2 {q} {}" \
+  --query="$@"
+)
+
+[[ -n $selected ]] && vim $selected # open multiple files in editor 
+
+# vim:ft=zsh:et

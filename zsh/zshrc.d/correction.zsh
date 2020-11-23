@@ -13,4 +13,5 @@ alias touch='nocorrect touch'
 alias hadoop='nocorrect hadoop'
 
 CORRECT_IGNORE_FILE='.*'
+CORRECT_IGNORE="[_|.]*"
 setopt correct_all   # CORRECT_IGNORE_FILE to ignore

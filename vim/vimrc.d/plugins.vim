@@ -215,14 +215,14 @@ if g:config.vimrc.plugin_on
     " (Optional) Multi-entry selection UI.
     Plug 'junegunn/fzf'
     Plug 'junegunn/fzf.vim'
-    nmap <leader>ff :Files<cr>
+    nmap <leader>ff :FilesUnderGitRoot<cr>
     nmap <leader>fd :FilesUnderFileDir<cr>
     nmap <leader>fg :FilesUnderGitRoot<cr>
     nmap <leader>b :Buffers<cr>
     nmap <leader>m :History<cr>
-    nmap <leader>rr :Rg<cr>
-    nmap <leader>rd :RgUnderFileDir<cr>
-    nmap <leader>rg :RgUnderGitRoot<cr>
+    nmap <leader>rr :Rr<cr>
+    "nmap <leader>rd :RgUnderFileDir<cr>
+    "nmap <leader>rg :RgUnderGitRoot<cr>
 
     let g:fzf_history_dir = g:cachedir . "/fzf-history"
     " [Buffers] Jump to the existing window if possible
@@ -230,7 +230,9 @@ if g:config.vimrc.plugin_on
     " [[B]Commits] Customize the options used by 'git log':
     let g:fzf_commits_log_options = '--graph --color=always --format="%C(auto)%h%d %s %C(black)%C(bold)%cr"'
     " [Commands] --expect expression for directly executing the command
-    let g:fzf_commands_expect = 'alt-enter,ctrl-x'
+    "let g:fzf_commands_expect = 'alt-enter,ctrl-x'
+    "let g:fzf_layout = { 'down': '40%' }
+
 
 
     command! -bang -nargs=? -complete=dir Files
@@ -241,7 +243,7 @@ if g:config.vimrc.plugin_on
                 \ call fzf#vim#files(<q-args>, fzf#vim#with_preview({ 'dir': expand('%:p:h')}), <bang>0)
 
     command! -bang -nargs=? -complete=dir FilesUnderGitRoot
-                \ call fzf#vim#files(<q-args>, fzf#vim#with_preview({ 'dir': systemlist('cd '. expand('%:p:h') . ';git rev-parse --show-toplevel')[0] }), <bang>0)
+                \ call fzf#vim#files(<q-args>, fzf#vim#with_preview({ 'dir': systemlist('cd '. expand('%:p:h') . ';git rev-parse --show-toplevel 2>/dev/null || pwd')[0] }), <bang>0)
 
     command! -bang -nargs=? -complete=dir FilesWorkDir
                 \ call fzf#vim#files(<q-args>, fzf#vim#with_preview({ 'dir': systemlist('git rev-parse --show-toplevel 2>/dev/null || pwd')[0] }), <bang>0)
@@ -252,31 +254,35 @@ if g:config.vimrc.plugin_on
     " Files target dir
     "
     "
-    let s:rg_cmd="rg --column --line-number --no-heading --color=always --smart-case --no-config "
+    let s:rg_cmd="rg --smart-case -l --hidden --no-ignore-vcs -g '!.git/' -g '!.svn/'"
+    command! -bang -nargs=* Rr  call fzf#run(fzf#wrap({'source': s:rg_cmd . " --files",
+                \ 'dir': systemlist('cd '. expand('%:p:h') . ';git rev-parse --show-toplevel 2>/dev/null || pwd')[0],
+                \ 'options': "--preview 'rg -i --pretty --context 2 {q} {}' --bind 'change:reload:" . s:rg_cmd . " {q} || true' --phony --prompt='Rr> '"}, <bang>0 ))
+    "let s:rg_cmd="rg --column --line-number --no-heading --color=always --smart-case --no-config "
 
-    command! -bang -nargs=* Rg
-                \ call fzf#vim#grep(
-                \   s:rg_cmd.shellescape(<q-args>), 0,
-                \   fzf#vim#with_preview({ 'dir': expand('%:p:h') }, 'right:50%'),
-                \   <bang>0)
+    "command! -bang -nargs=* Rg
+    "            \ call fzf#vim#grep(
+    "            \   s:rg_cmd.shellescape(<q-args>), 0,
+    "            \   fzf#vim#with_preview({ 'dir': expand('%:p:h') }, 'right:50%'),
+    "            \   <bang>0)
 
-    command! -bang -nargs=* RgUnderFileDir
-                \ call fzf#vim#grep(
-                \   s:rg_cmd.shellescape(<q-args>), 0,
-                \   fzf#vim#with_preview({ 'dir': expand('%:p:h') }, 'right:50%'), 
-                \   <bang>0)
+    "command! -bang -nargs=* RgUnderFileDir
+    "            \ call fzf#vim#grep(
+    "            \   s:rg_cmd.shellescape(<q-args>), 0,
+    "            \   fzf#vim#with_preview({ 'dir': expand('%:p:h') }, 'right:50%'), 
+    "            \   <bang>0)
 
-    command! -bang -nargs=* RgUnderGitRoot
-                \ call fzf#vim#grep(
-                \   s:rg_cmd.shellescape(<q-args>), 0,
-                \   fzf#vim#with_preview({ 'dir': systemlist('cd '. expand('%:p:h') . ';git rev-parse --show-toplevel')[0] }, 'right:50%'), 
-                \   <bang>0)
+    "command! -bang -nargs=* RgUnderGitRoot
+    "            \ call fzf#vim#grep(
+    "            \   s:rg_cmd.shellescape(<q-args>), 0,
+    "            \   fzf#vim#with_preview({ 'dir': systemlist('cd '. expand('%:p:h') . ';git rev-parse --show-toplevel 2>/dev/null || pwd')[0] }, 'right:50%'), 
+    "            \   <bang>0)
 
-    command! -bang -nargs=* RgWorkDir
-                \ call fzf#vim#grep(
-                \   s:rg_cmd.shellescape(<q-args>), 0,
-                \   fzf#vim#with_preview({ 'dir': systemlist('git rev-parse --show-toplevel 2>/dev/null || pwd')[0] }, 'right:50%'), 
-                \   <bang>0)
+    "command! -bang -nargs=* RgWorkDir
+    "            \ call fzf#vim#grep(
+    "            \   s:rg_cmd.shellescape(<q-args>), 0,
+    "            \   fzf#vim#with_preview({ 'dir': systemlist('git rev-parse --show-toplevel 2>/dev/null || pwd')[0] }, 'right:50%'), 
+    "            \   <bang>0)
 
     " enable gtags module
     let g:gutentags_modules = ['ctags', 'gtags_cscope']

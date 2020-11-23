@@ -1,34 +1,96 @@
-# DESC: vim recent files
-# vim: filetype=zsh
-v() {
-  local files
-  setopt localoptions extendedglob
-  if [ $# -eq 1 ] && [ -f "$1" ]; then
-    ${vim:-vim} ${1/#\~/$HOME}
-    return
-  fi
-  if [ $# -gt 1 ] && [ $1 = '..' ]; then # project root/parent dir
-    shift
-    local parent_dir=$(z -e -b 2>/dev/null || echo ..)  
+## Inspired by https://github.com/rupa/v
+[ "$vim" ] || vim=vim
+[ $viminfo ] || viminfo="$XDG_CACHE_HOME/vim/viminfo"
 
-    files=$( print -l $parent_dir/(^.git/)#/*(.om) |
-      while read line; do
-        [ -f "${line/\~/$HOME}" ] && echo "$line"
-      done | fzf-tmux -d -m -q "$*" -1) && ${vim:-vim} ${files/#\~/$HOME}
+setopt localoptions extendedglob globsubst
+local usage="usage: [-a] [-c] [-d[directory]] [-l] [-[0-9]] [--debug] [--help] [regexes]"
 
-      return
-  fi
-  if [ $# -gt 1 ] && [ $1 = '.' ]; then  # current dir
-    shift
-    files=$( print -l (^.git/)#/*(.om) |
-      while read line; do
-        [ -f "${line/\~/$HOME}" ] && echo "$line"
-      done | fzf-tmux -d -m -q "$*" -1) && ${vim:-vim} ${files/#\~/$HOME}
-      return
+[ $1 ] || list=1
 
-  fi
-  files=$(grep '^>' ${viminfo:-"$XDG_CACHE_HOME/vim/viminfo"} | cut -c3- |
-    while read line; do
-      [ -f "${line/\~/$HOME}" ] && echo "$line"
-    done | fzf-tmux -d -m -q "$*" -1) && ${vim:-vim} ${files/#\~/$HOME}
+local _pwd="$(command pwd)"
+
+local fnd=() 
+local files=()
+local deleted subdir list edit debug resp i line _cpath _csv_marks
+for x; do
+  case $x in
+    -a) deleted=1;;
+    -c) subdir="$_pwd"; ;;
+    -d*) subdir="${x:2}" && [ -z "$subdir" ] && subdir="-d"; ;;
+    -l) list=1;;
+    -[0-9]) edit=${x:1}; ;;
+    -h) echo $usage; return;;
+    --help) echo $usage; return;;
+    --debug) debug=1;;
+    --) shift; fnd+=("$@"); break;;
+    *) fnd+=("$x");;
+  esac;
+  shift;
+done
+set -- "${fnd[@]}"
+
+if [ "$subdir" = "-d" ]; then
+  IFS=, read -rA _csv_marks <<< "${_ZL_ROOT_MARKERS:-.git,.svn,.hg,.root}"
+  _cpath=$_pwd
+  while true; do
+    for line in ${_csv_marks[@]}
+    do
+      [ $debug ] && echo csv, "${_cpath}/$line"
+      [ -e "${_cpath}/$line" ] && subdir="$_cpath" && break
+    done
+    _cpath=${_cpath%/*}
+    [ -z "$_cpath" ] && break
+  done
+else
+  subdir=${(~)subdir}
+fi
+
+[ "$subdir" = "-d" ] && subdir="$_pwd"
+[ $debug ] && echo "pwd $subdir"
+[ $debug  ] && echo "fnd ${fnd[@]}"
+
+[ -f "$1" ] && {
+  $vim "$1"
+  return
+}
+
+while IFS=" " read line; do
+  [ "${line:0:1}" = ">" ] || continue
+  local fl=${line:2}
+  local _fl="${(~)fl}"
+  [ -f "$_fl" -o "$deleted" ] || continue
+  [ $debug ] && echo fl, $fl, $_fl
+  local match=1
+  for x; do
+    [[ "$fl" =~ $x ]] || match=
+  done
+  [ "$subdir" ] && {
+    case "$_fl" in
+      $subdir*);;
+      *) match=;;
+    esac
   }
+  [ "$match" ] || continue
+  i=$((i+1))
+  [ $debug ] && echo i, $i, $fl
+  files[$i]="$fl"
+done < "$viminfo"
+[ $debug ] && echo "${files[@]}"
+
+if [ "$edit" ]; then
+  resp=${files[$((edit+1))]}
+elif [ "$i" = 1 -o "$list" = "" ]; then
+  resp=${files[1]}
+elif [ "$i" ]; then 
+  while [ $i -gt 0 ]; do
+    echo -e "$((i-1))\t${files[$i]}"
+    i=$((i-1))
+  done
+  #read -p '> ' CHOICE
+  #[ "$CHOICE" ] && resp=${files[$((CHOICE+1))]}
+fi
+
+[ "$resp" ] || return
+$vim "${(~)resp}"
+
+# vim:ft=zsh:et

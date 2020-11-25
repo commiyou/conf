@@ -32,10 +32,10 @@ alias hdput="hadoop fs -put"
 alias cnjump="ssh -p26890 cnjump.weihuitel.com"
 
 function prompt_bigo_vpn() {
-	if ! rasdial.exe bigo 1 1 >/dev/null; then
+	if ! curl -I oa.bigo.sg > /dev/null 2>&1; then
     return
 	fi
-	p10k segment -f red -t BIGO
+	p10k segment -f yellow -t BIGO
 }
 
 function instant_prompt_bigo_vpn() {

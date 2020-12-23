@@ -82,8 +82,8 @@ websvr() {
     MPORT=8000
   fi
   timeout 10m python -m SimpleHTTPServer $MPORT > /dev/null 2>&1   &
-  if [[ $(ls | wc -l) -lt 10 ]]; then
-    for l in "$(ls)"
+  if [[ $(find . -type f | wc -l) -lt 10 ]]; then
+    for l in $(find . -type f)
     do
       echo http://$(myip):$MPORT/$l
     done

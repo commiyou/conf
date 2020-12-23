@@ -1,5 +1,16 @@
+# vim: ft=zsh
+
 function dbls() {
-	local db rpath f
+  local fnd=() 
+	local db rpath f x all
+  for x; do
+    case $x in
+      -a) all=1;;
+      *) fnd+=("$x");;
+    esac
+    shift
+  done
+  set -- "${fnd[@]}"
 	for db in "$@"; do
 		rpath=
 		if [ "$db" =~ ^bigolive\.* ]; then
@@ -14,11 +25,17 @@ function dbls() {
 			rpath="/user/hive/warehouse/${db#*.}"
 		elif [ "$db" =~ ^tmp\.* ]; then
 			rpath="/apps/hive/warehouse/tmp.db/${db#*.}"
+		elif [ "$db" =~ ^live_dw_com\.* ]; then
+			rpath="/user/hive/warehouse/live_dw_com.db/${db#*.}"
 		fi
 		echo "> $db : $rpath"
 		if [ -n "$rpath" ]; then
 			for f in $(echo $rpath); do
-				hadoop fs -ls "$f"| tail -10
+        if [ -n "$all" ]; then
+          hadoop fs -ls "$f" && break
+        else
+          { hadoop fs -ls "$f" | tail -10 } && break
+        fi
 			done
 		fi
 	done

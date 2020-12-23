@@ -1,4 +1,4 @@
-# vim: ft=sh
+# vim: ft=zsh
 
 die() {
   echo "$@" 1>&2 ; exit 1;
@@ -118,6 +118,14 @@ unbuf () {
   filetime=$(date +%Y%m%d_%H%M%S)
   mv "${filename}" "${filename}_${filetime}"
   mv "$newest_buf" "$filename"
+}
+
+# check the difference from dst dir to src dir
+diffd() {
+  local src_dir=${1?no src dir}
+  local dst_dir=${2?no dst dir}
+  (cd "$src_dir" && fd -t f -0) | xargs -0 -n1 -I{} diff -q "$src_dir"/{} "$dst_dir"/{}
+
 }
 
 cd () {

@@ -220,7 +220,8 @@ if g:config.vimrc.plugin_on
     nmap <leader>fg :FilesUnderGitRoot<cr>
     nmap <leader>b :Buffers<cr>
     nmap <leader>m :History<cr>
-    nmap <leader>rr :Rr<cr>
+    nmap <leader>rr :exec 'RrUnderCurrentFileDir' expand('<cword>')<cr>
+    nmap <leader>rw :exec 'RrUnderWorkDir' expand('<cword>')<cr>
     "nmap <leader>rd :RgUnderFileDir<cr>
     "nmap <leader>rg :RgUnderGitRoot<cr>
 
@@ -255,28 +256,14 @@ if g:config.vimrc.plugin_on
     "
     "
     let s:rg_cmd="rg --smart-case -l --hidden --no-ignore-vcs -g '!.git/' -g '!.svn/'"
-    command! -bang -nargs=* Rr  call fzf#run(fzf#wrap({'source': s:rg_cmd . " --files",
+    command! -bang -nargs=* RrUnderCurrentFileDir  call fzf#run(fzf#wrap({'source': s:rg_cmd . " --files",
                 \ 'dir': systemlist('cd '. expand('%:p:h') . ';git rev-parse --show-toplevel 2>/dev/null || pwd')[0],
-                \ 'options': "--preview 'rg -i --pretty --context 2 {q} {}' --bind 'change:reload:" . s:rg_cmd . " {q} || true' --phony --prompt='Rr> '"}, <bang>0 ))
-    "let s:rg_cmd="rg --column --line-number --no-heading --color=always --smart-case --no-config "
+                \ 'options': "--preview 'rg -i --pretty --context 2 {q} {}' --bind 'change:reload:" . s:rg_cmd . " {q} || true' --phony --prompt='Rr> ' -q '" . <q-args> . "'"}, <bang>0 ))
 
-    "command! -bang -nargs=* Rg
-    "            \ call fzf#vim#grep(
-    "            \   s:rg_cmd.shellescape(<q-args>), 0,
-    "            \   fzf#vim#with_preview({ 'dir': expand('%:p:h') }, 'right:50%'),
-    "            \   <bang>0)
+    command! -bang -nargs=* RrUnderWorkDir  call fzf#run(fzf#wrap({'source': s:rg_cmd . " --files",
+                \ 'dir': systemlist('git rev-parse --show-toplevel 2>/dev/null || pwd')[0],
+                \ 'options': "--preview 'rg -i --pretty --context 2 {q} {}' --bind 'change:reload:" . s:rg_cmd . " {q} || true' --phony --prompt='Rr> ' -q '" . <q-args> . "'"}, <bang>0 ))
 
-    "command! -bang -nargs=* RgUnderFileDir
-    "            \ call fzf#vim#grep(
-    "            \   s:rg_cmd.shellescape(<q-args>), 0,
-    "            \   fzf#vim#with_preview({ 'dir': expand('%:p:h') }, 'right:50%'), 
-    "            \   <bang>0)
-
-    "command! -bang -nargs=* RgUnderGitRoot
-    "            \ call fzf#vim#grep(
-    "            \   s:rg_cmd.shellescape(<q-args>), 0,
-    "            \   fzf#vim#with_preview({ 'dir': systemlist('cd '. expand('%:p:h') . ';git rev-parse --show-toplevel 2>/dev/null || pwd')[0] }, 'right:50%'), 
-    "            \   <bang>0)
 
     "command! -bang -nargs=* RgWorkDir
     "            \ call fzf#vim#grep(

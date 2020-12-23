@@ -33,6 +33,7 @@ function! s:config()
     let config.path = {
                 \ 'data': vim_data_path,
                 \ 'config':  vim_config_path,
+                \ 'rc':  vim_config_path . '/.vimrc',
                 \ }
 
     let config.bin = {

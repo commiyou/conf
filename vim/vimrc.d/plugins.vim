@@ -241,13 +241,15 @@ if g:config.vimrc.plugin_on
 
 
     command! -bang -nargs=? -complete=dir FilesUnderFileDir
-                \ call fzf#vim#files(<q-args>, fzf#vim#with_preview({ 'dir': expand('%:p:h')}), <bang>0)
+                \ call fzf#vim#files(<q-args>, fzf#vim#with_preview({ 'dir': expand('%:p:h'), 'options': "--prompt='" . expand('%:p:h') . "/'"}), <bang>0)
 
     command! -bang -nargs=? -complete=dir FilesUnderGitRoot
-                \ call fzf#vim#files(<q-args>, fzf#vim#with_preview({ 'dir': systemlist('cd '. expand('%:p:h') . ';git rev-parse --show-toplevel 2>/dev/null || pwd')[0] }), <bang>0)
+                \ call fzf#vim#files(<q-args>, fzf#vim#with_preview({ 'dir': systemlist('cd '. expand('%:p:h') . ';git rev-parse --show-toplevel 2>/dev/null || pwd')[0], 
+                \  'options': "--prompt='" . systemlist('cd '. expand('%:p:h') . ';git rev-parse --show-toplevel 2>/dev/null || pwd')[0]  . "/'"}), <bang>0)
 
     command! -bang -nargs=? -complete=dir FilesWorkDir
-                \ call fzf#vim#files(<q-args>, fzf#vim#with_preview({ 'dir': systemlist('git rev-parse --show-toplevel 2>/dev/null || pwd')[0] }), <bang>0)
+                \ call fzf#vim#files(<q-args>, fzf#vim#with_preview({ 'dir': systemlist('git rev-parse --show-toplevel 2>/dev/null || pwd')[0] 
+				\ 'options': "--prompt='" . systemlist('git rev-parse --show-toplevel 2>/dev/null || pwd')[0]  . "/'}), <bang>0)
 
     command! -bang -nargs=?  History
                 \ call fzf#vim#history(fzf#vim#with_preview(), <bang>0)

@@ -22,6 +22,7 @@ if [[ $(node -v) < 'v10.12' ]]; then
   else
     echo "can not find $kernel-$node_arch.tar.gz in https://nodejs.org/dist/latest/ " >& 2
   fi
+  cd -
 fi
 
 if [[ $(zsh --version | cut -f2 -d ' ') < '5.5' ]]; then
@@ -50,7 +51,7 @@ if ! command -v svn &> /dev/null; then
 
 fi
 
-echo "sudo add-apt-repository ppa:jonathonf/vim; apt update; apt install -y vim"
+echo "sudo add-apt-repository ppa:jonathonf/vim; sudo add-apt-repository ppa:git-core/ppa; sudo apt update; sudo apt install -y vim lua53 git; sudo ln -s /usr/bin/lua53 /usr/bin/lua"
 
 echo 'export PATH="/data1/youbin/.local/bin/bin:$PATH"' >> ~/.bashrc
 [ -e ~/.zshenv ] && mv ~/.zshenv  ~/.zshenv.$(date +%s)

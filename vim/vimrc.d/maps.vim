@@ -31,10 +31,10 @@ nnoremap <leader>\| :vs<CR>
 nnoremap <leader>- :sp<CR>
 nnoremap <c-w><c-f> :vsplit <cfile><cr>
 " Quickly open/reload vim
-nnoremap <leader>sv :source $vimdir/vimrc<CR>
-nnoremap <leader>ev :Files $vimdir<CR>
-autocmd BufWritePost $vimdir/vimrc source %
-autocmd BufWritePost $vimdir/vimrc.d/*.vim source %
+nnoremap <leader>sv :source g:config.path.config<CR>
+nnoremap <leader>ev :Files g:config.path.rc<CR>
+autocmd BufWritePost g:config.path.rc source %
+autocmd BufWritePost g:config.path.config . "/*.vim" source %
 
 cno $c e <C-\>eCurrentFileDir("tabe")<cr>
 cno $q <C-\>eDeleteTillSlash()<cr>

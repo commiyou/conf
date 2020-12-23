@@ -28,7 +28,7 @@ source $ZINIT[BIN_DIR]/zinit.zsh
 load=load
 [[ $load == light ]] && lightmode=light-mode || lightmode=
 
-zinit ice atclone"!bash install.sh" \
+zinit ice atclone"bash install.sh" \
   atpull'%atclone' pick"$XDG_DATA_HOME/lscolors.sh" nocompile'!' \
   atload'!zstyle ":completion:*" list-colors "${(s.:.)LS_COLORS}"' 
 zinit $load commiyou/LS_COLORS

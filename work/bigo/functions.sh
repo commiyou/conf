@@ -41,9 +41,11 @@ function dbls() {
 	done
 }
 
+alias hdcat="hadoop fs -cat"
 alias hdls="hadoop fs -ls"
 alias hdrm="hadoop fs -rmr"
 alias hdput="hadoop fs -put"
+alias hdget="hadoop fs -get"
 
 #alias ssh="ssh -o StrictHostKeyChecking=no -p 10020"
 alias cnjump="ssh -p26890 cnjump.weihuitel.com"
@@ -164,3 +166,21 @@ service_port() {
 service_debug() {
 	:
 }
+
+if command -v rasdial.exe > /dev/null 2>&1
+then
+  vpn() {
+    local pw
+    if [ $# -eq 0 ]; then
+      echo Token:
+      read
+      pw=$REPLY
+    elif [ "$1" = disconnect ]; then
+      rasdial.exe bigo /DISCONNECT
+      return 
+    else
+      pw=$1
+    fi
+    rasdial.exe bigo $USER@bigo.sg $pw
+  }
+fi

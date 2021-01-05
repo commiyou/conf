@@ -37,21 +37,10 @@ if ! command -v svn &> /dev/null; then
   else
     echo no subversion, should install...
   fi
-
 fi
 
-if ! command -v svn &> /dev/null; then
-  if command -v apt-get &> /dev/null; then
-    echo sudo apt-get install -y subversion
-  elif command -v yum &> /dev/null; then
-    echo sudo yum install -y subversion
-  else
-    echo no subversion, should install...
-  fi
 
-fi
-
-echo "sudo add-apt-repository ppa:jonathonf/vim; sudo add-apt-repository ppa:git-core/ppa; sudo apt update; sudo apt install -y vim lua5.3 git; sudo ln -s /usr/bin/lua5.3 /usr/bin/lua"
+echo "sudo add-apt-repository ppa:jonathonf/vim; sudo add-apt-repository ppa:git-core/ppa; sudo apt update; sudo apt install -y vim lua5.3 git subversion; sudo ln -s /usr/bin/lua5.3 /usr/bin/lua"
 
 echo 'export PATH="/data1/youbin/.local/bin/bin:$PATH"' >> ~/.bashrc
 [ -e ~/.zshenv ] && mv ~/.zshenv  ~/.zshenv.$(date +%s)

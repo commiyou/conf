@@ -44,8 +44,11 @@ function dbls() {
 alias hdcat="hadoop fs -cat"
 alias hdls="hadoop fs -ls"
 alias hdrm="hadoop fs -rmr"
+alias hdrmr=hdrm
 alias hdput="hadoop fs -put"
 alias hdget="hadoop fs -get"
+alias hdmv="hadoop fs -mv"
+alias hdcp="hadoop fs -cp"
 
 #alias ssh="ssh -o StrictHostKeyChecking=no -p 10020"
 alias cnjump="ssh -p26890 cnjump.weihuitel.com"

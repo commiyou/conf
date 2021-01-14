@@ -215,7 +215,7 @@ if g:config.vimrc.plugin_on
     " (Optional) Multi-entry selection UI.
     Plug 'junegunn/fzf'
     Plug 'junegunn/fzf.vim'
-    nmap <leader>ff :FilesUnderGitRoot<cr>
+    nmap <leader>ff :Files<cr>
     nmap <leader>fd :FilesUnderFileDir<cr>
     nmap <leader>fg :FilesUnderGitRoot<cr>
     nmap <leader>b :Buffers<cr>

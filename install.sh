@@ -4,6 +4,9 @@ if command -v pkg &> /dev/null; then
   echo termux-change-repo
   pkg install tmux exa zsh  nodejs lua53 subversion fzf fd wget python
   ln -sf /data/data/com.termux/files/usr/bin/lua5.3 /data/data/com.termux/files/usr/bin/lua 
+  termux-setup-storage
+  mv ~/.termux termux
+  ln -s ~/conf/termux .termux
   exit
 fi
 kernel="$(uname -s | tr '[A-Z]' '[a-z]')"

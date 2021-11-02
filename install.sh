@@ -44,7 +44,7 @@ if ! command -v svn &> /dev/null; then
 fi
 
 
-echo "sudo add-apt-repository ppa:jonathonf/vim; sudo add-apt-repository ppa:git-core/ppa; sudo apt update; sudo apt install -y vim lua5.3 git subversion; sudo ln -s /usr/bin/lua5.3 /usr/bin/lua"
+echo "sudo add-apt-repository ppa:jonathonf/vim; sudo add-apt-repository ppa:git-core/ppa; sudo apt update; sudo apt install -y vim lua5.3 git subversion unzip; sudo ln -s /usr/bin/lua5.3 /usr/bin/lua"
 
 echo 'export PATH="/data1/youbin/.local/bin/bin:$PATH"' >> ~/.bashrc
 [ -e ~/.zshenv ] && mv ~/.zshenv  ~/.zshenv.$(date +%s)

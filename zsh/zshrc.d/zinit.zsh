@@ -17,7 +17,7 @@ hash -d zinit=$ZINIT[HOME_DIR]
 if [[ ! -f $ZINIT[BIN_DIR]/zinit.zsh ]]; then
   print -P "%F{33}▓▒░ %F{220}Installing %F{33}DHARMA%F{220} Initiative Plugin Manager (%F{33}zdharma/zinit%F{220})…%f"
   command mkdir -p "$ZINIT[HOME_DIR]" && command chmod g-rwX "$ZINIT[HOME_DIR]"
-  command git clone https://github.com/zdharma/zinit "$ZINIT[BIN_DIR]" && \
+  command git clone https://github.com/commiyou/zinit "$ZINIT[BIN_DIR]" && \
     print -P "%F{33}▓▒░ %F{34}Installation successful.%f%b" || \
     print -P "%F{160}▓▒░ The clone has failed.%f%b"
 fi
@@ -70,7 +70,7 @@ zinit $lightmode wait lucid for \
 
 zinit $lightmode wait"1" lucid for \
   atinit"local zew_word_style=whitespace" \
-  psprint/zsh-editing-workbench
+  commiyou/zsh-editing-workbench
 
 zinit $lightmode wait"1" lucid from"gh-r" as"program" for \
   if'[[ ! ${commands[exa]} ]]' mv"exa* -> exa" pick'exa' ogham/exa \
@@ -105,7 +105,7 @@ fi
 
 # Fast-syntax-highlighting & autosuggestions
 zinit $lightmode wait'0b' lucid for \
-  atinit"zicompinit; zicdreplay" zdharma/fast-syntax-highlighting \
+  atinit"zicompinit; zicdreplay" commiyou/fast-syntax-highlighting \
   atload"!zstyle ':fzf-tab:complete:(cd|z):*' fzf-preview 'exa -1 --color=always \$realpath';" Aloxaf/fzf-tab \
   atload"!_zsh_autosuggest_start" zsh-users/zsh-autosuggestions 
 

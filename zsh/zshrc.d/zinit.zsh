@@ -44,6 +44,7 @@ zinit $lightmode wait lucid for \
   OMZP::urltools \
   OMZP::jsontools \
   OMZP::extract \
+  OMZP::thefuck \
   OMZL::clipboard.zsh \
   OMZL::completion.zsh \
   OMZL::functions.zsh \

@@ -98,9 +98,7 @@ if [ -n "$WORK_ENV" ] && [ -d $XDG_CONFIG_HOME/work/$WORK_ENV/ ]; then
   #source $config_file
   #for cf ($XDG_CONFIG_HOME/work/$WORK_ENV/*.sh) zinit snippet $cf
   zinit $lightmode wait'0c' lucid is-snippet for \
-    $XDG_CONFIG_HOME/work/$WORK_ENV/functions.sh \
-    blockf $XDG_CONFIG_HOME/work/$WORK_ENV/bigo.sh \
-    blockf $XDG_CONFIG_HOME/work/$WORK_ENV/bigo-completion.sh
+    $XDG_CONFIG_HOME/work/$WORK_ENV/functions.sh 
 fi
 
 # Fast-syntax-highlighting & autosuggestions

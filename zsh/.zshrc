@@ -18,3 +18,4 @@ unset config_file
 
 # To customize prompt, run `p10k configure` or edit 
 [[ ! -f $ZDOTDIR/.p10k.zsh ]] || source $ZDOTDIR/.p10k.zsh;
+[[ ! -f ~/.self.zshrc ]] || source ~/.self.zshrc;

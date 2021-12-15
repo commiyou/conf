@@ -8,7 +8,7 @@ if !empty($XDG_CONFIG_HOME) && isdirectory($XDG_CONFIG_HOME.'/vim')
 else
     let g:vimrc = resolve(expand('<sfile>:p'))
     let g:vimdir = fnamemodify(g:vimrc, ':h')
-    for f in split(glob(g:vimdir . "/.vim/vimrc.d/*.vim"), '[\r\n]')
+    for f in split(glob(g:vimdir . "/vimrc.d/*.vim"), '[\r\n]')
         exe 'source' f
     endfor
 endif

@@ -78,7 +78,7 @@ human() {
 
 # calc expresion
 C() {
-	python -c "from __future__ import division;print '%.3f' % ($@)"
+	python2 -c "from __future__ import division;print '%.3f' % ($@)"
 }
 
 # re escape, useful for awk/grep

@@ -49,6 +49,7 @@ if g:config.vimrc.plugin_on
     Plug 'wellle/tmux-complete.vim'
     let nodejs_version = system('node -v')
     if nodejs_version >= 'v10.12'
+        let g:coc_disable_startup_warning = 1
         let g:coc_config_home = g:config.path.config
         let g:coc_data_home = g:config.path.data . '/coc'
         Plug 'neoclide/coc.nvim', {'branch': 'release'}

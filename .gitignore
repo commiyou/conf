@@ -28,7 +28,10 @@ zsdoc/data
 /tests/_output/*
 !/tests/_output/.gitkeep
 
+# vscode 
+/Code
 
+QtProject.conf
 .zhistory
 zinit
 .path

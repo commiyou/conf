@@ -1,0 +1,37 @@
+# quickstart
+```
+cd ~
+git clone https://github.com/commiyou/conf --branch new
+ln -s ~/conf/vim/.vimrc
+```
+打开vim，就会自动下载插件, 或者使用`:PlugInstall`
+
+# 快捷键 
+`mapleader`为`space`
+
+##  normal mode
+- `<leader>m` recently opened files
+- `<leader>b` buffers/opened files
+- `<leader>ff` open file under current dir: `<enter>` open, `<ctrl>x` split, `ctrl>v` vsplit
+- `<leader>rr` search current word in files under current dir: `<enter>` open, `<ctrl>x` split, `ctrl>v` vsplit
+- `<leader>m` highlight current word: `<enter>` open, `<ctrl>x` split, `ctrl>v` vsplit
+- `<ctrl>wz` maximize current window/zoom mode
+- `<ctrl>wq` close current window
+- `<ctrl>h/l/j/k` jump to left/right/downside/upside window
+- `<ctrl>]` open function defination in top window from ctags
+- `<ctrl>i` go to newer cursor position in jump list
+- `<ctrl>o` go to older cursor position in jump list
+- `ci<char>` delete words in `<char>` and start insert
+
+## cmdline mode
+可用使用`<tab>`补全
+- `:help help` help
+- `:cd ..` set current dir to ..
+- `:sp`  split tab, 
+- `:vsp`  split tab vertically
+- `:tabe` edit in tab
+- `:e <path>` edit file
+- `:e` roload current file
+- `:r <path>` read in to current file
+- `:help :Git` git tools, `:Git blame` 
+- `:Git`git tools, `:Git blame` 

@@ -4,7 +4,8 @@ cd ~
 git clone https://github.com/commiyou/conf --branch new
 ln -s ~/conf/vim/.vimrc
 ```
-打开vim，就会自动下载插件, 或者使用`:PlugInstall`
+打开vim，就会自动下载插件到`$XDG_DATA_HOME/vim` 或者 `~/.local/share` 下, 或者使用`:PlugInstall`
+
 
 # 快捷键 
 `mapleader`为`space`
@@ -12,9 +13,10 @@ ln -s ~/conf/vim/.vimrc
 ##  normal mode
 - `<leader>m` recently opened files
 - `<leader>b` buffers/opened files
-- `<leader>ff` open file under current dir: `<enter>` open, `<ctrl>x` split, `ctrl>v` vsplit
-- `<leader>rr` search current word in files under current dir: `<enter>` open, `<ctrl>x` split, `ctrl>v` vsplit
-- `<leader>m` highlight current word: `<enter>` open, `<ctrl>x` split, `ctrl>v` vsplit
+- `<leader>ff` search file by `fzf` under current dir: `<enter>` open, `<ctrl>x` split, `<ctrl>v` vsplit, `<ctrl>t` tabe
+- `<leader>rr` search current word by `rg` in files under current dir: `<enter>` open, `<ctrl>x` split, `<ctrl>v` vsplit, `<ctrl>t` tabe
+- `<leader>m` highlight current word: `<enter>` open, `<ctrl>x` split, `<ctrl>v` vsplit, `<ctrl>t` tabe
+- `<leader>tt` open/close explorer
 - `<ctrl>wz` maximize current window/zoom mode
 - `<ctrl>wq` close current window
 - `<ctrl>h/l/j/k` jump to left/right/downside/upside window
@@ -35,3 +37,4 @@ ln -s ~/conf/vim/.vimrc
 - `:r <path>` read in to current file
 - `:help :Git` git tools, `:Git blame` 
 - `:Git`git tools, `:Git blame` 
+- `:Maps` see all mapping

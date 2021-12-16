@@ -2,7 +2,12 @@
 ```
 cd ~
 git clone https://github.com/commiyou/conf --branch new
+cp ~/.vimrc ~/.vimrc.bak
 ln -s ~/conf/vim/.vimrc
+
+# install ripgrep
+# https://github.com/BurntSushi/ripgrep#installation
+
 ```
 打开vim，就会自动下载插件到`$XDG_DATA_HOME/vim` 或者 `~/.local/share` 下, 或者使用`:PlugInstall`
 
@@ -13,9 +18,9 @@ ln -s ~/conf/vim/.vimrc
 ##  normal mode
 - `<leader>m` recently opened files
 - `<leader>b` buffers/opened files
-- `<leader>ff` search file by `fzf` under current dir: `<enter>` open, `<ctrl>x` split, `<ctrl>v` vsplit, `<ctrl>t` tabe
-- `<leader>rr` search current word by `rg` in files under current dir: `<enter>` open, `<ctrl>x` split, `<ctrl>v` vsplit, `<ctrl>t` tabe
-- `<leader>m` highlight current word: `<enter>` open, `<ctrl>x` split, `<ctrl>v` vsplit, `<ctrl>t` tabe
+- `<leader>ff` search file by `fzf` under current dir: `<enter>` open, `<ctrl>x` split, `<ctrl>v` vsplit, `<ctrl>t` tabe, `<ctrl>c` break
+- `<leader>rr` search current word by `rg` in files under current dir: `<enter>` open, `<ctrl>x` split, `<ctrl>v` vsplit, `<ctrl>t` tabe, `<ctrl>c` break
+- `<leader>m` highlight current word: `<enter>` open, `<ctrl>x` split, `<ctrl>v` vsplit, `<ctrl>t` tabe, `<ctrl>c` break
 - `<leader>tt` open/close explorer
 - `<ctrl>wz` maximize current window/zoom mode
 - `<ctrl>wq` close current window

@@ -29,6 +29,8 @@ ln -s ~/conf/vim/.vimrc
 - `<ctrl>i` go to newer cursor position in jump list
 - `<ctrl>o` go to older cursor position in jump list
 - `ci<char>` delete words in `<char>` and start insert
+- `ma` make marker `a`
+- `'a` jump to makrer `a`
 
 ## cmdline mode
 可用使用`<tab>`补全
@@ -36,10 +38,13 @@ ln -s ~/conf/vim/.vimrc
 - `:cd ..` set current dir to ..
 - `:sp`  split tab, 
 - `:vsp`  split tab vertically
-- `:tabe` edit in tab
+- `:tabe` edit in new tab
 - `:e <path>` edit file
 - `:e` roload current file
 - `:r <path>` read in to current file
 - `:help :Git` git tools, `:Git blame` 
 - `:Git`git tools, `:Git blame` 
 - `:Maps` see all mapping
+- `:Rg [PATTERN]` search word by `rg`
+- `:FZF` search file by `fzf`, 
+- `:help fzf-vim-commands` more useful commands

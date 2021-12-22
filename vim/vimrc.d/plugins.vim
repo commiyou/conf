@@ -200,9 +200,9 @@ if g:config.vimrc.plugin_on
     nnoremap <leader>U :UndotreeToggle<CR>
     " }}}
 
-    Plug 'junegunn/vim-peekaboo'
+    "Plug 'junegunn/vim-peekaboo'
     " {{{
-    let g:peekaboo_delay = 400
+    "let g:peekaboo_delay = 400
     " }}}
     Plug 'tpope/vim-fugitive'
     Plug 'mhinz/vim-signify'

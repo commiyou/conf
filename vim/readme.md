@@ -19,7 +19,7 @@ ln -s ~/conf/vim/.vimrc
 - `<leader>m` recently opened files
 - `<leader>b` buffers/opened files
 - `<leader>ff` search file by `fzf` under current dir: `<enter>` open, `<ctrl>x` split, `<ctrl>v` vsplit, `<ctrl>t` tabe, `<ctrl>c` break
-- `<leader>rr` search current word by `rg` in files under current dir: `<enter>` open, `<ctrl>x` split, `<ctrl>v` vsplit, `<ctrl>t` tabe, `<ctrl>c` break
+- `<leader>rr` search current word by `rg` in files under current dir: `<enter>` open, `<ctrl>x` split, `<ctrl>v` vsplit, `<ctrl>t` tabe, `<ctrl>c` break; ~目前有点问题，需要改动下搜索词才能触发rg的搜索~
 - `<leader>m` highlight current word: `<enter>` open, `<ctrl>x` split, `<ctrl>v` vsplit, `<ctrl>t` tabe, `<ctrl>c` break
 - `<leader>tt` open/close explorer
 - `<ctrl>wz` maximize current window/zoom mode
@@ -31,6 +31,7 @@ ln -s ~/conf/vim/.vimrc
 - `ci<char>` delete words in `<char>` and start insert
 - `ma` make marker `a`
 - `'a` jump to makrer `a`
+- `"+y` copy into systerm clipboard (ubuntu with vim-gtk installed)
 
 ## cmdline mode
 可用使用`<tab>`补全

@@ -318,6 +318,8 @@ if g:config.vimrc.plugin_on
     " let g:templates_debug = 1
     " let g:templates_user_variables = 
     " }}}
+    "Shift-K to view the translation of the word under the cursor.
+    set keywordprg=trans\ :ja
     call plug#end()
 
     try

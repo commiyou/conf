@@ -1,0 +1,41 @@
+! http://xahlee.info/linux/linux_xmodmap_tutorial.html
+! reset: setxkbmap -layout us
+! list: xmodmap -pke > ~/xmodmap_original
+! In terminal, type `xev`, then press key to find that key's X11 keycode and keysym.
+!
+! 1. `key` by itself
+! 2. `Shift` + `key`
+! 3. mode_switch + `key`
+! 4. mode_switch + `Shift` + `key`
+! 5. `AltGraph` + `key`
+! 5. `AltGraph` + `Shift` + `key`
+!
+! remove Caps Lock functionality
+clear lock
+! use Caps Lock to access 3rd and 4th value in keycode definition below
+keycode 66 = Mode_switch
+
+keycode  9 = Escape NoSymbol Caps_Lock
+keycode 30 = u U Prior Prior
+keycode 31 = i I Home Home
+keycode 32 = o O End End
+keycode 33 = p P Next Next
+
+! compose key is Mode_switch o
+!keycode 32 = o O Multi_key Multi_key
+
+! move mouse pointer (requires accessibility feature to be enabled)
+!keycode 39 = s S KP_Left  KP_Left
+!keycode 40 = d D KP_Down  KP_Down
+!keycode 41 = f F KP_Up    KP_Up
+!keycode 42 = g G KP_Right KP_Right
+
+! simulate arrow keys vim style
+keycode 43 = h H Left  Left
+keycode 44 = j J Down  Down
+keycode 45 = k K Up    Up
+keycode 46 = l L Right Right
+
+!keycode  94 = F10 F10 XF86AudioMute XF86AudioMute F10 F10 XF86Switch_VT_10
+!keycode  95 = F11 F11 XF86AudioLowerVolume XF86AudioLowerVolume F11 F11 XF86Switch_VT_11
+!keycode  96 = F12 F12 XF86AudioRaiseVolume XF86AudioRaiseVolume F12 F12 XF86Switch_VT_12

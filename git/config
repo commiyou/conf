@@ -1,6 +1,6 @@
 [user]
-  name = commiyou
-  email = commiyou@gmail.com
+  name = bin.you
+  email = bin.you@allride.ai
 [color]
   ui = auto
 [alias]
@@ -32,10 +32,12 @@
   uncommit = reset --soft HEAD~1
   # Remove file(s) from Git but not from disk
   untrack = rm --cache --
+	find-file = "!for branch in `git for-each-ref --format=\"%(refname)\" refs/heads`; do echo \"${branch}:\"; git ls-tree -r --name-only $branch | nl -bn -w3 | grep \"$1\"; done; :"
 [core]
   # Don't consider trailing space change as a cause for merge conflicts
   whitespace = -trailing-space
+  autocrlf = input
 [credential]
-  helper = cache --timeout=3600
+	helper = /usr/share/doc/git/contrib/credential/libsecret/git-credential-libsecret
 [pull]
 	rebase = true

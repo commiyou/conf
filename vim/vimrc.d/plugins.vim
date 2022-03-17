@@ -17,46 +17,64 @@ if g:config.vimrc.plugin_on
     call plug#begin(g:plug.base)
 
     try
-    	let pyver = execute(':pythonx import sys;print(sys.version.split(" ")[0])')
+        pythonx import vim; from sys import version_info as v; vim.command('let pyver=%d' % (v[0] * 100 + v[1]))
     catch
-    	let pyver='2.7'
+        let pyver='207'
     endtry
 
     let g:netrw_home= g:cachedir
 
-    if has("python3") && pyver > '3.0'
-
-        Plug 'roxma/vim-hug-neovim-rpc', { 'do': 'pip3 intall --user pynvim' }
-        Plug 'roxma/nvim-yarp', { 'do': 'pip3 install --user neovim'}
-        
-        if pyver < '3.6.1'
-            Plug 'Shougo/deoplete.nvim', { 'tag':'4.1', 'do': 'pip3 install --user pynvim' }
+    "echom has("python3") 
+    "echom pyver 
+    "echom execute(':pythonx import sys;print(sys.version.strip("\0").split()[0])')
+    "if has("python3") && pyver > '300'
+    if 1
+        if has('nvim')
+            Plug 'Shougo/deoplete.nvim', { 'do': ':UpdateRemotePlugins' }
         else
-            Plug 'Shougo/deoplete.nvim', { 'do': 'pip3 install --user pynvim' }
+            Plug 'roxma/vim-hug-neovim-rpc', { 'do': 'pip3 intall --user pynvim' }
+            Plug 'roxma/nvim-yarp', { 'do': 'pip3 install --user neovim'}
+
+            if pyver < '306'
+                Plug 'Shougo/deoplete.nvim', { 'tag':'4.1', 'do': 'pip3 install --user pynvim' }
+            else
+                Plug 'Shougo/deoplete.nvim', { 'do': 'pip3 install --user pynvim' }
+            endif
         endif
+        let g:deoplete#enable_at_startup = 1
+
         Plug 'Shougo/neco-syntax'
-        Plug 'tbodt/deoplete-tabnine', { 'do': './install.sh' }
+        "Plug 'tbodt/deoplete-tabnine', { 'do': './install.sh' }
         Plug 'autozimu/LanguageClient-neovim', { 'branch': 'next', 'do': 'bash install.sh' } 
+
+        "Plug 'prabirshrestha/vim-lsp'
+        "Plug 'lighttiger2505/deoplete-vim-lsp'
+        "Plug 'mattn/vim-lsp-settings'
+        "noremap <F5> <Plug>(lcn-menu)
+        " Or map each action separately
+        "noremap <silent>K <Plug>(lcn-hover)
+        "noremap <silent> gd <Plug>(lcn-definition)
+        "noremap <silent> <F2> <Plug>(lcn-renam
+
+
         Plug 'deoplete-plugins/deoplete-dictionary'
         Plug 'Shougo/context_filetype.vim'
         Plug 'Shougo/neopairs.vim'
         Plug 'Shougo/echodoc.vim'
         Plug 'Shougo/neoinclude.vim'
+    else
+        let nodejs_version = system('node -v')
+        if nodejs_version >= 'v10.12'
+            let g:coc_disable_startup_warning = 1
+            let g:coc_config_home = g:config.path.config
+            let g:coc_data_home = g:config.path.data . '/coc'
+            Plug 'neoclide/coc.nvim', {'branch': 'release'}
+        endif
     endif
 
 
 
     Plug 'wellle/tmux-complete.vim'
-    let nodejs_version = system('node -v')
-    if nodejs_version >= 'v10.12'
-        let g:coc_disable_startup_warning = 1
-        let g:coc_config_home = g:config.path.config
-        let g:coc_data_home = g:config.path.data . '/coc'
-        Plug 'neoclide/coc.nvim', {'branch': 'release'}
-        if &rtp =~ 'coc.nvim'
-            exec 'source'  s:spath . '/plugins/yyy_coc.vim'
-        endif
-    endif
 
 
     " Plug 'ludovicchabant/vim-gutentags'
@@ -69,13 +87,13 @@ if g:config.vimrc.plugin_on
     let g:alternateNoDefaultAlternate = 1
 
     Plug 'tpope/vim-repeat'
+    " dependency of vim-mark
+    Plug 'inkarkat/vim-ingo-library'  
+    Plug 'inkarkat/vim-mark'
     nmap <Leader>M <Plug>MarkSet
     let g:mwHistAdd = '@'
     let g:mwAutoLoadMarks = 1
     let g:mw_no_mappings = 1
-    " dependency of vim-mark
-    Plug 'inkarkat/vim-ingo-library'  
-    Plug 'inkarkat/vim-mark'
 
     Plug 'rhysd/clever-f.vim'
     " {{{
@@ -100,7 +118,8 @@ if g:config.vimrc.plugin_on
     let g:ale_python_isort_options = '-sl --line-width=120'
     let g:ale_linters = { 'python' : ['flake8'], 'cpp' : ['all'] }
 
-    let g:ale_fixers = {  'python': ['isort', 'yapf', 'trim_whitespace'], 'json': ['jq','remove_trailing_lines', 'trim_whitespace'], 'cpp':['remove_trailing_lines', 'trim_whitespace']}
+    let g:ale_fixers = {  'python': ['isort', 'yapf', 'trim_whitespace'], 'json': ['jq','remove_trailing_lines', 'trim_whitespace'], 'cpp':['clang-format']}
+    let g:ale_c_clangformat_style_option = "{BasedOnStyle: google}"
     let g:ale_fix_on_save = 1
     let s:yapf_bin =  ""
     if filereadable(s:yapf_bin)
@@ -111,7 +130,7 @@ if g:config.vimrc.plugin_on
     nmap <silent> <leader>n <Plug>(ale_next_wrap)
 
     if pyver >= '3.5'
-	    Plug 'SirVer/ultisnips'
+        Plug 'SirVer/ultisnips'
     endif
     Plug 'honza/vim-snippets'
     let g:UltiSnipsJumpBackwardTrigger="<c-b>"
@@ -136,10 +155,10 @@ if g:config.vimrc.plugin_on
     let g:indent_guides_start_level = 2
     try
         " not load error
-        au FileType python silent! IndentGuidesEnable
-        au FileType python let indent_guides_auto_colors = 0
-        au FileType python autocmd BufEnter,Colorscheme * :hi IndentGuidesOdd  guibg=darkgrey   ctermbg=236
-        au FileType python autocmd BufEnter,Colorscheme * :hi IndentGuidesEven guibg=darkgrey   ctermbg=240
+        au FileType python,cpp silent! IndentGuidesEnable
+        au FileType python,cpp let indent_guides_auto_colors = 0
+        au FileType python,cpp autocmd BufEnter,Colorscheme * :hi IndentGuidesOdd  guibg=darkgrey   ctermbg=236
+        au FileType python,cpp autocmd BufEnter,Colorscheme * :hi IndentGuidesEven guibg=darkgrey   ctermbg=240
     catch
     endtry
     " }}}
@@ -189,13 +208,6 @@ if g:config.vimrc.plugin_on
     " Plug 'tpope/vim-unimpaired'
     Plug 'mbbill/undotree'
     " {{{
-    set undofile
-    " Auto create undodir if not exists
-    let undodir = expand(g:cachedir . '/undodir')
-    if !isdirectory(undodir)
-        call mkdir(undodir, 'p')
-    endif
-    let &undodir = undodir
 
     nnoremap <leader>U :UndotreeToggle<CR>
     " }}}
@@ -250,7 +262,7 @@ if g:config.vimrc.plugin_on
 
     command! -bang -nargs=? -complete=dir FilesWorkDir
                 \ call fzf#vim#files(<q-args>, fzf#vim#with_preview({ 'dir': systemlist('git rev-parse --show-toplevel 2>/dev/null || pwd')[0] 
-				\ 'options': "--prompt='" . systemlist('git rev-parse --show-toplevel 2>/dev/null || pwd')[0]  . "/'}), <bang>0)
+                \ 'options': "--prompt='" . systemlist('git rev-parse --show-toplevel 2>/dev/null || pwd')[0]  . "/'}), <bang>0)
 
     command! -bang -nargs=?  History
                 \ call fzf#vim#history(fzf#vim#with_preview(), <bang>0)
@@ -319,8 +331,15 @@ if g:config.vimrc.plugin_on
     " let g:templates_user_variables = 
     " }}}
     "Shift-K to view the translation of the word under the cursor.
-    set keywordprg=trans\ :ja
+    "set keywordprg=trans\ :ja
+
+    " autocmd FileType apache setlocal commentstring=#\ %s
+    Plug 'tpope/vim-commentary'
     call plug#end()
+
+    if &rtp =~ 'coc.nvim'
+        "exec 'source' . s:spath . '/plugins/yyy_coc.vim'
+    endif
 
     try
         " Remove this if you'd like to use fuzzy search

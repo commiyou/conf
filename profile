@@ -14,7 +14,7 @@ export EDITOR=vim
 
 export LESS="-igRFX"
 
-export TERM="xterm-256color"
+#export TERM="xterm-256color"
 
 [ -f $XDG_CONFIG_HOME/zsh/.zshrc ] && export ZDOTDIR=${XDG_CONFIG_HOME}/zsh
 
@@ -24,3 +24,4 @@ umask 022
 
 # load work rcfiles
 export WORK_ENV=allride
+#[ -f ~/.Xmodmap ] && xmodmap ~/.Xmodmap

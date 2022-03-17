@@ -1,7 +1,8 @@
 {
 	"prettier.printWidth":120,
 	"python.formatting.yapfPath": "yapf",
-	"python.formatting.yapfArgs": []
+  "python.formatting.yapfArgs": [],
+  "clangd.path": "~/.local/share/vim/coc/extensions/coc-clangd-data/install/13.0.0/clangd_13.0.0/bin/clangd"
 
 
 }

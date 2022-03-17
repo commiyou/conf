@@ -8,3 +8,6 @@ export LESS_TERMCAP_md="${yellow}";
 unset TMOUT
 
 umask 022
+
+export ARTISTIC_STYLE_OPTIONS=${XDG_CONFIG_HOME}/astylerc
+

@@ -11,18 +11,21 @@ endif
 let g:cachedir = $XDG_CACHE_HOME . '/vim'
 let g:datadir = $XDG_DATA_HOME . '/vim'
 
-let s:undodir = g:cachedir . '/undo'
-if !isdirectory(s:undodir)| call mkdir(s:undodir, "p", 0700)| endif
-let &undodir = s:undodir
+set undofile
+if !has('nvim')
+    let s:undodir = g:cachedir . '/undo'
+    if !isdirectory(s:undodir)| call mkdir(s:undodir, "p", 0700)| endif
+    let &undodir = s:undodir
 
-let s:swapdir = g:cachedir . '/swap'
-if !isdirectory(s:swapdir)| call mkdir(s:swapdir, "p", 0700)| endif
-let &directory = s:swapdir
+    let s:swapdir = g:cachedir . '/swap'
+    if !isdirectory(s:swapdir)| call mkdir(s:swapdir, "p", 0700)| endif
+    let &directory = s:swapdir
 
-let s:backupdir = g:cachedir . '/backup'
-if !isdirectory(s:backupdir)| call mkdir(s:backupdir, "p", 0700)| endif
-let &directory = s:backupdir
+    let s:backupdir = g:cachedir . '/backup'
+    if !isdirectory(s:backupdir)| call mkdir(s:backupdir, "p", 0700)| endif
+    let &backupdir = s:backupdir
 
-let &viminfo .= ',n' . $XDG_CACHE_HOME . '/vim/viminfo'
+    let &viminfo .= ',n' . $XDG_CACHE_HOME . '/vim/viminfo'
+endif
 let &runtimepath = $XDG_CONFIG_HOME . '/vim,' . $XDG_CONFIG_HOME . '/vim/after,'.$VIM.','.$VIMRUNTIME
 let $MYVIMRC = $XDG_CONFIG_HOME . '/vim/vimrc'

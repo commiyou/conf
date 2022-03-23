@@ -185,7 +185,7 @@ if g:config.vimrc.plugin_on
     let g:airline_theme = 'sol'
     let g:airline#extensions#wordcount#enabled = 0
     let g:airline#extensions#whitespace#enabled = 0
-    let g:airline#extensions#ale#enabled = 1
+    "let g:airline#extensions#ale#enabled = 1
     Plug 'tomasr/molokai'
     Plug 'fmoralesc/molokayo'
 

@@ -12,15 +12,15 @@ an executable
 lvim.log.level = "warn"
 lvim.format_on_save = true
 lvim.colorscheme = "gruvbox"
-
--- keymappings [view all the defaults by pressing <leader>Lk]
 lvim.leader = "space"
+
 lvim.keys.normal_mode["<C-s>"] = ":w<cr>"
 lvim.keys.normal_mode["<C-b>"] = "<left>"
 lvim.keys.normal_mode["<C-f>"] = "<right>"
-lvim.keys.command_mode["<C-a>"] = "<Home>"
-lvim.keys.command_mode["<C-b>"] = "<Left>"
-lvim.keys.command_mode["<C-f>"] = "<Right>"
+
+lvim.keys.normal_mode["<c-g>"] = "1<c-g>"
+lvim.keys.normal_mode["0"] = "^"
+-- :h cmdline-editing,  <c-f>
 lvim.keys.command_mode["<C-h>"] = ":TmuxNavigateLeft<cr>"
 lvim.keys.command_mode["<C-j>"] = ":TmuxNavigateDown<cr>"
 lvim.keys.command_mode["<C-k>"] = ":TmuxNavigateUp<cr>"
@@ -51,41 +51,36 @@ lvim.builtin.telescope.defaults.mappings = {
 		["<C-p>"] = actions.cycle_history_prev,
 		-- ["<esc>"] = actions.close,
 	},
-	-- for normal mode
-	--n = {
-	--["<C-j>"] = actions.move_selection_next,
-	--["<C-k>"] = actions.move_selection_previous,
-	--},
 }
 
--- Use which-key to add extra bindings with the leader-key prefix
--- lvim.builtin.which_key.mappings["t"] = {
--- 	name = "+Trouble",
--- 	r = { "<cmd>Trouble lsp_references<cr>", "References" },
--- 	f = { "<cmd>Trouble lsp_definitions<cr>", "Definitions" },
--- 	d = { "<cmd>Trouble document_diagnostics<cr>", "Diagnostics" },
--- 	q = { "<cmd>Trouble quickfix<cr>", "QuickFix" },
--- 	l = { "<cmd>Trouble loclist<cr>", "LocationList" },
--- 	w = { "<cmd>Trouble workspace_diagnostics<cr>", "Diagnostics" },
--- }
-lvim.builtin.which_key.mappings["m"] = { "<cmd>Telescope oldfiles<cr>", "Open Recent File" }
 lvim.builtin.which_key.mappings["b"] = { "<cmd>Telescope buffers<cr>", "Open Buffers" }
+lvim.builtin.which_key.mappings["m"] = { "<cmd>Telescope oldfiles<cr>", "Open Recent File" }
 lvim.builtin.which_key.mappings["f"] = {
 	name = "Find",
 	a = { "<cmd>Telescope builtin<cr>", "All builtins" },
-	f = { require("lvim.core.telescope.custom-finders").find_project_files, "Find File" },
-	m = { "<cmd>Telescope oldfiles<cr>", "Open Recent File" },
 	b = { "<cmd>Telescope buffers<cr>", "Open Buffers" },
-	r = { "<cmd>Telescope live_grep<cr>", "Live Grep" },
-	g = { "<cmd>Telescope grep_string<cr>", "Grep Word" },
-	c = { "<cmd>Telescope commands<cr>", "Run Commands" },
 	C = { "<cmd>Telescope commands_history<cr>", "Rerun Commands" },
+	c = { "<cmd>Telescope commands<cr>", "Run Commands" },
+	f = { require("lvim.core.telescope.custom-finders").find_project_files, "Find File" },
+	h = { "<cmd>Telescope help_tags<cr>", "Help" },
+	k = { "<cmd>Telescope keymaps<cr>", "keymappings" },
+	m = { "<cmd>Telescope oldfiles<cr>", "Open Recent File" },
+	g = { "<cmd>Telescope grep_string<cr>", "Grep Word" },
 	O = { "<cmd>Telescope vim_options<cr>", "Vim Options" },
 	p = { "<cmd>Telescope registers<cr>", "Paste registers" },
 	P = { "<cmd>Telescope projects<CR>", "Projects" },
-	k = { "<cmd>Telescope keymaps<cr>", "keymappings" },
+	r = { "<cmd>Telescope live_grep<cr>", "Live Grep" },
 	T = { "<cmd>Telescope treesitter<cr>", "treesitter (tags)" },
 	t = { "<cmd>SymbolsOutline<cr>", "Tags" },
+	-- t = { "<cmd>TagbarToggle<cr>", "Tags" },
+}
+lvim.builtin.which_key.mappings["Ls"] = { "<cmd>Pmsg lua put(lvim)<cr>", "Show Confs" }
+lvim.builtin.which_key.mappings["o"] = { -- toggle options
+	p = { "<cmd>setlocal paste!<cr>", "paste" },
+	c = {
+		"<cmd>lua if vim.o.clipboard == '' then vim.o.clipboard = 'unnamedplus' else vim.o.clipboard = '' end<cr>",
+		"clipboard",
+	},
 }
 
 -- TODO: User Config for predefined plugins
@@ -95,6 +90,7 @@ lvim.builtin.notify.active = true
 lvim.builtin.terminal.active = true
 lvim.builtin.nvimtree.setup.view.side = "left"
 lvim.builtin.nvimtree.show_icons.git = 0
+-- lvim.builtin.bufferline.active = false
 
 -- if you don't want all the parsers change this to a table of the ones you want
 lvim.builtin.treesitter.ensure_installed = {
@@ -115,7 +111,22 @@ lvim.builtin.treesitter.ensure_installed = {
 lvim.builtin.treesitter.ignore_install = { "haskell" }
 lvim.builtin.treesitter.highlight.enabled = true
 
-lvim.builtin.lualine.options.theme = "gruvbox"
+-- lvim.builtin.lualine.options.theme = "gruvbox"
+--lvim.builtin.lualine.options.disablfalseed_filetypes = { "dashboard", "NvimTree", "OUTLINE", "Outline" }
+--lvim.builtin.lualine.active = true
+-- lvim.builtin.lualine.sections = {
+--   lualine_a = {
+--     {
+--       "mode",
+--       fmt = function(str)
+--         return str:sub(1, 1)
+--       end,
+--     },
+--   },
+--   lualine_b = { { "branch" }, { "filename", path = 2 } },
+-- }
+--lvim.builtin.lualine.extensions = { "quickfix", "symbols-outline" }
+--require("lualine").setup({ extensions = { "quickfix", "symbols-outline" } })
 
 -- generic LSP settings
 
@@ -176,34 +187,53 @@ formatters.setup({
 --   },
 -- }
 
--- Additional Plugins
--- lvim.plugins = {
---     {"folke/tokyonight.nvim"},
---     {
---       "folke/trouble.nvim",
---       cmd = "TroubleToggle",
---     },
--- }
-
 lvim.plugins = {
 	--{ "ray-x/lsp_signature.nvim" },
-	{ "simrat39/symbols-outline.nvim" },
+	-- { "simrat39/symbols-outline.nvim" },
+	--{
+	--	"vim-airline/vim-airline",
+	--	requires = { "vim-airline/vim-airline-themes" },
+	--	config = function()
+	--		vim.g.airline_theme = "sol"
+	--		vim.g["airline#extensions#wordcount#enabled"] = 0
+	--		-- vim.g["airline#extensions#whitespace#enabled"] = 0
+	--	end,
+	--},
+	-- {
+	-- 	"preservim/tagbar",
+	-- 	config = function()
+	-- 		vim.g.tagbar_sort = 0 -- by position, press 's' to toggle by name/position
+	-- 		vim.g.tarbar_show_data_type = 1
+	-- 		vim.g.tagbar_show_linenumbers = 2
+	-- 		vim.g.tagbar_expand = 1
+	-- 	end,
+	-- },
+	-- {
+	-- 	"github/copilot.vim",
+	-- 	config = function()
+	-- 		vim.g.copilot_no_tab_map = true
+	-- 		vim.g.copilot_assume_mapped = true
+	-- 	end,
+	-- },
 	{ "andymass/vim-matchup" },
-	{ "f-person/git-blame.nvim" },
-	{ "github/copilot.vim" },
-	{ "morhetz/gruvbox" },
+	{ "tpope/vim-fugitive" },
+	-- { "f-person/git-blame.nvim" }, -- too slow when big file!
 	{ "ConradIrwin/vim-bracketed-paste" },
 	{ "folke/trouble.nvim" },
 	{ "farmergreg/vim-lastplace" },
 	{ "felipec/vim-sanegx" }, -- gx open url
 	{ "itchyny/vim-cursorword" },
 	{ "elzr/vim-json" },
-	-- { "wellle/tmux-complete.vim" },
+	{ "wellle/tmux-complete.vim" },
 	{ "tpope/vim-repeat" },
+	{ "andersevenrud/cmp-tmux" },
+	{ "tzachar/cmp-tabnine", run = "./install.sh", requires = "hrsh7th/nvim-cmp", event = "InsertEnter" },
+	{ "morhetz/gruvbox" },
 	{
-		"enricobacis/a.vim",
+		"commiyou/a.vim",
 		config = function()
-			vim.cmd("let g:alternateNoDefaultAlternate = 1")
+			vim.g.alternateNoDefaultAlternate = 1
+			vim.g.alternateNoDefaultMapping = 1
 		end,
 	},
 	{
@@ -217,11 +247,11 @@ lvim.plugins = {
 		requires = { "inkarkat/vim-ingo-library" },
 		config = function()
 			vim.cmd([[
-		let g:mwHistAdd = '@'
-		let g:mwAutoLoadMarks = 1
-		let g:mw_no_mappings = 1
-    nmap <leader>M <Plug>MarkSet
-		]])
+	   let g:mwHistAdd = '@'
+	   let g:mwAutoLoadMarks = 1
+	   let g:mw_no_mappings = 1
+	   nmap <leader>M <Plug>MarkSet
+	   ]])
 		end,
 	},
 	{
@@ -233,29 +263,19 @@ lvim.plugins = {
 			vim.api.nvim_set_keymap("n", "S", ":HopWord<cr>", { silent = true })
 		end,
 	},
-	{
-		"AckslD/nvim-neoclip.lua",
-		requires = {
-			{ "tami5/sqlite.lua", module = "sqlite" },
-		},
-		config = function()
-			require("neoclip").setup()
-		end,
-	},
-	{ "andersevenrud/cmp-tmux" },
-	{ "tzachar/cmp-tabnine", run = "./install.sh", requires = "hrsh7th/nvim-cmp", event = "InsertEnter" },
 }
-require("telescope").load_extension("neoclip")
 -- Autocommands (https://neovim.io/doc/user/autocmd.html)
 -- lvim.autocommands.custom_groups = {
 --   { "BufWinEnter", "*.lua", "setlm.opt.relativenumber = true -- lua print(vim.o.rnu)
 vim.o.rnu = true
-vim.opt.gdefault = true -- the :substitute flag 'g' is default on
-vim.opt.eol = false -- no auto add <EOL>
-vim.opt.wrap = true
+vim.o.gdefault = true -- the :substitute flag 'g' is default on
+vim.o.eol = false -- no auto add <EOL>
+vim.o.wrap = true
 vim.opt.isfname = vim.opt.isfname - "="
-vim.opt.mouse = "h"
+vim.o.mouse = "h"
 vim.o.splitbelow = false
+vim.o.clipboard = ""
+vim.o.et = true
 
 -- put({1, 2, 3})
 function _G.put(...)
@@ -270,7 +290,7 @@ function _G.put(...)
 end
 
 vim.cmd([[
-function! TabMessage(cmd)
+function! s:pmsg(cmd)
   redir => message
   silent execute a:cmd
   redir END
@@ -278,11 +298,10 @@ function! TabMessage(cmd)
     echoerr "no output"
   else
     " use "new" instead of "tabnew" below if you prefer split windows instead of tabs
-    tabnew
-    setlocal buftype=nofile bufhidden=wipe noswapfile nobuflisted nomodified
+    new
+    setlocal buftype=nofile bufhidden=hide noswapfile nomodified
     silent put=message
   endif
 endfunction
-command! -nargs=+ -complete=command TabMessage call TabMessage(<q-args>)
-
+command! -nargs=+ -complete=command Pmsg call s:pmsg(<q-args>)
 ]])

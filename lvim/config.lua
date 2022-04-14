@@ -11,7 +11,8 @@ an executable
 -- general
 lvim.log.level = "warn"
 lvim.format_on_save = true
-lvim.colorscheme = "gruvbox"
+lvim.colorscheme = "molokai"
+-- lvim.colorscheme = "gruvbox"
 lvim.leader = "space"
 
 lvim.keys.normal_mode["<C-s>"] = ":w<cr>"
@@ -42,6 +43,9 @@ nnoremap <expr> N  'nN'[v:searchforward]
 -- Change Telescope navigation to use j and k for navigation and n and p for history in both input and normal mode.
 -- we use protected-mode (pcall) just in case the plugin wasn't loaded yet.
 local _, actions = pcall(require, "telescope.actions")
+local _, action_layout = pcall(require, "telescope.actions.layout")
+lvim.builtin.telescope.defaults.dynamic_preview_title = true
+lvim.builtin.telescope.defaults.path_display.shorten = { len = 3, exclude = { -1 } }
 lvim.builtin.telescope.defaults.mappings = {
 	-- for input mode
 	i = {
@@ -49,9 +53,14 @@ lvim.builtin.telescope.defaults.mappings = {
 		["<C-k>"] = actions.move_selection_previous,
 		["<C-n>"] = actions.cycle_history_next,
 		["<C-p>"] = actions.cycle_history_prev,
+		["<C-f>"] = action_layout.toggle_preview,
 		-- ["<esc>"] = actions.close,
 	},
 }
+
+table.insert(lvim.builtin.cmp.sources, 1, { name = "copilot" })
+table.insert(lvim.builtin.cmp.sources, 1, { name = "tmux", option = { all_panes = true } })
+lvim.builtin.cmp.formatting.source_names["tmux"] = "(Tmux)"
 
 lvim.builtin.which_key.mappings["b"] = { "<cmd>Telescope buffers<cr>", "Open Buffers" }
 lvim.builtin.which_key.mappings["m"] = { "<cmd>Telescope oldfiles<cr>", "Open Recent File" }
@@ -189,7 +198,6 @@ formatters.setup({
 
 lvim.plugins = {
 	--{ "ray-x/lsp_signature.nvim" },
-	-- { "simrat39/symbols-outline.nvim" },
 	--{
 	--	"vim-airline/vim-airline",
 	--	requires = { "vim-airline/vim-airline-themes" },
@@ -215,8 +223,19 @@ lvim.plugins = {
 	-- 		vim.g.copilot_assume_mapped = true
 	-- 	end,
 	-- },
+	-- { "hrsh7th/cmp-copilot", requires = "hrsh7th/nvim-cmp", event = "InsertEnter" },
+	{ "simrat39/symbols-outline.nvim" },
 	{ "andymass/vim-matchup" },
 	{ "tpope/vim-fugitive" },
+	{
+		"RRethy/vim-hexokinase",
+		run = "make hexokinase",
+		config = function()
+			vim.g.Hexokinase_highlighters = { "backgroundfull" }
+		end,
+	},
+	{ "tomasr/molokai" },
+	-- { "fmoralesc/molokayo"},
 	-- { "f-person/git-blame.nvim" }, -- too slow when big file!
 	{ "ConradIrwin/vim-bracketed-paste" },
 	{ "folke/trouble.nvim" },
@@ -226,14 +245,18 @@ lvim.plugins = {
 	{ "elzr/vim-json" },
 	{ "wellle/tmux-complete.vim" },
 	{ "tpope/vim-repeat" },
-	{ "andersevenrud/cmp-tmux" },
+	{ "andersevenrud/cmp-tmux", requires = "hrsh7th/nvim-cmp", event = "InsertEnter" },
+	{ "hrsh7th/cmp-cmdline", requires = "hrsh7th/nvim-cmp", event = "InsertEnter" },
 	{ "tzachar/cmp-tabnine", run = "./install.sh", requires = "hrsh7th/nvim-cmp", event = "InsertEnter" },
 	{ "morhetz/gruvbox" },
+	{ "szw/vim-maximizer" },
 	{
 		"commiyou/a.vim",
 		config = function()
 			vim.g.alternateNoDefaultAlternate = 1
 			vim.g.alternateNoDefaultMapping = 1
+			vim.g.alternateRelativeFiles = 1
+			vim.g.alternateNoFindBuffer = 1
 		end,
 	},
 	{
@@ -264,6 +287,18 @@ lvim.plugins = {
 		end,
 	},
 }
+
+require("cmp").setup.cmdline(":", {
+	sources = {
+		{ name = "path" },
+		{ name = "cmdline" },
+	},
+})
+require("cmp").setup.cmdline("/", {
+	sources = {
+		{ name = "buffer" },
+	},
+})
 -- Autocommands (https://neovim.io/doc/user/autocmd.html)
 -- lvim.autocommands.custom_groups = {
 --   { "BufWinEnter", "*.lua", "setlm.opt.relativenumber = true -- lua print(vim.o.rnu)
@@ -304,4 +339,15 @@ function! s:pmsg(cmd)
   endif
 endfunction
 command! -nargs=+ -complete=command Pmsg call s:pmsg(<q-args>)
+
+nnoremap <silent><C-w>z :MaximizerToggle<CR>
+vnoremap <silent><C-w>z :MaximizerToggle<CR>gv
+"imap <expr> <Plug>(vimrc:copilot-dummy-map) copilot#Accept("\<Tab>")
+
+" jump to the previous function
+autocmd FileType c,cpp nnoremap <silent> [f :call
+\ search('\(\(if\\|for\\|while\\|switch\\|catch\)\_s*\)\@64<!(\_[^)]*)\_[^;{}()]*\zs{', "bw")<CR>
+" jump to the next function
+autocmd FileType c,cpp nnoremap <silent> ]f :call
+\ search('\(\(if\\|for\\|while\\|switch\\|catch\)\_s*\)\@64<!(\_[^)]*)\_[^;{}()]*\zs{', "w")<CR>
 ]])

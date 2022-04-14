@@ -155,3 +155,18 @@ set noconfirm  " quit confirm"
 
 set isfname-=:
 set isfname-==
+
+function! s:pmsg(cmd)
+  redir => message
+  silent execute a:cmd
+  redir END
+  if empty(message)
+    echoerr "no output"
+  else
+    " use "new" instead of "tabnew" below if you prefer split windows instead of tabs
+    new
+    setlocal buftype=nofile bufhidden=hide noswapfile nomodified
+    silent put=message
+  endif
+endfunction
+command! -nargs=+ -complete=command Pmsg call s:pmsg(<q-args>)

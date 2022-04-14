@@ -41,3 +41,5 @@
 	helper = /usr/share/doc/git/contrib/credential/libsecret/git-credential-libsecret
 [pull]
 	rebase = true
+[init]
+	templateDir = /home/bin.you/.git-template

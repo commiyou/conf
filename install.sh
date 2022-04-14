@@ -50,3 +50,7 @@ echo 'export PATH="/data1/youbin/.local/bin/bin:$PATH"' >> ~/.bashrc
 [ -e ~/.zshenv ] && mv ~/.zshenv  ~/.zshenv.$(date +%s)
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 echo "source $DIR/profile" > ~/.zshenv
+
+echo install luavim
+bash <(curl -s https://raw.githubusercontent.com/lunarvim/lunarvim/master/utils/installer/install.sh)
+

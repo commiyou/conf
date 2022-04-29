@@ -45,7 +45,8 @@ nnoremap <expr> N  'nN'[v:searchforward]
 local _, actions = pcall(require, "telescope.actions")
 local _, action_layout = pcall(require, "telescope.actions.layout")
 lvim.builtin.telescope.defaults.dynamic_preview_title = true
-lvim.builtin.telescope.defaults.path_display.shorten = { len = 3, exclude = { -1 } }
+-- lvim.builtin.telescope.defaults.path_display.shorten = { len = 3, exclude = { -1 } }
+lvim.builtin.telescope.defaults.path_display = { "smart" }
 lvim.builtin.telescope.defaults.mappings = {
 	-- for input mode
 	i = {
@@ -61,6 +62,32 @@ lvim.builtin.telescope.defaults.mappings = {
 table.insert(lvim.builtin.cmp.sources, 1, { name = "copilot" })
 table.insert(lvim.builtin.cmp.sources, 1, { name = "tmux", option = { all_panes = true } })
 lvim.builtin.cmp.formatting.source_names["tmux"] = "(Tmux)"
+for _i, _data in ipairs(lvim.builtin.cmp.sources) do
+	if _data["name"] == "buffer" then
+		lvim.builtin.cmp.sources[_i] = {
+			name = "buffer",
+			option = {
+				get_bufnrs = function()
+					local buf = vim.api.nvim_get_current_buf()
+					local byte_size = vim.api.nvim_buf_get_offset(buf, vim.api.nvim_buf_line_count(buf))
+					print(vim.api.nvim_buf_line_count(buf))
+					-- io.open("/home/bin.you/debug.txt", "w+"):write
+					if byte_size > 1024 * 1024 then -- 1 Megabyte max
+						return {}
+					end
+					return { buf }
+				end,
+			},
+		}
+	end
+end
+
+local function find_cwd_files(prompt_bufnr)
+	local opt = {
+		cwd = vim.fn.expand("%:p:h"),
+	}
+	require("telescope.builtin").find_files(opt)
+end
 
 lvim.builtin.which_key.mappings["b"] = { "<cmd>Telescope buffers<cr>", "Open Buffers" }
 lvim.builtin.which_key.mappings["m"] = { "<cmd>Telescope oldfiles<cr>", "Open Recent File" }
@@ -70,17 +97,19 @@ lvim.builtin.which_key.mappings["f"] = {
 	b = { "<cmd>Telescope buffers<cr>", "Open Buffers" },
 	C = { "<cmd>Telescope commands_history<cr>", "Rerun Commands" },
 	c = { "<cmd>Telescope commands<cr>", "Run Commands" },
-	f = { require("lvim.core.telescope.custom-finders").find_project_files, "Find File" },
+	d = { find_cwd_files, "find same dir" },
+	f = { "<cmd>Telescope find_files<cr>", "Find File" },
+	g = { require("lvim.core.telescope.custom-finders").find_project_files, "Find same prj" },
 	h = { "<cmd>Telescope help_tags<cr>", "Help" },
 	k = { "<cmd>Telescope keymaps<cr>", "keymappings" },
 	m = { "<cmd>Telescope oldfiles<cr>", "Open Recent File" },
-	g = { "<cmd>Telescope grep_string<cr>", "Grep Word" },
 	O = { "<cmd>Telescope vim_options<cr>", "Vim Options" },
 	p = { "<cmd>Telescope registers<cr>", "Paste registers" },
 	P = { "<cmd>Telescope projects<CR>", "Projects" },
 	r = { "<cmd>Telescope live_grep<cr>", "Live Grep" },
 	T = { "<cmd>Telescope treesitter<cr>", "treesitter (tags)" },
 	t = { "<cmd>SymbolsOutline<cr>", "Tags" },
+	w = { "<cmd>Telescope grep_string<cr>", "Grep Word" },
 	-- t = { "<cmd>TagbarToggle<cr>", "Tags" },
 }
 lvim.builtin.which_key.mappings["Ls"] = { "<cmd>Pmsg lua put(lvim)<cr>", "Show Confs" }
@@ -234,7 +263,7 @@ lvim.plugins = {
 			vim.g.Hexokinase_highlighters = { "backgroundfull" }
 		end,
 	},
-	{ "tomasr/molokai" },
+	{ "commiyou/molokai" },
 	-- { "fmoralesc/molokayo"},
 	-- { "f-person/git-blame.nvim" }, -- too slow when big file!
 	{ "ConradIrwin/vim-bracketed-paste" },
@@ -288,13 +317,15 @@ lvim.plugins = {
 	},
 }
 
-require("cmp").setup.cmdline(":", {
+local cmp = require("cmp")
+
+cmp.setup.cmdline(":", {
 	sources = {
 		{ name = "path" },
 		{ name = "cmdline" },
 	},
 })
-require("cmp").setup.cmdline("/", {
+cmp.setup.cmdline("/", {
 	sources = {
 		{ name = "buffer" },
 	},

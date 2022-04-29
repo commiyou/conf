@@ -2,4 +2,5 @@ try
 	colorscheme molokai
 catch
 endtry
-hi MatchParen cterm=none ctermbg=green ctermfg=blue
+hi MatchParen      ctermfg=cyan ctermbg=208 cterm=bold
+

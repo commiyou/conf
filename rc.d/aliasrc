@@ -14,7 +14,7 @@ else # macOS `ls`
 	colorflag="-G"
 	export LSCOLORS='BxBxhxDxfxhxhxhxhxcxcx'
 fi
-alias ls=" ls ${colorflag}"
+alias ls="ls ${colorflag}"
 alias l="ls -lF"
 alias ll="ls -lhF"
 alias la="ls -lhFa"
@@ -37,7 +37,7 @@ alias history=" history"
 
 alias vi=vim
 alias wcl="wc -l"
-alias df=" df -lh"
+alias df="df -lh"
 alias pytest="py.test --cache-clear"
 
 alias k1="kill %1"

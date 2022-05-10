@@ -51,6 +51,12 @@ echo 'export PATH="/data1/youbin/.local/bin/bin:$PATH"' >> ~/.bashrc
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 echo "source $DIR/profile" > ~/.zshenv
 
+mkdir -p ~/.local/bin
+curl -LO https://github.com/neovim/neovim/releases/latest/download/nvim.appimage
+mv nvim.appimage ~/.local/bin/vim
+chmod u+x  ~/.local/bin/vim
+
+
 echo install luavim
 bash <(curl -s https://raw.githubusercontent.com/lunarvim/lunarvim/master/utils/installer/install.sh)
 

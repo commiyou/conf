@@ -319,6 +319,8 @@ lvim.plugins = {
 
 local cmp = require("cmp")
 
+cmp.setup.filetype({ "log" }, { enabled = false })
+
 cmp.setup.cmdline(":", {
 	sources = {
 		{ name = "path" },
@@ -327,7 +329,21 @@ cmp.setup.cmdline(":", {
 })
 cmp.setup.cmdline("/", {
 	sources = {
-		{ name = "buffer" },
+		{
+			name = "buffer",
+			option = {
+				get_bufnrs = function()
+					local buf = vim.api.nvim_get_current_buf()
+					local byte_size = vim.api.nvim_buf_get_offset(buf, vim.api.nvim_buf_line_count(buf))
+					print(vim.api.nvim_buf_line_count(buf))
+					-- io.open("/home/bin.you/debug.txt", "w+"):write
+					if byte_size > 1024 * 1024 then -- 1 Megabyte max
+						return {}
+					end
+					return { buf }
+				end,
+			},
+		},
 	},
 })
 -- Autocommands (https://neovim.io/doc/user/autocmd.html)

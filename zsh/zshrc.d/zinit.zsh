@@ -61,6 +61,7 @@ zinit $lightmode wait lucid for \
   atload$'!FORGIT_LOG_FZF_OPTS=\'--bind="ctrl-e:execute(echo {} |grep -Eo [a-f0-9]+ |head -1 |xargs git show |vim -)"\'; \
     alias gdca="forgit::diff --cached"; \
     alias glog="forgit::log --oneline --decorate --graph"; \
+    compdef _git gco=git-checkout; \
     ' wfxr/forgit \
   as"program" pick'bin/fzf-tmux' src'shell/key-bindings.zsh'  trackbinds bindmap='^T -> ^X^T; \ec -> ^X\ec' commiyou/fzf \
   as"program" atload'export SSHHOME=$XDG_CONFIG_HOME' pick'sshrc' commiyou/sshrc \

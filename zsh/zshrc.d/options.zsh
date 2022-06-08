@@ -35,3 +35,5 @@ setopt noBG_NICE  # DON't Run all background jobs at a lower priority
 setopt LONG_LIST_JOBS 
 #setopt notify # Report the status of background jobs immediately, rather than waiting until just before printing a prompt
 
+# compdef _git gco=git-checkout
+setopt complete_aliases

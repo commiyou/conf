@@ -54,6 +54,27 @@ fi
   return
 }
 
+if [[ "$viminfo" =~ \.shada$ ]]; then
+echo shada
+  nvim  -Es +'redir @">|echo join(v:oldfiles,"\n")|redir END|enew|put ' -V1 -i "$viminfo" 2>&1 | grep '^/' | tr -d '' | while read line; do
+  local fl=${line}
+  [ $debug ] && echo fl, $fl, $_fl
+  local match=1
+  for x; do
+    [[ "$fl" =~ $x ]] || match=
+  done
+  [ "$subdir" ] && {
+    case "$_fl" in
+      $subdir*);;
+      *) match=;;
+    esac
+  }
+  [ "$match" ] || continue
+  i=$((i+1))
+  [ $debug ] && echo i, $i, $fl
+  files[$i]="$fl"
+done
+else
 while IFS=" " read line; do
   [ "${line:0:1}" = ">" ] || continue
   local fl=${line:2}
@@ -75,6 +96,8 @@ while IFS=" " read line; do
   [ $debug ] && echo i, $i, $fl
   files[$i]="$fl"
 done < "$viminfo"
+fi
+
 [ $debug ] && echo "${files[@]}"
 
 if [ "$edit" ]; then
@@ -93,4 +116,4 @@ fi
 [ "$resp" ] || return
 $vim "${(~)resp}"
 
-# vim:ft=zsh:et
+# vim:ft=sh:et

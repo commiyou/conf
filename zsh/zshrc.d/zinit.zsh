@@ -93,14 +93,17 @@ zinit $load romkatv/powerlevel10k
 zinit $lightmode wait lucid as"completion" for \
   svn OMZP::fd \
   svn OMZP::docker \
-  svn OMZP::ripgrep 
+  svn OMZP::ripgrep
+
+zinit ice $lightmode wait lucid pick'roszsh'
+zinit snippet https://raw.githubusercontent.com/ros/ros/melodic-devel/tools/rosbash/roszsh
 
 local cf
 if [ -n "$WORK_ENV" ] && [ -d $XDG_CONFIG_HOME/work/$WORK_ENV/ ]; then
   #source $config_file
   #for cf ($XDG_CONFIG_HOME/work/$WORK_ENV/*.sh) zinit snippet $cf
-  zinit $lightmode wait'0c' lucid is-snippet for \
-    $XDG_CONFIG_HOME/work/$WORK_ENV/functions.sh 
+  zinit ice $lightmode wait'0c' lucid 
+  zinit snippet -f $XDG_CONFIG_HOME/work/$WORK_ENV/functions.sh 
 fi
 
 # Fast-syntax-highlighting & autosuggestions

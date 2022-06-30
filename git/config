@@ -43,3 +43,5 @@
 	rebase = true
 [init]
 	templateDir = /home/bin.you/.git-template
+[blame]
+	ignoreRevsFile = .git-blame-ignore-revs

@@ -69,6 +69,7 @@ echo shada
       *) match=;;
     esac
   }
+
   [ "$match" ] || continue
   i=$((i+1))
   [ $debug ] && echo i, $i, $fl
@@ -91,6 +92,7 @@ while IFS=" " read line; do
       *) match=;;
     esac
   }
+  [ "$fl" =~ COMMIT_EDITMSG$ ] && continue
   [ "$match" ] || continue
   i=$((i+1))
   [ $debug ] && echo i, $i, $fl

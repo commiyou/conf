@@ -44,6 +44,8 @@ nnoremap <expr> N  'nN'[v:searchforward]
 -- we use protected-mode (pcall) just in case the plugin wasn't loaded yet.
 local _, actions = pcall(require, "telescope.actions")
 local _, action_layout = pcall(require, "telescope.actions.layout")
+local _, action_state = pcall(require, "telescope.actions.state")
+
 lvim.builtin.telescope.defaults.dynamic_preview_title = true
 -- lvim.builtin.telescope.defaults.path_display.shorten = { len = 3, exclude = { -1 } }
 lvim.builtin.telescope.defaults.path_display = { "smart" }
@@ -89,6 +91,18 @@ local function find_cwd_files(prompt_bufnr)
 	require("telescope.builtin").find_files(opt)
 end
 
+local function run_selection(prompt_bufnr, map)
+	actions.select_default:replace(function()
+		actions.close(prompt_bufnr)
+		local selection = action_state.get_selected_entry()
+		vim.cmd([[!git log ]] .. selection[1])
+	end)
+	return true
+end
+local function git_log(prompt_bufnr)
+	require("telescope.builtin").find_files({ attach_mappings = run_selection })
+end
+
 lvim.builtin.which_key.mappings["b"] = { "<cmd>Telescope buffers<cr>", "Open Buffers" }
 lvim.builtin.which_key.mappings["m"] = { "<cmd>Telescope oldfiles<cr>", "Open Recent File" }
 lvim.builtin.which_key.mappings["f"] = {
@@ -102,13 +116,14 @@ lvim.builtin.which_key.mappings["f"] = {
 	g = { require("lvim.core.telescope.custom-finders").find_project_files, "Find same prj" },
 	h = { "<cmd>Telescope help_tags<cr>", "Help" },
 	k = { "<cmd>Telescope keymaps<cr>", "keymappings" },
+	l = { git_log, "Git log" },
 	m = { "<cmd>Telescope oldfiles<cr>", "Open Recent File" },
 	O = { "<cmd>Telescope vim_options<cr>", "Vim Options" },
 	p = { "<cmd>Telescope registers<cr>", "Paste registers" },
 	P = { "<cmd>Telescope projects<CR>", "Projects" },
 	r = { "<cmd>Telescope live_grep<cr>", "Live Grep" },
-	T = { "<cmd>Telescope treesitter<cr>", "treesitter (tags)" },
-	t = { "<cmd>SymbolsOutline<cr>", "Tags" },
+	t = { "<cmd>Telescope tags<cr>", "Ctags" },
+	T = { "<cmd>SymbolsOutline<cr>", "Symbols" },
 	w = { "<cmd>Telescope grep_string<cr>", "Grep Word" },
 	-- t = { "<cmd>TagbarToggle<cr>", "Tags" },
 }
@@ -397,4 +412,8 @@ autocmd FileType c,cpp nnoremap <silent> [f :call
 " jump to the next function
 autocmd FileType c,cpp nnoremap <silent> ]f :call
 \ search('\(\(if\\|for\\|while\\|switch\\|catch\)\_s*\)\@64<!(\_[^)]*)\_[^;{}()]*\zs{', "w")<CR>
+
+set tags=./tags;,tags;
+nnoremap gt :ts <C-R>=expand("<cword>")<CR><CR>
+
 ]])

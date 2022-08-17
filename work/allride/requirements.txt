@@ -1,0 +1,9 @@
+click==8.0.4
+fake_useragent==0.1.11
+lxml==4.9.0
+parse==1.19.0
+pyppeteer==1.0.2
+pyquery==1.4.3
+requests==2.27.1
+tendo==0.2.15
+w3lib==1.22.0

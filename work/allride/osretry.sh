@@ -16,7 +16,7 @@ do
 
     bagfile=${line%.temp}
     bagfile=${bagfile##*/}
-    echo process $bagfile ..
+    echo process $bagfile .. in $bagdir
     cd $cwd/$bagdir/ossutil_output || cd $cwd/$bagdir/../ossutil_output
     bagaddr=$(cat * | grep ' cp ' | xargs -n1 |grep '^oss://' | sort -u | grep $bagfile)
     if [ -z "$bagaddr" ]; then

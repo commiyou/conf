@@ -26,7 +26,8 @@ def get_status(doc):
 
 
 def curl_issue(issue):
-    curl_cmd = open(os.path.expanduser("~/issue.sh")).read()
+    url = "http://jira.allride-ai.cn:8080/issues/?filter=10793"
+    curl_cmd = open(url).read()
     curl_cmd = re.sub(r'PV4-\d\d\d\d', 'PV4-'+ str(issue), curl_cmd)
     #print(curl_cmd)
     result = subprocess.run(curl_cmd,stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)

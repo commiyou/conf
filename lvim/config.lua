@@ -64,8 +64,8 @@ lvim.builtin.telescope.defaults.mappings = {
 	},
 }
 
-table.insert(lvim.builtin.cmp.sources, 1, { name = "copilot" })
-table.insert(lvim.builtin.cmp.sources, 1, { name = "tmux", option = { all_panes = true } })
+-- table.insert(lvim.builtin.cmp.sources, 1, { name = "copilot" })
+-- table.insert(lvim.builtin.cmp.sources, 1, { name = "tmux", option = { all_panes = true } })
 lvim.builtin.cmp.formatting.source_names["tmux"] = "(Tmux)"
 for _i, _data in ipairs(lvim.builtin.cmp.sources) do
 	if _data["name"] == "buffer" then
@@ -94,18 +94,6 @@ local function find_cwd_files(prompt_bufnr)
 	require("telescope.builtin").find_files(opt)
 end
 
-local function run_selection(prompt_bufnr, map)
-	actions.select_default:replace(function()
-		actions.close(prompt_bufnr)
-		local selection = action_state.get_selected_entry()
-		vim.cmd([[!git log ]] .. selection[1])
-	end)
-	return true
-end
-local function git_log(prompt_bufnr)
-	require("telescope.builtin").find_files({ attach_mappings = run_selection })
-end
-
 lvim.builtin.which_key.mappings["b"] = { "<cmd>Telescope buffers<cr>", "Open Buffers" }
 lvim.builtin.which_key.mappings["m"] = { "<cmd>Telescope oldfiles<cr>", "Open Recent File" }
 lvim.builtin.which_key.mappings["f"] = {
@@ -119,12 +107,13 @@ lvim.builtin.which_key.mappings["f"] = {
 	g = { require("lvim.core.telescope.custom-finders").find_project_files, "Find same prj" },
 	h = { "<cmd>Telescope help_tags<cr>", "Help" },
 	k = { "<cmd>Telescope keymaps<cr>", "keymappings" },
-	l = { git_log, "Git log" },
 	m = { "<cmd>Telescope oldfiles<cr>", "Open Recent File" },
 	O = { "<cmd>Telescope vim_options<cr>", "Vim Options" },
 	p = { "<cmd>Telescope registers<cr>", "Paste registers" },
 	P = { "<cmd>Telescope projects<CR>", "Projects" },
 	r = { "<cmd>Telescope live_grep<cr>", "Live Grep" },
+	s = { "<cmd>Telescope lsp_document_symbols<cr>", "Buffer Symbol" },
+	S = { "<cmd>Telescope lsp_workspace_symbols<cr>", "WorkSpace Symbol" },
 	t = { "<cmd>Telescope tags<cr>", "Ctags" },
 	T = { "<cmd>SymbolsOutline<cr>", "Symbols" },
 	w = { "<cmd>Telescope grep_string<cr>", "Grep Word" },
@@ -150,18 +139,18 @@ lvim.builtin.nvimtree.setup.renderer.icons.show.git = false
 
 -- if you don't want all the parsers change this to a table of the ones you want
 lvim.builtin.treesitter.ensure_installed = {
-  "bash",
-  "c",
-  "javascript",
-  "json",
-  "lua",
-  "python",
-  "typescript",
-  "tsx",
-  "css",
-  "rust",
-  "java",
-  "yaml",
+	"bash",
+	"c",
+	"javascript",
+	"json",
+	"lua",
+	"python",
+	"typescript",
+	"tsx",
+	"css",
+	"rust",
+	"java",
+	"yaml",
 }
 
 lvim.builtin.treesitter.ignore_install = { "haskell" }
@@ -258,6 +247,9 @@ lvim.plugins = {
 	-- 	end,
 	-- },
 	-- { "hrsh7th/cmp-copilot", requires = "hrsh7th/nvim-cmp", event = "InsertEnter" },
+	{ "tpope/vim-surround" }, --  https://github.com/tpope/vim-surround   cs{char}{char} / ds{char} / ys{motion}{char}
+	{ "tpope/vim-abolish" }, -- :%Subvert/facilit{y,ies}/building{,s}/g
+	{ "tpope/vim-repeat" }, --
 	{ "simrat39/symbols-outline.nvim" },
 	{ "andymass/vim-matchup" },
 	{ "tpope/vim-fugitive" },
@@ -278,7 +270,6 @@ lvim.plugins = {
 	{ "itchyny/vim-cursorword" },
 	{ "elzr/vim-json" },
 	{ "wellle/tmux-complete.vim" },
-	{ "tpope/vim-repeat" },
 	{ "andersevenrud/cmp-tmux", requires = "hrsh7th/nvim-cmp", event = "InsertEnter" },
 	{ "hrsh7th/cmp-cmdline", requires = "hrsh7th/nvim-cmp", event = "InsertEnter" },
 	{ "tzachar/cmp-tabnine", run = "./install.sh", requires = "hrsh7th/nvim-cmp", event = "InsertEnter" },
@@ -324,15 +315,20 @@ lvim.plugins = {
 
 local cmp = require("cmp")
 
-cmp.setup.filetype({ "log" }, { enabled = false })
-
+cmp.setup({
+	sources = {
+		{ name = "tmux" },
+	},
+})
 cmp.setup.cmdline(":", {
+	mapping = cmp.mapping.preset.cmdline(),
 	sources = {
 		{ name = "path" },
 		{ name = "cmdline" },
 	},
 })
 cmp.setup.cmdline("/", {
+	mapping = cmp.mapping.preset.cmdline(),
 	sources = {
 		{
 			name = "buffer",

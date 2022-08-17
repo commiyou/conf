@@ -1,7 +1,7 @@
 # vim: ft=zsh
 
-alias oscp="ossutil64 cp --recursive"
-alias osget="ossutil64 cp --recursive"
+alias oscp="ossutil64 cp --recursive -u"
+alias osget="ossutil64 cp --recursive -u"
 alias osls="ossutil64 ls"
 alias rplay="rosbag play"
 alias rplayt="rosbag play --topics /tracking/tracked_object_marker /prediction/predicted_objects /current_pva --"
@@ -13,10 +13,10 @@ alias rupdate="cd \$(git rev-parse --show-toplevel) && catkin_make install . -j1
 
 osdown ()
 {
-  yes N | ossutil64 cp --recursive $* . 
+  yes N | ossutil64 cp --recursive -u $* . 
   while ls * | grep  temp$
   do
-    yes N | ossutil64 cp --recursive $* .
+    yes N | ossutil64 cp --recursive -u $* .
     sleep 3
   done
 }

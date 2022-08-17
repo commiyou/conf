@@ -33,3 +33,6 @@ alias -g TR,=" | tr ',' '\t'"
 alias -g CSV=" | tr '\t' ',' "
 
 alias -g E="luit -encoding gb18030"  # env gb18030 to utf
+if type xdg-open > /dev/null; then
+  alias open=xdg-open
+fi

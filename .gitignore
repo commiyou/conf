@@ -36,3 +36,4 @@ QtProject.conf
 zinit
 .path
 vim/autoload
+__pycache__/

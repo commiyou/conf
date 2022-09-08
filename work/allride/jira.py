@@ -89,7 +89,8 @@ class AllrideJira:
             return False
 
     def get_todo_issues(self):
-        jql = 'labels = 变道 AND createdDate >= 2022-07-01 AND status in ("To Do", "In Progress") AND component = Planning ORDER BY priority, createdDate DESC'
+        #jql = 'labels = 变道 AND createdDate >= 2022-07-01 AND status in ("To Do", "In Progress") AND component = Planning ORDER BY priority, createdDate DESC'
+        jql = 'assignee ="bin you"  and updatedDate  >= "2022-08-20" ORDER BY updatedDate  DESC'
         url = f"http://jira.allride-ai.cn:8080/issues/?jql={quote_plus(jql)}"
         header = { 'User-Agent': USER_AGENT, 'Host': 'jira.allride-ai.cn:8080', 'Upgrade-Insecure-Requests' : '1' }
 

@@ -199,7 +199,7 @@ def main(name, passwd):
     jira = AllrideJira()
     if not jira.login(name, passwd):
         return False
-    clean_issue(jira)
+    # clean_issue(jira)
     download_todo_issues(jira)
     #issues = jira.get_todo_issues()
 

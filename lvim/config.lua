@@ -49,6 +49,10 @@ local _, actions = pcall(require, "telescope.actions")
 local _, action_layout = pcall(require, "telescope.actions.layout")
 local _, action_state = pcall(require, "telescope.actions.state")
 
+-- lvim.builtin.bufferline.options.mode = "tabs"
+-- lvim.builtin.bufferline.options.sort_by = function (buffer_a, buffer_b)
+--   return buffer_a.mo
+-- end
 lvim.builtin.telescope.defaults.dynamic_preview_title = true
 -- lvim.builtin.telescope.defaults.path_display.shorten = { len = 3, exclude = { -1 } }
 lvim.builtin.telescope.defaults.path_display = { "smart" }
@@ -127,6 +131,8 @@ lvim.builtin.which_key.mappings["o"] = { -- toggle options
 		"clipboard",
 	},
 }
+lvim.builtin.which_key.mappings["[b"] = { "<cmd>BufMRUPrev<cr>", "BufMRUPrev" }
+lvim.builtin.which_key.mappings["]b"] = { "<cmd>BufMRUNext<cr>", "BufMRUNext" }
 
 -- TODO: User Config for predefined plugins
 -- After changing plugin config exit and reopen LunarVim, Run :PackerInstall :PackerCompile
@@ -269,6 +275,7 @@ lvim.plugins = {
 	{ "felipec/vim-sanegx" }, -- gx open url
 	{ "itchyny/vim-cursorword" },
 	{ "elzr/vim-json" },
+	{ "mildred/vim-bufmru" }, -- for
 	{ "wellle/tmux-complete.vim" },
 	{ "andersevenrud/cmp-tmux", requires = "hrsh7th/nvim-cmp", event = "InsertEnter" },
 	{ "hrsh7th/cmp-cmdline", requires = "hrsh7th/nvim-cmp", event = "InsertEnter" },

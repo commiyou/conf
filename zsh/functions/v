@@ -55,7 +55,6 @@ fi
 }
 
 if [[ "$viminfo" =~ \.shada$ ]]; then
-echo shada
   nvim  -Es +'redir @">|echo join(v:oldfiles,"\n")|redir END|enew|put ' -V1 -i "$viminfo" 2>&1 | grep '^/' | tr -d '' | while read line; do
   local fl=${line}
   [ $debug ] && echo fl, $fl, $_fl

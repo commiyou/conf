@@ -62,9 +62,9 @@ filepath() {
 }
 
 fp() {
-	[[ $# = 0 ]] && echo $(myip):$(filepath .) && return
+	[[ $# = 0 ]] && echo $(myip | head -1):$(filepath .) && return
 	for file in "$@"; do
-		[[ -e "$file" ]] && echo $(myip):$(filepath "$file") \
+		[[ -e "$file" ]] && echo $(myip | head -1):$(filepath "$file") \
 			|| echo "can NOT find $file" >&2
 	done
 }
@@ -180,4 +180,8 @@ fstash() {
       git stash show -p $sha
     fi
   done
+}
+
+tmux_reset() {
+  pkill -10 tmux
 }

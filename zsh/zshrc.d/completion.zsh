@@ -14,6 +14,7 @@ zstyle ':completion::*:(vim|vi):*:*' file-patterns \
 
 #zstyle ':completion:*' file-sort access
 zstyle ':completion:*' file-sort 'modification'
+zstyle ':completion::*:(rg|grep|cat|ls|tac)' file-sort date
 #zstyle ':completion:*' sort 'modification'
 
 zstyle ':completion:*:(cd|vi|vim|ls):*' ignore-parents parent pwd

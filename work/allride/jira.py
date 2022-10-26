@@ -18,7 +18,8 @@ from requests_html import HTMLSession
 from tendo import singleton
 
 USER_AGENT = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.0.0 Safari/537.36'
-OSSUTIL64 = '/home/bin.you/bin/ossutil64'
+OSSUTIL64 = '~/bin/ossutil64'
+JQL = 'assignee = currentUser() AND resolution = Unresolved and updatedDate > 2022-10-01 ORDER BY updated DESC'
 
 # 车辆：ID6009
 
@@ -33,7 +34,12 @@ def extract_issue_desc(desc):
     res = {"bags":[]}
     for line in lines:
         if line.startswith("bag") or "bag:" in line or "bag：" in line:
-            res["bagdir"] = line[line.find("oss://"):].split()[0]
+            tmp = line[line.find("oss://"):].split()[0]
+            if tmp.endswith(".bag"):
+                res["bagdir"] = os.path.dirname(tmp)
+                res["bags"].append(tmp)
+            else:
+                res["bagdir"] = tmp
         elif line.startswith("版本"):
             res["branch"] = line[3:].strip()
         elif line.startswith("log") or "log:" in line or "log：" in line:
@@ -90,8 +96,7 @@ class AllrideJira:
 
     def get_todo_issues(self):
         #jql = 'labels = 变道 AND createdDate >= 2022-07-01 AND status in ("To Do", "In Progress") AND component = Planning ORDER BY priority, createdDate DESC'
-        jql = 'assignee ="bin you"  and updatedDate  >= "2022-08-20" ORDER BY updatedDate  DESC'
-        url = f"http://jira.allride-ai.cn:8080/issues/?jql={quote_plus(jql)}"
+        url = f"http://jira.allride-ai.cn:8080/issues/?jql={quote_plus(JQL)}"
         header = { 'User-Agent': USER_AGENT, 'Host': 'jira.allride-ai.cn:8080', 'Upgrade-Insecure-Requests' : '1' }
 
         print(f"request {url}")
@@ -184,9 +189,11 @@ def download_todo_issues(jira):
             for bag in issue_res["bags"]:
                 ncmd = f"{cmd} {bag} ."
                 run_sh(ncmd)
-        else:
+        elif "bagdir" in issue_res:
             ncmd = f'{cmd} {issue_res["bagdir"]} .'
             run_sh(ncmd)
+        else:
+            print("bad issue " , issue[0])
         time.sleep(2)
 
 

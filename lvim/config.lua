@@ -118,7 +118,8 @@ lvim.builtin.which_key.mappings["f"] = {
 	r = { "<cmd>Telescope live_grep<cr>", "Live Grep" },
 	s = { "<cmd>Telescope lsp_document_symbols<cr>", "Buffer Symbol" },
 	S = { "<cmd>Telescope lsp_workspace_symbols<cr>", "WorkSpace Symbol" },
-	t = { "<cmd>Telescope tags<cr>", "Ctags" },
+	-- t = { "<cmd>Telescope tags<cr>", "Ctags" },
+	t = { "<cmd>TlistToggle<cr>", "taglist" },
 	T = { "<cmd>SymbolsOutline<cr>", "Symbols" },
 	w = { "<cmd>Telescope grep_string<cr>", "Grep Word" },
 	-- t = { "<cmd>TagbarToggle<cr>", "Tags" },
@@ -270,6 +271,13 @@ lvim.plugins = {
 	-- { "fmoralesc/molokayo"},
 	-- { "f-person/git-blame.nvim" }, -- too slow when big file!
 	{ "ConradIrwin/vim-bracketed-paste" },
+	{
+		"MattesGroeger/vim-bookmarks",
+		config = function()
+			-- vim.g.bookmark_no_default_key_mappings = 1
+		end,
+	},
+	{ "yegappan/taglist" },
 	{ "folke/trouble.nvim" },
 	{ "farmergreg/vim-lastplace" },
 	{ "felipec/vim-sanegx" }, -- gx open url

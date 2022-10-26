@@ -66,7 +66,7 @@ myip() {
   if [[ -n "$SSH_CONNECTION" ]]; then
     echo $SSH_CONNECTION | cut -f3 -d' '
   else 
-    /sbin/ifconfig eth0 | grep 'inet addr' | cut -f12 -d ' ' | cut -f2 -d':'
+    hostname -i | tail -n +1 | xargs -n1 
   fi
 }
 
@@ -85,11 +85,11 @@ websvr() {
   if [[ $(find . -type f | wc -l) -lt 10 ]]; then
     for l in $(find . -type f)
     do
-      echo http://$(myip):$MPORT/$l
+      echo http://$(myip |head -1):$MPORT/$l
     done
   fi
 
-  echo http://$(myip):$MPORT starting...
+  echo http://$(myip |head -1):$MPORT starting...
 }
 
 

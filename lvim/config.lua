@@ -18,6 +18,8 @@ lvim.colorscheme = "onedarker"
 -- keymappings [view all the defaults by pressing <leader>Lk]
 lvim.leader = "space"
 -- add your own keymapping
+lvim.keys.normal_mode["H"] = ":bp<cr>"
+lvim.keys.normal_mode["L"] = ":bN<cr>"
 lvim.keys.normal_mode["<C-s>"] = ":w<cr>"
 lvim.keys.normal_mode["<C-b>"] = "<left>"
 lvim.keys.normal_mode["<C-f>"] = "<right>"
@@ -68,7 +70,13 @@ lvim.builtin.telescope.defaults.mappings = {
 	},
 }
 
--- table.insert(lvim.builtin.cmp.sources, 1, { name = "copilot" })
+require("null-ls").setup({
+	on_init = function(new_client, _)
+		new_client.offset_encoding = "utf-8"
+	end,
+})
+
+lvim.builtin.illuminate.active = false
 -- table.insert(lvim.builtin.cmp.sources, 1, { name = "tmux", option = { all_panes = true } })
 lvim.builtin.cmp.formatting.source_names["tmux"] = "(Tmux)"
 for _i, _data in ipairs(lvim.builtin.cmp.sources) do
@@ -139,7 +147,6 @@ lvim.builtin.which_key.mappings["]b"] = { "<cmd>BufMRUNext<cr>", "BufMRUNext" }
 -- After changing plugin config exit and reopen LunarVim, Run :PackerInstall :PackerCompile
 lvim.builtin.alpha.active = true
 lvim.builtin.alpha.mode = "dashboard"
-lvim.builtin.notify.active = true
 lvim.builtin.terminal.active = true
 lvim.builtin.nvimtree.setup.view.side = "left"
 lvim.builtin.nvimtree.setup.renderer.icons.show.git = false
@@ -196,6 +203,7 @@ formatters.setup({
 	{ command = "stylua", filetypes = { "lua" } }, -- cargo install stylua
 	{ command = "black", filetypes = { "python" } },
 	{ command = "isort", filetypes = { "python" } },
+	{ command = "clang-format", args = { "--style={BasedOnStyle: Google, DerivePointerAlignment: false}" } },
 })
 --   {
 --     -- each formatter accepts a list of options identical to https://github.com/jose-elias-alvarez/null-ls.nvim/blob/main/doc/BUILTINS.md#Configuration
@@ -227,69 +235,15 @@ formatters.setup({
 -- }
 
 lvim.plugins = {
-	--{ "ray-x/lsp_signature.nvim" },
-	--{
-	--	"vim-airline/vim-airline",
-	--	requires = { "vim-airline/vim-airline-themes" },
-	--	config = function()
-	--		vim.g.airline_theme = "sol"
-	--		vim.g["airline#extensions#wordcount#enabled"] = 0
-	--		-- vim.g["airline#extensions#whitespace#enabled"] = 0
-	--	end,
-	--},
-	-- {
-	-- 	"preservim/tagbar",
-	-- 	config = function()
-	-- 		vim.g.tagbar_sort = 0 -- by position, press 's' to toggle by name/position
-	-- 		vim.g.tarbar_show_data_type = 1
-	-- 		vim.g.tagbar_show_linenumbers = 2
-	-- 		vim.g.tagbar_expand = 1
-	-- 	end,
-	-- },
-	-- {
-	-- 	"github/copilot.vim",
-	-- 	config = function()
-	-- 		vim.g.copilot_no_tab_map = true
-	-- 		vim.g.copilot_assume_mapped = true
-	-- 	end,
-	-- },
-	-- { "hrsh7th/cmp-copilot", requires = "hrsh7th/nvim-cmp", event = "InsertEnter" },
-	{ "tpope/vim-surround" }, --  https://github.com/tpope/vim-surround   cs{char}{char} / ds{char} / ys{motion}{char}
-	{ "tpope/vim-abolish" }, -- :%Subvert/facilit{y,ies}/building{,s}/g
-	{ "tpope/vim-repeat" }, --
-	{ "simrat39/symbols-outline.nvim" },
+	{ "andersevenrud/cmp-tmux", requires = "hrsh7th/nvim-cmp", event = "InsertEnter" },
 	{ "andymass/vim-matchup" },
-	{ "tpope/vim-fugitive" },
 	{
-		"RRethy/vim-hexokinase",
-		run = "make hexokinase",
+		"christoomey/vim-tmux-navigator",
 		config = function()
-			vim.g.Hexokinase_highlighters = { "backgroundfull" }
+			vim.g.tmux_navigator_disable_when_zoomed = 1
 		end,
 	},
 	{ "commiyou/molokai" },
-	-- { "fmoralesc/molokayo"},
-	-- { "f-person/git-blame.nvim" }, -- too slow when big file!
-	{ "ConradIrwin/vim-bracketed-paste" },
-	{
-		"MattesGroeger/vim-bookmarks",
-		config = function()
-			-- vim.g.bookmark_no_default_key_mappings = 1
-		end,
-	},
-	{ "yegappan/taglist" },
-	{ "folke/trouble.nvim" },
-	{ "farmergreg/vim-lastplace" },
-	{ "felipec/vim-sanegx" }, -- gx open url
-	{ "itchyny/vim-cursorword" },
-	{ "elzr/vim-json" },
-	{ "mildred/vim-bufmru" }, -- for
-	{ "wellle/tmux-complete.vim" },
-	{ "andersevenrud/cmp-tmux", requires = "hrsh7th/nvim-cmp", event = "InsertEnter" },
-	{ "hrsh7th/cmp-cmdline", requires = "hrsh7th/nvim-cmp", event = "InsertEnter" },
-	{ "tzachar/cmp-tabnine", run = "./install.sh", requires = "hrsh7th/nvim-cmp", event = "InsertEnter" },
-	{ "morhetz/gruvbox" },
-	{ "szw/vim-maximizer" },
 	{
 		"commiyou/a.vim",
 		config = function()
@@ -299,12 +253,13 @@ lvim.plugins = {
 			vim.g.alternateNoFindBuffer = 1
 		end,
 	},
-	{
-		"christoomey/vim-tmux-navigator",
-		config = function()
-			vim.g.tmux_navigator_disable_when_zoomed = 1
-		end,
-	},
+	{ "ConradIrwin/vim-bracketed-paste" },
+	{ "elzr/vim-json" },
+	{ "folke/trouble.nvim" },
+	{ "farmergreg/vim-lastplace" },
+	-- { "f-person/git-blame.nvim" }, -- too slow when big file!
+	{ "hrsh7th/cmp-cmdline", requires = "hrsh7th/nvim-cmp", event = "InsertEnter" },
+	-- { "itchyny/vim-cursorword" },
 	{
 		"inkarkat/vim-mark",
 		requires = { "inkarkat/vim-ingo-library" },
@@ -317,6 +272,9 @@ lvim.plugins = {
 	   ]])
 		end,
 	},
+	{ "MattesGroeger/vim-bookmarks" },
+	{ "mildred/vim-bufmru" },
+	{ "morhetz/gruvbox" },
 	{
 		"phaazon/hop.nvim",
 		event = "BufRead",
@@ -326,6 +284,22 @@ lvim.plugins = {
 			vim.api.nvim_set_keymap("n", "S", ":HopWord<cr>", { silent = true })
 		end,
 	},
+	{
+		"RRethy/vim-hexokinase",
+		run = "make hexokinase",
+		config = function()
+			vim.g.Hexokinase_highlighters = { "backgroundfull" }
+		end,
+	},
+	{ "simrat39/symbols-outline.nvim" },
+	{ "szw/vim-maximizer" },
+	{ "tpope/vim-abolish" }, -- :%Subvert/facilit{y,ies}/building{,s}/g
+	{ "tpope/vim-fugitive" },
+	{ "tpope/vim-surround" }, --  https://github.com/tpope/vim-surround   cs{char}{char} / ds{char} / ys{motion}{char}
+	{ "tpope/vim-repeat" }, --
+	{ "tzachar/cmp-tabnine", run = "./install.sh", requires = "hrsh7th/nvim-cmp", event = "InsertEnter" },
+	{ "wellle/tmux-complete.vim" },
+	{ "yegappan/taglist" },
 }
 
 local cmp = require("cmp")
@@ -402,6 +376,9 @@ function! s:pmsg(cmd)
   endif
 endfunction
 command! -nargs=+ -complete=command Pmsg call s:pmsg(<q-args>)
+
+set ttm=10
+set tm=500
 
 nnoremap <silent><C-w>z :MaximizerToggle<CR>
 vnoremap <silent><C-w>z :MaximizerToggle<CR>gv

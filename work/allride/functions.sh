@@ -8,7 +8,7 @@ alias rplayt="rosbag play --topics /tracking/tracked_object_marker /prediction/p
 alias rlaunch="source ./devel/setup.sh && roslaunch planning planning.launch;"
 alias rvalid="docker restart ctrl_node; source ./devel/setup.sh && roslaunch planning planning.launch"
 alias rinstall="cd \$(git rev-parse --show-toplevel) && rm -rf build && mkdir -p build && cd build && conan install -u .. && cd .. && catkin_make install . -j11 -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -DCMAKE_BUILD_TYPE=Debug"
-alias rupdate="cd \$(git rev-parse --show-toplevel) && catkin_make install . -j11 -DCMAKE_EXPORT_COMPILE_COMMANDS=1"
+alias rupdate="cd \$(git rev-parse --show-toplevel) && catkin_make install . -j3 -DCMAKE_EXPORT_COMPILE_COMMANDS=1"
 
 
 osdown ()

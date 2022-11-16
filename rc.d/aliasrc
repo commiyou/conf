@@ -77,10 +77,10 @@ alias t="tail -f"
 
 alias ln="ln -si"
 alias lnf="ln -sf"
-alias rgc='rg -t cpp -t protobuf -t c'
-alias rgp='rg -t py'
-alias rgs='rg -t sh'
-alias rga='rg -t sh -t cpp -t py -t protobuf -t c'
+alias rgcpp='rg -t cpp -t protobuf -t c'
+alias rgpy='rg -t py'
+alias rgsh='rg -t sh'
+alias rgall='rg --no-ignore'
 alias ipython="BETTER_EXCEPTIONS=0 ipython"  # better exceptions raise exceptions in ipython
 
 ## git
@@ -134,7 +134,8 @@ alias gmum='git merge upstream/master'
 alias gma='git merge --abort'
 
 alias gp='git push'
-alias gpcr='git push origin HEAD:refs/for/$(git_current_branch)'
+#alias gpcr='git push origin HEAD:refs/for/$(git_current_branch)'
+alias gpcr='git push origin HEAD:$(git_current_branch)'
 alias gpnt='git push origin HEAD:refs/tags/$(( git describe --tags $(git rev-list --tags --max-count=20) 2>/dev/null || echo 0.0.0 ) | sort -rV | head -1 | awk -F. -v OFS=. \{\$NF++\;print\})'
 
 alias grb='git rebase'

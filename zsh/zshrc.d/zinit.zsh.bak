@@ -1,0 +1,169 @@
+# vim: filetype=zsh
+
+SHELL=zsh
+#command -v ruby > /dev/null && command -v gem >/dev/null || return
+[ -n "$USE_ZPLUG" ] && return
+
+typeset -A ZINIT=(
+BIN_DIR         ${XDG_DATA_HOME:-$HOME/.local/share}/zinit/bin
+HOME_DIR        ${XDG_DATA_HOME:-$HOME/.local/share}/zinit
+ZCOMPDUMP_PATH  ${XDG_CACHE_HOME:-$HOME/.cache}/zcompdump-${(%):-%n}
+COMPINIT_OPTS   -C
+)
+
+hash -d zinit=$ZINIT[HOME_DIR]
+
+### Added by Zinit's installer
+if [[ ! -f $ZINIT[BIN_DIR]/zinit.zsh ]]; then
+  print -P "%F{33}▓▒░ %F{220}Installing %F{33}DHARMA%F{220} Initiative Plugin Manager (%F{33}zdharma/zinit%F{220})…%f"
+  command mkdir -p "$ZINIT[HOME_DIR]" && command chmod g-rwX "$ZINIT[HOME_DIR]"
+  command git clone https://github.com/zdharma-continuum/zinit "$ZINIT[BIN_DIR]" && \
+    print -P "%F{33}▓▒░ %F{34}Installation successful.%f%b" || \
+    print -P "%F{160}▓▒░ The clone has failed.%f%b"
+fi
+
+source $ZINIT[BIN_DIR]/zinit.zsh
+
+
+# https://github.com/NICHOLAS85/dotfiles/blob/xps_13_9365_refresh/.zshrc
+#
+# Functions to make configuration less verbose
+# zt() : First argument is a wait time and suffix, 
+# ie "0a". Anything that doesn't match will be passed 
+# as if it were an ice mod. Default ices depth'3' and lucid
+zt(){ zinit depth'3' lucid "${@}"; }
+
+zt light-mode for \
+  zdharma-continuum/z-a-patch-dl \
+  zdharma-continuum/z-a-submods \
+  NICHOLAS85/z-a-linkman \
+  NICHOLAS85/z-a-linkbin \
+  atinit'Z_A_USECOMP=1' \
+  NICHOLAS85/z-a-eval
+
+
+#### plugins
+load=load
+[[ $load == light ]] && lightmode=light-mode || lightmode=
+
+
+
+# light-mode within zshrc – for the instant prompt
+zt light-mode for \
+  romkatv/powerlevel10k \
+  id-as"p10k-theme" \
+  atload"source ${ZDOTDIR:-$HOME}/.p10k.zsh" \
+  zdharma-continuum/null
+
+zt wait light-mode for \
+  trigger-load'!extract' svn \
+  OMZP::extract \
+  trigger-load'!zhooks' \
+  agkozak/zhooks \
+  trigger-load'!gencomp' blockf \
+  atload"!export GENCOMP_DIR=${ZDOTDIR:-$HOME}/completions/" Aloxaf/gencomp
+
+
+zt light-mode for \
+  OMZP::fancy-ctrl-z \
+  OMZP::colored-man-pages \
+  OMZP::command-not-found \
+  OMZP::gnu-utils \
+  OMZP::iterm2 \
+  OMZP::rsync \
+  OMZP::systemadmin \
+  OMZP::urltools \
+  OMZP::jsontools \
+  OMZP::thefuck \
+  OMZL::clipboard.zsh \
+  OMZL::completion.zsh \
+  OMZL::functions.zsh \
+  OMZL::grep.zsh 
+
+
+zt light-mode binary from"gh-r" lman lbin for \
+  @ogham/exa \
+  @sharkdp/fd 
+
+zt light-mode binary from"gh-r" for \
+  lman lbin"**/rg -> rg" @BurntSushi/ripgrep \
+  dl'https://raw.githubusercontent.com/junegunn/fzf/master/man/man1/fzf.1' lman \
+  lbin \
+  junegunn/fzf-bin
+
+#zt light-mode  for \
+  #atclone"bash install.sh" \
+  #eval'dircolors -b LS_COLORS' \
+  #atload'zstyle ":completion:*" list-colors ${(s.:.)LS_COLORS}' \
+  #commiyou/LS_COLORS
+
+zt light-mode has'lua' for \
+  atload'!export _ZL_DATA=$XDG_CACHE_HOME/.zlua; alias zh="z -I -t ."; alias zb="z -b" ' \
+  skywind3000/z.lua \
+  atload'!function _z() { _zlua "$@"; }; alias z="nocorrect _fz"' \
+  changyuheng/fz 
+
+
+
+  #zinit $lightmode wait'0b' lucid for \
+  #atinit'zicompinit; zicdreplay' zdharma-continuum/fast-syntax-highlighting  \
+  #atinit'zicompinit; zicdreplay' atload"!_zsh_autosuggest_start" zsh-users/zsh-autosuggestions 
+
+#zplugin ice wait'1' lucid
+#zplugin light laggardkernel/zsh-thefuck
+
+# $'string'  quote https://stackoverflow.com/questions/1250079/how-to-escape-single-quotes-within-single-quoted-strings/16605140#16605140
+# fzf-marks, at slot 0, for quick Ctrl-G accessibility
+zt light-mode for \
+  hlissner/zsh-autopair \
+  urbainvaes/fzf-marks \
+  atload$'!FORGIT_LOG_FZF_OPTS=\'--bind="ctrl-e:execute(echo {} |grep -Eo [a-f0-9]+ |head -1 |xargs git show |vim -)"\'; \
+  alias gdca="forgit::diff --cached"; \
+  alias glog="forgit::log --oneline --decorate --graph"; \
+  compdef _git gco=git-checkout; \
+  ' wfxr/forgit \
+  as"program" atload'export SSHHOME=$XDG_CONFIG_HOME' pick'sshrc' commiyou/sshrc \
+  has"tmux" atload$'!ZSH_TMUX_FIXTERM=false; \
+  ZSH_TMUX_CONFIG=${XDG_CONFIG_HOME:-$HOME/.config}/tmux/tmux.conf; \
+  compdef _zsh_tmux_plugin_run=tmux; \
+  ' svn OMZP::tmux
+
+#  as"program" pick'bin/fzf-tmux' src'shell/key-bindings.zsh'  trackbinds bindmap='^T -> ^X^T; \ec -> ^X\ec' commiyou/fzf \
+
+zt light-mode for \
+  atinit"local zew_word_style=whitespace" \
+  zdharma-continuum/zsh-editing-workbench \
+  src'shell/key-bindings.zsh' \
+  trackbinds bindmap='^T -> ^X^T; \ec -> ^X\ec' \
+  junegunn/fzf 
+
+
+
+# completions
+zinit ice $lightmode wait lucid pick'roszsh'
+zinit snippet https://raw.githubusercontent.com/ros/ros/melodic-devel/tools/rosbash/roszsh
+
+
+[ -n "$WORK_ENV" ] && zt light-mode svn id-as for \
+    https://github.com/commiyou/conf/branches/new/work/$WORK_ENV
+
+zt light-mode for \
+  blockf compile'lib/*f*~*.zwc' \
+  pick'autoenv.zsh' nocompletions \
+  Tarrasch/zsh-autoenv 
+
+zt light-mode as"completion" for \
+  svn OMZP::docker 
+  #svn OMZP::fd \
+  #svn OMZP::ripgrep
+
+zt wait"0b" light-mode for \
+  atload"!zicompinit; \
+  zstyle ':fzf-tab:complete:(cd|z):*' fzf-preview 'exa -1 --color=always \$realpath';" \
+  Aloxaf/fzf-tab \
+  atinit"ZINIT[COMPINIT_OPTS]=-C; zicompinit; zicdreplay" \
+  zdharma-continuum/fast-syntax-highlighting \
+  as'completion' atpull'zinit cclear' blockf \
+  zsh-users/zsh-completions \
+  atload'!_zsh_autosuggest_start' \
+  zsh-users/zsh-autosuggestions \

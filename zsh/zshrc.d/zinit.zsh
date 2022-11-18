@@ -15,25 +15,54 @@ hash -d zinit=$ZINIT[HOME_DIR]
 
 ### Added by Zinit's installer
 if [[ ! -f $ZINIT[BIN_DIR]/zinit.zsh ]]; then
-  print -P "%F{33}▓▒░ %F{220}Installing %F{33}DHARMA%F{220} Initiative Plugin Manager (%F{33}zdharma/zinit%F{220})…%f"
+  print -P "%F{33}▓▒░ %F{220}Installing %F{33}DHARMA%F{220} \
+    Initiative Plugin Manager (%F{33}zdharma/zinit%F{220})…%f"
   command mkdir -p "$ZINIT[HOME_DIR]" && command chmod g-rwX "$ZINIT[HOME_DIR]"
-  command git clone https://github.com/commiyou/zinit "$ZINIT[BIN_DIR]" && \
+  command git clone https://github.com/zdharma-continuum/zinit "$ZINIT[BIN_DIR]" && \
     print -P "%F{33}▓▒░ %F{34}Installation successful.%f%b" || \
     print -P "%F{160}▓▒░ The clone has failed.%f%b"
 fi
 
 source $ZINIT[BIN_DIR]/zinit.zsh
 
+zt(){ zinit depth'3' lucid "${@}"; }
 #### plugins
-load=load
-[[ $load == light ]] && lightmode=light-mode || lightmode=
+## light is parallel & load is sequential.
+#load=load
+#[[ $load == light ]] && lightmode=light-mode || lightmode=
 
-zinit ice atclone"bash install.sh" \
-  atpull'%atclone' pick"$XDG_DATA_HOME/lscolors.sh" nocompile'!' \
-  atload'!zstyle ":completion:*" list-colors "${(s.:.)LS_COLORS}"' 
-zinit $load commiyou/LS_COLORS
+lightmode=light-mode
 
-zinit $lightmode wait lucid for \
+zt $lightmode for \
+  romkatv/powerlevel10k \
+  id-as"p10k-theme" \
+  atload"source ${ZDOTDIR:-$HOME}/.p10k.zsh" \
+  zdharma-continuum/null
+
+
+zt $lightmode for \
+  zdharma-continuum/z-a-patch-dl \
+  zdharma-continuum/z-a-submods \
+  NICHOLAS85/z-a-linkman \
+  NICHOLAS85/z-a-linkbin \
+  atinit'Z_A_USECOMP=1' \
+  NICHOLAS85/z-a-eval
+
+
+zt $lightmode wait for \
+  eval'dircolors -b LS_COLORS' \
+  atload'zstyle ":completion:*" list-colors ${(s.:.)LS_COLORS}' \
+  commiyou/LS_COLORS \
+  atload'compdef _zinit zi' zdharma-continuum/null \
+  trigger-load'!zhooks' \
+  agkozak/zhooks \
+  trigger-load'!gencomp' blockf \
+  atload"!export GENCOMP_DIR=${ZDOTDIR:-$HOME}/completions/" Aloxaf/gencomp \
+  blockf compile'lib/*f*~*.zwc' \
+  pick'autoenv.zsh' nocompletions \
+  Tarrasch/zsh-autoenv 
+
+zt $lightmode wait for \
   OMZP::fancy-ctrl-z \
   OMZP::colored-man-pages \
   OMZP::command-not-found \
@@ -42,74 +71,82 @@ zinit $lightmode wait lucid for \
   OMZP::rsync \
   OMZP::systemadmin \
   OMZP::urltools \
+  trigger-load'!pp_json;is_json;urlencode_json;urldecode_json;pp_ndjson;is_ndjson;' \
   OMZP::jsontools \
+  trigger-load'!x;extract;' \
   OMZP::extract \
   OMZP::thefuck \
   OMZL::clipboard.zsh \
   OMZL::completion.zsh \
   OMZL::functions.zsh \
-  OMZL::grep.zsh 
+  OMZL::grep.zsh \
+  has"tmux" atload$'!ZSH_TMUX_FIXTERM=false; \
+    ZSH_TMUX_CONFIG=${XDG_CONFIG_HOME:-$HOME/.config}/tmux/tmux.conf; \
+    compdef _zsh_tmux_plugin_run=tmux; ' \
+  OMZP::tmux 
+
+zt $lightmode wait binary from"gh-r" lman lbin for \
+  @ogham/exa \
+  @sharkdp/fd 
+
+zt $lightmode wait binary from"gh-r" for \
+  lman lbin"**/rg -> rg" @BurntSushi/ripgrep \
+  dl'https://raw.githubusercontent.com/junegunn/fzf/master/man/man1/fzf.1' \
+  id-as'fzf-bin' lman lbin bpick'*linux*' \
+  junegunn/fzf
+
+zt $lightmode wait for \
+  atinit"local zew_word_style=whitespace" \
+  zdharma-continuum/zsh-editing-workbench \
+  pick'shell/key-bindings.zsh' \
+  trackbinds bindmap='^T -> ^X^T; \ec -> ^X\ec' \
+  junegunn/fzf 
+
+zt $lightmode wait has'lua' for \
+  atload'!export _ZL_DATA=$XDG_CACHE_HOME/.zlua;' \
+  skywind3000/z.lua \
+  atload'!function _z() { _zlua "$@"; }; alias z="nocorrect _fz"' \
+  changyuheng/fz 
 
 #zplugin ice wait'1' lucid
 #zplugin light laggardkernel/zsh-thefuck
 
+#as"program" pick'bin/fzf-tmux' src'shell/key-bindings.zsh'  trackbinds bindmap='^T -> ^X^T; \ec -> ^X\ec' commiyou/fzf \
 # $'string'  quote https://stackoverflow.com/questions/1250079/how-to-escape-single-quotes-within-single-quoted-strings/16605140#16605140
 # fzf-marks, at slot 0, for quick Ctrl-G accessibility
-zinit $lightmode wait lucid for \
+zt $lightmode wait for \
   hlissner/zsh-autopair \
   urbainvaes/fzf-marks \
-  atload$'!FORGIT_LOG_FZF_OPTS=\'--bind="ctrl-e:execute(echo {} |grep -Eo [a-f0-9]+ |head -1 |xargs git show |vim -)"\'; \
+  atload$'!FORGIT_LOG_FZF_OPTS=\'--bind="ctrl-e:execute(echo {} |grep -Eo [a-f0-9]+ |head -1 |xargs command git show |vim -)"\'; \
     alias gdca="forgit::diff --cached"; \
     alias glog="forgit::log --oneline --decorate --graph"; \
     compdef _git gco=git-checkout; \
     ' wfxr/forgit \
-  as"program" pick'bin/fzf-tmux' src'shell/key-bindings.zsh'  trackbinds bindmap='^T -> ^X^T; \ec -> ^X\ec' commiyou/fzf \
-  as"program" atload'export SSHHOME=$XDG_CONFIG_HOME' pick'sshrc' commiyou/sshrc \
-  has"tmux" atload$'!ZSH_TMUX_FIXTERM=false; \
-    ZSH_TMUX_CONFIG=${XDG_CONFIG_HOME:-$HOME/.config}/tmux/tmux.conf; \
-    compdef _zsh_tmux_plugin_run=tmux; \
-    ' svn OMZP::tmux
-
-zinit $lightmode wait"1" lucid for \
+  as"program" atload'export SSHHOME=$XDG_CONFIG_HOME' pick'sshrc' IngoMeyer441/sshrc \
   atinit"local zew_word_style=whitespace" \
-  commiyou/zsh-editing-workbench
+  zdharma-continuum/zsh-editing-workbench
 
-zinit $lightmode wait"1" lucid from"gh-r" as"program" for \
-  if'[[ ! ${commands[exa]} ]]' mv"exa* -> exa" pick'exa' ogham/exa \
-  if'[[ ! ${commands[fd]} ]]' mv"fd* -> fd"  pick'fd/fd' @sharkdp/fd \
-  if'[[ ! ${commands[rg]} ]]' mv"ripgrep* -> rg" pick'rg/rg' BurntSushi/ripgrep \
-  junegunn/fzf
-
-
-zinit $lightmode wait"1" lucid has'lua' for \
-  atload'!export _ZL_DATA=$XDG_CACHE_HOME/.zlua; alias zh="z -I -t ."; alias zb="z -b" ' skywind3000/z.lua \
-  atload'!function _z() { _zlua "$@"; }; alias z="nocorrect _fz"' changyuheng/fz
-
-# light-mode within zshrc – for the instant prompt
-zinit ice atload"!source ${ZDOTDIR:-$HOME}/.p10k.zsh" lucid nocd depth=1
-zinit $load romkatv/powerlevel10k
 
 # completions
-zinit $lightmode wait lucid as"completion" for \
+zt $lightmode wait blockf as"completion" for \
   svn OMZP::fd \
   svn OMZP::docker \
   svn OMZP::ripgrep
 
-zinit ice $lightmode wait lucid pick'roszsh'
-zinit snippet https://raw.githubusercontent.com/ros/ros/melodic-devel/tools/rosbash/roszsh
+#zinit ice $lightmode wait lucid pick'roszsh'
+#zinit snippet https://raw.githubusercontent.com/ros/ros/melodic-devel/tools/rosbash/roszsh
 
-local cf
-if [ -n "$WORK_ENV" ] && [ -d $XDG_CONFIG_HOME/work/$WORK_ENV/ ]; then
-  #source $config_file
-  #for cf ($XDG_CONFIG_HOME/work/$WORK_ENV/*.sh) zinit snippet $cf
-  zinit ice $lightmode wait'0c' lucid 
-  zinit snippet -f $XDG_CONFIG_HOME/work/$WORK_ENV/functions.sh 
-fi
+[[ -n $WORK_ENV ]] && zt $lightmode wait svn id-as nocompile for \
+  https://github.com/commiyou/conf/branches/new/work/$WORK_ENV
 
-# Fast-syntax-highlighting & autosuggestions
-zinit $lightmode wait'0b' lucid for \
-  atinit"zicompinit; zicdreplay" commiyou/fast-syntax-highlighting \
-  atload"!zstyle ':fzf-tab:complete:(cd|z):*' fzf-preview 'exa -1 --color=always \$realpath';" Aloxaf/fzf-tab \
+# fzf-tab must before Fast-syntax-highlighting & autosuggestions
+# and bellow LS_COLORS
+zt $lightmode wait'0b' for \
+  atinit"zicompinit; zicdreplay" \
+  atload"!zstyle ':fzf-tab:complete:(cd|z):*' \
+  fzf-preview 'exa -1 --color=always \$realpath';" \
+  Aloxaf/fzf-tab \
+  zdharma-continuum/fast-syntax-highlighting \
+  blockf atpull'zinit creinstall -q .' zsh-users/zsh-completions \
   atload"!_zsh_autosuggest_start" zsh-users/zsh-autosuggestions 
 
-zinit $lightmode wait lucid blockf atpull'zinit creinstall -q .' for zsh-users/zsh-completions 

@@ -35,7 +35,6 @@ lightmode=light-mode
 
 zt $lightmode for \
   romkatv/powerlevel10k \
-  id-as"p10k-theme" \
   atload"source ${ZDOTDIR:-$HOME}/.p10k.zsh" \
   zdharma-continuum/null
 
@@ -48,12 +47,12 @@ zt $lightmode for \
   atinit'Z_A_USECOMP=1' \
   NICHOLAS85/z-a-eval
 
-
 zt $lightmode wait for \
   eval'dircolors -b LS_COLORS' \
   atload'zstyle ":completion:*" list-colors ${(s.:.)LS_COLORS}' \
-  commiyou/LS_COLORS \
-  atload'compdef _zinit zi' zdharma-continuum/null \
+  commiyou/LS_COLORS
+
+zt $lightmode wait for \
   trigger-load'!zhooks' \
   agkozak/zhooks \
   trigger-load'!gencomp' blockf \
@@ -80,7 +79,7 @@ zt $lightmode wait for \
   OMZL::completion.zsh \
   OMZL::functions.zsh \
   OMZL::grep.zsh \
-  has"tmux" atload$'!ZSH_TMUX_FIXTERM=false; \
+  has'tmux' atload$'!ZSH_TMUX_FIXTERM=false; \
     ZSH_TMUX_CONFIG=${XDG_CONFIG_HOME:-$HOME/.config}/tmux/tmux.conf; \
     compdef _zsh_tmux_plugin_run=tmux; ' \
   OMZP::tmux 
@@ -136,17 +135,23 @@ zt $lightmode wait blockf as"completion" for \
 #zinit ice $lightmode wait lucid pick'roszsh'
 #zinit snippet https://raw.githubusercontent.com/ros/ros/melodic-devel/tools/rosbash/roszsh
 
-[[ -n $WORK_ENV ]] && zt $lightmode wait svn id-as nocompile for \
+zt $lightmode wait'[[ -n $WORK_ENV ]]' svn id-as for \
   https://github.com/commiyou/conf/branches/new/work/$WORK_ENV
+
+zt $lightmode wait svn for \
+  blockf atpull'zinit creinstall -q .' id-as'commiyou-completions'\
+  https://github.com/commiyou/conf/branches/new/zsh/zshrc.d/completions \
+  blockf as'completion' pick'roszsh' id-as \
+  https://github.com/ros/ros/branches/noetic-devel/tools/rosbash
+
 
 # fzf-tab must before Fast-syntax-highlighting & autosuggestions
 # and bellow LS_COLORS
 zt $lightmode wait'0b' for \
-  atinit"zicompinit; zicdreplay" \
+  atinit"zicompinit; zicdreplay; compdef _zinit zi;" \
   atload"!zstyle ':fzf-tab:complete:(cd|z):*' \
   fzf-preview 'exa -1 --color=always \$realpath';" \
   Aloxaf/fzf-tab \
   zdharma-continuum/fast-syntax-highlighting \
   blockf atpull'zinit creinstall -q .' zsh-users/zsh-completions \
   atload"!_zsh_autosuggest_start" zsh-users/zsh-autosuggestions 
-

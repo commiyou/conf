@@ -132,17 +132,16 @@ zt $lightmode wait blockf as"completion" for \
   svn OMZP::docker \
   svn OMZP::ripgrep
 
-#zinit ice $lightmode wait lucid pick'roszsh'
-#zinit snippet https://raw.githubusercontent.com/ros/ros/melodic-devel/tools/rosbash/roszsh
 
 zt $lightmode wait'[[ -n $WORK_ENV ]]' svn id-as for \
   https://github.com/commiyou/conf/branches/new/work/$WORK_ENV
 
 zt $lightmode wait svn for \
-  blockf atpull'zinit creinstall -q .' id-as'commiyou-completions'\
-  https://github.com/commiyou/conf/branches/new/zsh/zshrc.d/completions \
-  blockf as'completion' pick'roszsh' id-as \
-  https://github.com/ros/ros/branches/noetic-devel/tools/rosbash
+  blockf as'completion' atpull'zinit creinstall -q .' id-as'commiyou-completions'\
+  https://github.com/commiyou/conf/branches/new/zsh/completions \
+
+zinit ice $lightmode wait lucid pick'roszsh' id-as'roszsh'
+zinit snippet https://raw.githubusercontent.com/ros/ros/melodic-devel/tools/rosbash/roszsh
 
 
 # fzf-tab must before Fast-syntax-highlighting & autosuggestions

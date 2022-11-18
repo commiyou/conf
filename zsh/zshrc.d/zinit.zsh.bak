@@ -88,8 +88,8 @@ zt light-mode binary from"gh-r" lman lbin for \
 zt light-mode binary from"gh-r" for \
   lman lbin"**/rg -> rg" @BurntSushi/ripgrep \
   dl'https://raw.githubusercontent.com/junegunn/fzf/master/man/man1/fzf.1' lman \
-  lbin \
-  junegunn/fzf-bin
+  lbin bpick"linux_amd64" \
+  junegunn/fzf
 
 #zt light-mode  for \
   #atclone"bash install.sh" \

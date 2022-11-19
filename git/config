@@ -1,6 +1,3 @@
-[user]
-  name = bin.you
-  email = bin.you@allride.ai
 [color]
   ui = auto
 [alias]
@@ -38,10 +35,6 @@
   whitespace = -trailing-space
   autocrlf = input
 [credential]
-	helper = /usr/share/doc/git/contrib/credential/libsecret/git-credential-libsecret
+	helper = store
 [pull]
 	rebase = true
-[init]
-	templateDir = /home/bin.you/.git-template
-[blame]
-	ignoreRevsFile = .git-blame-ignore-revs

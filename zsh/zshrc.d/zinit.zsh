@@ -88,10 +88,14 @@ zt $lightmode wait binary from"gh-r" lman lbin for \
   @ogham/exa \
   @sharkdp/fd 
 
+local ostype
+[[ $OSTYPE =~ '.*darwin.*' ]] && ostype=darwin
+[[ $OSTYPE =~ '.*linux.*' ]] && ostype=linux
+
 zt $lightmode wait binary from"gh-r" for \
   lman lbin"**/rg -> rg" @BurntSushi/ripgrep \
   dl'https://raw.githubusercontent.com/junegunn/fzf/master/man/man1/fzf.1' \
-  id-as'fzf-bin' lman lbin bpick'*linux*' \
+  id-as'fzf-bin' lman lbin bpick"*$ostype*" \
   junegunn/fzf
 
 zt $lightmode wait for \

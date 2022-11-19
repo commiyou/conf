@@ -59,86 +59,90 @@ lvim.builtin.telescope.defaults.dynamic_preview_title = true
 -- lvim.builtin.telescope.defaults.path_display.shorten = { len = 3, exclude = { -1 } }
 lvim.builtin.telescope.defaults.path_display = { "smart" }
 lvim.builtin.telescope.defaults.mappings = {
-	-- for input mode
-	i = {
-		["<C-j>"] = actions.move_selection_next,
-		["<C-k>"] = actions.move_selection_previous,
-		["<C-n>"] = actions.cycle_history_next,
-		["<C-p>"] = actions.cycle_history_prev,
-		["<C-f>"] = action_layout.toggle_preview,
-		-- ["<esc>"] = actions.close,
-	},
+  -- for input mode
+  i = {
+    ["<C-j>"] = actions.move_selection_next,
+    ["<C-k>"] = actions.move_selection_previous,
+    ["<C-n>"] = actions.cycle_history_next,
+    ["<C-p>"] = actions.cycle_history_prev,
+    ["<C-f>"] = action_layout.toggle_preview,
+    -- ["<esc>"] = actions.close,
+  },
 }
 
-require("null-ls").setup({
-	on_init = function(new_client, _)
-		new_client.offset_encoding = "utf-8"
-	end,
-})
+-- https://github.com/jose-elias-alvarez/null-ls.nvim/issues/428
+local notify = vim.notify
+vim.notify = function(msg, ...)
+    if msg:match("warning: multiple different client offset_encodings") then
+        return
+    end
 
-lvim.builtin.illuminate.active = false
+    notify(msg, ...)
+end
+
+-- lvim.builtin.illuminate.active = false
 -- table.insert(lvim.builtin.cmp.sources, 1, { name = "tmux", option = { all_panes = true } })
 lvim.builtin.cmp.formatting.source_names["tmux"] = "(Tmux)"
 for _i, _data in ipairs(lvim.builtin.cmp.sources) do
-	if _data["name"] == "buffer" then
-		lvim.builtin.cmp.sources[_i] = {
-			name = "buffer",
-			option = {
-				get_bufnrs = function()
-					local buf = vim.api.nvim_get_current_buf()
-					local byte_size = vim.api.nvim_buf_get_offset(buf, vim.api.nvim_buf_line_count(buf))
-					print(vim.api.nvim_buf_line_count(buf))
-					-- io.open("/home/bin.you/debug.txt", "w+"):write
-					if byte_size > 1024 * 1024 then -- 1 Megabyte max
-						return {}
-					end
-					return { buf }
-				end,
-			},
-		}
-	end
+  if _data["name"] == "buffer" then
+    lvim.builtin.cmp.sources[_i] = {
+      name = "buffer",
+      option = {
+        get_bufnrs = function()
+          local buf = vim.api.nvim_get_current_buf()
+          local byte_size = vim.api.nvim_buf_get_offset(buf, vim.api.nvim_buf_line_count(buf))
+          print(vim.api.nvim_buf_line_count(buf))
+          -- io.open("/home/bin.you/debug.txt", "w+"):write
+          if byte_size > 1024 * 1024 then -- 1 Megabyte max
+            return {}
+          end
+          return { buf }
+        end,
+      },
+    }
+  end
 end
 
 local function find_cwd_files(prompt_bufnr)
-	local opt = {
-		cwd = vim.fn.expand("%:p:h"),
-	}
-	require("telescope.builtin").find_files(opt)
+  local opt = {
+    cwd = vim.fn.expand("%:p:h"),
+  }
+  require("telescope.builtin").find_files(opt)
 end
 
 lvim.builtin.which_key.mappings["b"] = { "<cmd>Telescope buffers<cr>", "Open Buffers" }
 lvim.builtin.which_key.mappings["m"] = { "<cmd>Telescope oldfiles<cr>", "Open Recent File" }
 lvim.builtin.which_key.mappings["f"] = {
-	name = "Find",
-	a = { "<cmd>Telescope builtin<cr>", "All builtins" },
-	b = { "<cmd>Telescope buffers<cr>", "Open Buffers" },
-	C = { "<cmd>Telescope commands_history<cr>", "Rerun Commands" },
-	c = { "<cmd>Telescope commands<cr>", "Run Commands" },
-	d = { find_cwd_files, "find same dir" },
-	f = { "<cmd>Telescope find_files<cr>", "Find File" },
-	g = { require("lvim.core.telescope.custom-finders").find_project_files, "Find same prj" },
-	h = { "<cmd>Telescope help_tags<cr>", "Help" },
-	k = { "<cmd>Telescope keymaps<cr>", "keymappings" },
-	m = { "<cmd>Telescope oldfiles<cr>", "Open Recent File" },
-	O = { "<cmd>Telescope vim_options<cr>", "Vim Options" },
-	p = { "<cmd>Telescope registers<cr>", "Paste registers" },
-	P = { "<cmd>Telescope projects<CR>", "Projects" },
-	r = { "<cmd>Telescope live_grep<cr>", "Live Grep" },
-	s = { "<cmd>Telescope lsp_document_symbols<cr>", "Buffer Symbol" },
-	S = { "<cmd>Telescope lsp_workspace_symbols<cr>", "WorkSpace Symbol" },
-	-- t = { "<cmd>Telescope tags<cr>", "Ctags" },
-	t = { "<cmd>TlistToggle<cr>", "taglist" },
-	T = { "<cmd>SymbolsOutline<cr>", "Symbols" },
-	w = { "<cmd>Telescope grep_string<cr>", "Grep Word" },
-	-- t = { "<cmd>TagbarToggle<cr>", "Tags" },
+  name = "Find",
+  a = { "<cmd>Telescope builtin<cr>", "All builtins" },
+  b = { "<cmd>Telescope buffers<cr>", "Open Buffers" },
+  C = { "<cmd>Telescope commands_history<cr>", "Rerun Commands" },
+  c = { "<cmd>Telescope commands<cr>", "Run Commands" },
+  d = { find_cwd_files, "find same dir" },
+  f = { "<cmd>Telescope find_files<cr>", "Find File" },
+  g = { require("lvim.core.telescope.custom-finders").find_project_files, "Find same prj" },
+  h = { "<cmd>Telescope help_tags<cr>", "Help" },
+  k = { "<cmd>Telescope keymaps<cr>", "keymappings" },
+  m = { "<cmd>Telescope oldfiles<cr>", "Open Recent File" },
+  O = { "<cmd>Telescope vim_options<cr>", "Vim Options" },
+  p = { "<cmd>Telescope registers<cr>", "Paste registers" },
+  P = { "<cmd>Telescope projects<CR>", "Projects" },
+  r = { "<cmd>Telescope live_grep<cr>", "Live Grep" },
+  s = { "<cmd>Telescope lsp_document_symbols<cr>", "Buffer Symbol" },
+  S = { "<cmd>Telescope lsp_workspace_symbols<cr>", "WorkSpace Symbol" },
+  -- t = { "<cmd>Telescope tags<cr>", "Ctags" },
+  t = { "<cmd>TlistToggle<cr>", "taglist" },
+  T = { "<cmd>SymbolsOutline<cr>", "Symbols" },
+  w = { "<cmd>Telescope grep_string<cr>", "Grep Word" },
+  -- t = { "<cmd>TagbarToggle<cr>", "Tags" },
 }
 lvim.builtin.which_key.mappings["Ls"] = { "<cmd>Pmsg lua put(lvim)<cr>", "Show Confs" }
 lvim.builtin.which_key.mappings["o"] = { -- toggle options
-	p = { "<cmd>setlocal paste!<cr>", "paste" },
-	c = {
-		"<cmd>lua if vim.o.clipboard == '' then vim.o.clipboard = 'unnamedplus' else vim.o.clipboard = '' end<cr>",
-		"clipboard",
-	},
+  p = { "<cmd>setlocal paste!<cr>", "paste" },
+  c = {
+    "<cmd>lua if vim.o.clipboard == '' then vim.o.clipboard = 'unnamedplus' else vim.o.clipboard = '' end<cr>",
+    "clipboard",
+  },
 }
 lvim.builtin.which_key.mappings["[b"] = { "<cmd>BufMRUPrev<cr>", "BufMRUPrev" }
 lvim.builtin.which_key.mappings["]b"] = { "<cmd>BufMRUNext<cr>", "BufMRUNext" }
@@ -153,18 +157,18 @@ lvim.builtin.nvimtree.setup.renderer.icons.show.git = false
 
 -- if you don't want all the parsers change this to a table of the ones you want
 lvim.builtin.treesitter.ensure_installed = {
-	"bash",
-	"c",
-	"javascript",
-	"json",
-	"lua",
-	"python",
-	"typescript",
-	"tsx",
-	"css",
-	"rust",
-	"java",
-	"yaml",
+  "bash",
+  "c",
+  "javascript",
+  "json",
+  "lua",
+  "python",
+  "typescript",
+  "tsx",
+  "css",
+  "rust",
+  "java",
+  "yaml",
 }
 
 lvim.builtin.treesitter.ignore_install = { "haskell" }
@@ -200,10 +204,10 @@ lvim.builtin.treesitter.highlight.enabled = true
 -- -- set a formatter, this will override the language server formatting capabilities (if it exists)
 local formatters = require("lvim.lsp.null-ls.formatters")
 formatters.setup({
-	{ command = "stylua", filetypes = { "lua" } }, -- cargo install stylua
-	{ command = "black", filetypes = { "python" } },
-	{ command = "isort", filetypes = { "python" } },
-	{ command = "clang-format", args = { "--style={BasedOnStyle: Google, DerivePointerAlignment: false}" } },
+  { command = "stylua", filetypes = { "lua" } }, -- cargo install stylua
+  { command = "black", filetypes = { "python" } },
+  { command = "isort", filetypes = { "python" } },
+  { command = "clang-format", args = { "--style={BasedOnStyle: Google, DerivePointerAlignment: false}" } },
 })
 --   {
 --     -- each formatter accepts a list of options identical to https://github.com/jose-elias-alvarez/null-ls.nvim/blob/main/doc/BUILTINS.md#Configuration
@@ -235,106 +239,106 @@ formatters.setup({
 -- }
 
 lvim.plugins = {
-	{ "andersevenrud/cmp-tmux", requires = "hrsh7th/nvim-cmp", event = "InsertEnter" },
-	{ "andymass/vim-matchup" },
-	{
-		"christoomey/vim-tmux-navigator",
-		config = function()
-			vim.g.tmux_navigator_disable_when_zoomed = 1
-		end,
-	},
-	{ "commiyou/molokai" },
-	{
-		"commiyou/a.vim",
-		config = function()
-			vim.g.alternateNoDefaultAlternate = 1
-			vim.g.alternateNoDefaultMapping = 1
-			vim.g.alternateRelativeFiles = 1
-			vim.g.alternateNoFindBuffer = 1
-		end,
-	},
-	{ "ConradIrwin/vim-bracketed-paste" },
-	{ "elzr/vim-json" },
-	{ "folke/trouble.nvim" },
-	{ "farmergreg/vim-lastplace" },
-	-- { "f-person/git-blame.nvim" }, -- too slow when big file!
-	{ "hrsh7th/cmp-cmdline", requires = "hrsh7th/nvim-cmp", event = "InsertEnter" },
-	-- { "itchyny/vim-cursorword" },
-	{
-		"inkarkat/vim-mark",
-		requires = { "inkarkat/vim-ingo-library" },
-		config = function()
-			vim.cmd([[
+  { "andersevenrud/cmp-tmux", requires = "hrsh7th/nvim-cmp", event = "InsertEnter" },
+  { "andymass/vim-matchup" },
+  {
+    "christoomey/vim-tmux-navigator",
+    config = function()
+      vim.g.tmux_navigator_disable_when_zoomed = 1
+    end,
+  },
+  { "commiyou/molokai" },
+  {
+    "commiyou/a.vim",
+    config = function()
+      vim.g.alternateNoDefaultAlternate = 1
+      vim.g.alternateNoDefaultMapping = 1
+      vim.g.alternateRelativeFiles = 1
+      vim.g.alternateNoFindBuffer = 1
+    end,
+  },
+  { "ConradIrwin/vim-bracketed-paste" },
+  { "elzr/vim-json" },
+  { "folke/trouble.nvim" },
+  { "farmergreg/vim-lastplace" },
+  -- { "f-person/git-blame.nvim" }, -- too slow when big file!
+  { "hrsh7th/cmp-cmdline", requires = "hrsh7th/nvim-cmp", event = "InsertEnter" },
+  -- { "itchyny/vim-cursorword" },
+  {
+    "inkarkat/vim-mark",
+    requires = { "inkarkat/vim-ingo-library" },
+    config = function()
+      vim.cmd([[
 	   let g:mwHistAdd = '@'
 	   let g:mwAutoLoadMarks = 1
 	   let g:mw_no_mappings = 1
 	   nmap <leader>M <Plug>MarkSet
-	   ]])
-		end,
-	},
-	{ "MattesGroeger/vim-bookmarks" },
-	{ "mildred/vim-bufmru" },
-	{ "morhetz/gruvbox" },
-	{
-		"phaazon/hop.nvim",
-		event = "BufRead",
-		config = function()
-			require("hop").setup()
-			vim.api.nvim_set_keymap("n", "s", ":HopChar2<cr>", { silent = true })
-			vim.api.nvim_set_keymap("n", "S", ":HopWord<cr>", { silent = true })
-		end,
-	},
-	{
-		"RRethy/vim-hexokinase",
-		run = "make hexokinase",
-		config = function()
-			vim.g.Hexokinase_highlighters = { "backgroundfull" }
-		end,
-	},
-	{ "simrat39/symbols-outline.nvim" },
-	{ "szw/vim-maximizer" },
-	{ "tpope/vim-abolish" }, -- :%Subvert/facilit{y,ies}/building{,s}/g
-	{ "tpope/vim-fugitive" },
-	{ "tpope/vim-surround" }, --  https://github.com/tpope/vim-surround   cs{char}{char} / ds{char} / ys{motion}{char}
-	{ "tpope/vim-repeat" }, --
-	{ "tzachar/cmp-tabnine", run = "./install.sh", requires = "hrsh7th/nvim-cmp", event = "InsertEnter" },
-	{ "wellle/tmux-complete.vim" },
-	{ "yegappan/taglist" },
+	   ]] )
+    end,
+  },
+  { "MattesGroeger/vim-bookmarks" },
+  { "mildred/vim-bufmru" },
+  { "morhetz/gruvbox" },
+  {
+    "phaazon/hop.nvim",
+    event = "BufRead",
+    config = function()
+      require("hop").setup()
+      vim.api.nvim_set_keymap("n", "s", ":HopChar2<cr>", { silent = true })
+      vim.api.nvim_set_keymap("n", "S", ":HopWord<cr>", { silent = true })
+    end,
+  },
+  {
+    "RRethy/vim-hexokinase",
+    run = "make hexokinase",
+    config = function()
+      vim.g.Hexokinase_highlighters = { "backgroundfull" }
+    end,
+  },
+  { "simrat39/symbols-outline.nvim" },
+  { "szw/vim-maximizer" },
+  { "tpope/vim-abolish" }, -- :%Subvert/facilit{y,ies}/building{,s}/g
+  { "tpope/vim-fugitive" },
+  { "tpope/vim-surround" }, --  https://github.com/tpope/vim-surround   cs{char}{char} / ds{char} / ys{motion}{char}
+  { "tpope/vim-repeat" }, --
+  { "tzachar/cmp-tabnine", run = "./install.sh", requires = "hrsh7th/nvim-cmp", event = "InsertEnter" },
+  { "wellle/tmux-complete.vim" },
+  { "yegappan/taglist" },
 }
 
 local cmp = require("cmp")
 
 cmp.setup({
-	sources = {
-		{ name = "tmux" },
-	},
+  sources = {
+    { name = "tmux" },
+  },
 })
 cmp.setup.cmdline(":", {
-	mapping = cmp.mapping.preset.cmdline(),
-	sources = {
-		{ name = "path" },
-		{ name = "cmdline" },
-	},
+  mapping = cmp.mapping.preset.cmdline(),
+  sources = {
+    { name = "path" },
+    { name = "cmdline" },
+  },
 })
 cmp.setup.cmdline("/", {
-	mapping = cmp.mapping.preset.cmdline(),
-	sources = {
-		{
-			name = "buffer",
-			option = {
-				get_bufnrs = function()
-					local buf = vim.api.nvim_get_current_buf()
-					local byte_size = vim.api.nvim_buf_get_offset(buf, vim.api.nvim_buf_line_count(buf))
-					print(vim.api.nvim_buf_line_count(buf))
-					-- io.open("/home/bin.you/debug.txt", "w+"):write
-					if byte_size > 1024 * 1024 then -- 1 Megabyte max
-						return {}
-					end
-					return { buf }
-				end,
-			},
-		},
-	},
+  mapping = cmp.mapping.preset.cmdline(),
+  sources = {
+    {
+      name = "buffer",
+      option = {
+        get_bufnrs = function()
+          local buf = vim.api.nvim_get_current_buf()
+          local byte_size = vim.api.nvim_buf_get_offset(buf, vim.api.nvim_buf_line_count(buf))
+          print(vim.api.nvim_buf_line_count(buf))
+          -- io.open("/home/bin.you/debug.txt", "w+"):write
+          if byte_size > 1024 * 1024 then -- 1 Megabyte max
+            return {}
+          end
+          return { buf }
+        end,
+      },
+    },
+  },
 })
 -- Autocommands (https://neovim.io/doc/user/autocmd.html)
 -- lvim.autocommands.custom_groups = {
@@ -351,14 +355,14 @@ vim.o.et = true
 
 -- put({1, 2, 3})
 function _G.put(...)
-	local objects = {}
-	for i = 1, select("#", ...) do
-		local v = select(i, ...)
-		table.insert(objects, vim.inspect(v))
-	end
+  local objects = {}
+  for i = 1, select("#", ...) do
+    local v = select(i, ...)
+    table.insert(objects, vim.inspect(v))
+  end
 
-	print(table.concat(objects, "\n"))
-	return ...
+  print(table.concat(objects, "\n"))
+  return ...
 end
 
 vim.cmd([[

@@ -24,7 +24,7 @@ case "$state" in
     if [ "$findall" ]; then
       [ -d "$filedir" ] && _files -W ${filedir:a} -g "**/*(.)" && return 0
     else
-      _values 'files' $(v -l ${(k)opt_args} | cut -f2 | tac)
+      _values 'files' $(v -l ${(k)opt_args} | cut -f2 | tail -r)
     fi
     ;;
 esac

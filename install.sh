@@ -11,7 +11,7 @@ if command -v pkg &> /dev/null; then
 fi
 kernel="$(uname -s | tr '[A-Z]' '[a-z]')"
 arch="$(uname -m | tr '[A-Z]' '[a-z]')"
-INSTALL_DIR=~/.local
+INSTALL_DIR=$INSTALL_DIR
 
 if [[ $(node -v) < 'v10.12' ]]; then
   case "$arch" in
@@ -51,14 +51,16 @@ echo 'export PATH="/data1/youbin/.local/bin/bin:$PATH"' >> ~/.bashrc
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 echo "source $DIR/profile" > ~/.zshenv
 
-mkdir -p ~/.local/bin
+mkdir -p $INSTALL_DIR/bin
 curl -LO https://github.com/neovim/neovim/releases/latest/download/nvim.appimage
-mv nvim.appimage ~/.local/bin/vim
-chmod u+x  ~/.local/bin/vim
+mv nvim.appimage $INSTALL_DIR/bin/nvim
+chmod u+x  $INSTALL_DIR/bin/nvim
 
 
 echo install luavim
 bash <(curl -s https://raw.githubusercontent.com/lunarvim/lunarvim/master/utils/installer/install.sh)
 
-pip install thefuck
+ln -s $INSTALL_DIR/bin/lvim $INSTALL_DIR/bin/vim
+
+pip3 install thefuck
 

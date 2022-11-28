@@ -12,6 +12,7 @@ fi
 
 [ -n $ZDOTDIR ] || ZDOTDIR=${${(%):-%x}:A:h}
 
+for config_file ($XDG_CONFIG_HOME/rc.d/*.sh) source $config_file
 for config_file ($ZDOTDIR/zshrc.d/*.zsh) source $config_file
 
 unset config_file

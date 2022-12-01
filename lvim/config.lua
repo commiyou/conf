@@ -73,11 +73,11 @@ lvim.builtin.telescope.defaults.mappings = {
 -- https://github.com/jose-elias-alvarez/null-ls.nvim/issues/428
 local notify = vim.notify
 vim.notify = function(msg, ...)
-    if msg:match("warning: multiple different client offset_encodings") then
-        return
-    end
+  if msg:match("warning: multiple different client offset_encodings") then
+    return
+  end
 
-    notify(msg, ...)
+  notify(msg, ...)
 end
 
 -- lvim.builtin.illuminate.active = false
@@ -204,7 +204,7 @@ lvim.builtin.treesitter.highlight.enabled = true
 -- -- set a formatter, this will override the language server formatting capabilities (if it exists)
 local formatters = require("lvim.lsp.null-ls.formatters")
 formatters.setup({
-  { command = "stylua", filetypes = { "lua" } }, -- cargo install stylua
+  -- { command = "stylua", filetypes = { "lua" } }, -- cargo install stylua
   { command = "black", filetypes = { "python" } },
   { command = "isort", filetypes = { "python" } },
   { command = "clang-format", args = { "--style={BasedOnStyle: Google, DerivePointerAlignment: false}" } },
@@ -276,7 +276,20 @@ lvim.plugins = {
 	   ]] )
     end,
   },
-  { "MattesGroeger/vim-bookmarks" },
+  { "MattesGroeger/vim-bookmarks",
+    config = function()
+      vim.cmd([[
+      let g:bookmark_no_default_key_mappings = 1
+      nmap <Leader>mm <Plug>BookmarkToggle
+      nmap <Leader>ma <Plug>BookmarkShowAll
+      nmap <Leader>mj <Plug>BookmarkNext
+      nmap <Leader>mk <Plug>BookmarkPrev
+      nmap <Leader>mc <Plug>BookmarkClear
+      nmap <Leader>mx <Plug>BookmarkClearAll
+	   ]] )
+    end,
+
+  },
   { "mildred/vim-bufmru" },
   { "morhetz/gruvbox" },
   {

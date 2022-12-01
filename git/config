@@ -38,3 +38,5 @@
 	helper = store
 [pull]
 	rebase = true
+[init]
+	templateDir = ~/.git-template

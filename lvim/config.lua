@@ -174,7 +174,13 @@ lvim.builtin.treesitter.ensure_installed = {
 lvim.builtin.treesitter.ignore_install = { "haskell" }
 lvim.builtin.treesitter.highlight.enabled = true
 
+
+-- https://github.com/neovim/nvim-lspconfig
+-- pyright
+-- https://github.com/microsoft/pyright/blob/main/docs/configuration.md
+
 -- generic LSP settings
+--
 
 -- ---@usage disable automatic installation of servers
 -- lvim.lsp.automatic_servers_installation = false
@@ -207,7 +213,8 @@ formatters.setup({
   -- { command = "stylua", filetypes = { "lua" } }, -- cargo install stylua
   { command = "black", filetypes = { "python" } },
   { command = "isort", filetypes = { "python" } },
-  { command = "clang-format", args = { "--style={BasedOnStyle: Google, DerivePointerAlignment: false}" } },
+  -- { command = "clang-format", args = { "--style={BasedOnStyle: Google, DerivePointerAlignment: false}" } },
+  { command = "clang-format" },
 })
 --   {
 --     -- each formatter accepts a list of options identical to https://github.com/jose-elias-alvarez/null-ls.nvim/blob/main/doc/BUILTINS.md#Configuration
@@ -281,6 +288,7 @@ lvim.plugins = {
       vim.cmd([[
       let g:bookmark_no_default_key_mappings = 1
       nmap <Leader>mm <Plug>BookmarkToggle
+      nmap <Leader>mi <Plug>BookmarkAnnotate
       nmap <Leader>ma <Plug>BookmarkShowAll
       nmap <Leader>mj <Plug>BookmarkNext
       nmap <Leader>mk <Plug>BookmarkPrev
@@ -288,7 +296,6 @@ lvim.plugins = {
       nmap <Leader>mx <Plug>BookmarkClearAll
 	   ]] )
     end,
-
   },
   { "mildred/vim-bufmru" },
   { "morhetz/gruvbox" },

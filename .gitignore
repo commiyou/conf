@@ -37,3 +37,9 @@ zinit
 .path
 vim/autoload
 __pycache__/
+TabNine/
+dconf/
+htop/
+lvim/plugin/
+menus/
+thefuck/

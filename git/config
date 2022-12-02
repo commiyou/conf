@@ -34,9 +34,12 @@
   # Don't consider trailing space change as a cause for merge conflicts
   whitespace = -trailing-space
   autocrlf = input
+  pager = diff-so-fancy | less --tabs=4 -RFX
 [credential]
 	helper = store
 [pull]
 	rebase = true
 [init]
 	templateDir = ~/.git-template
+[interactive]
+  diffFilter = diff-so-fancy --patch

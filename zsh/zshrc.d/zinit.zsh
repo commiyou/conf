@@ -119,6 +119,12 @@ zt $lightmode wait has'lua' for \
 # fzf-marks, at slot 0, for quick Ctrl-G accessibility
 zt $lightmode wait for \
   hlissner/zsh-autopair \
+  Tarrasch/zsh-colors \
+  atload'ZSH_COMMAND_TIME_EXCLUDE=(vim v); ZSH_COMMAND_TIME_COLOR=red' \
+  popstas/zsh-command-time \
+  atpull$'git config --global core.pager "diff-so-fancy | less --tabs=4 -RFX"; \
+    git config --global interactive.diffFilter "diff-so-fancy --patch";' \
+  z-shell/zsh-diff-so-fancy \
   urbainvaes/fzf-marks \
   atload$'!FORGIT_LOG_FZF_OPTS=\'--bind="ctrl-e:execute(echo {} |grep -Eo [a-f0-9]+ |head -1 |xargs command git show |vim -)"\'; \
     alias gdca="forgit::diff --cached"; \

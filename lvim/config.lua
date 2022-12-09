@@ -265,10 +265,12 @@ lvim.plugins = {
     end,
   },
   { "ConradIrwin/vim-bracketed-paste" },
+  { "dbeniamine/cheat.sh-vim" },
   { "elzr/vim-json" },
   { "folke/trouble.nvim" },
   { "farmergreg/vim-lastplace" },
   -- { "f-person/git-blame.nvim" }, -- too slow when big file!
+  { "hnamikaw/vim-autohotkey" },
   { "hrsh7th/cmp-cmdline", requires = "hrsh7th/nvim-cmp", event = "InsertEnter" },
   -- { "itchyny/vim-cursorword" },
   {

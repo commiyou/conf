@@ -40,6 +40,9 @@ __pycache__/
 TabNine/
 dconf/
 htop/
-lvim/plugin/
+/lvim/plugin/
 menus/
-thefuck/
+/thefuck/
+/cheat/cheatsheets/community
+/lvim.bak
+/menus

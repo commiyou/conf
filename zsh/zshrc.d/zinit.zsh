@@ -96,14 +96,24 @@ zt $lightmode wait binary from"gh-r" for \
   lman lbin"**/rg -> rg" @BurntSushi/ripgrep \
   dl'https://raw.githubusercontent.com/junegunn/fzf/master/man/man1/fzf.1' \
   id-as'fzf-bin' lman lbin bpick"*$ostype*" \
-  junegunn/fzf
+  junegunn/fzf \
+  id-as'cheat-bin' lman lbin"**/cheat* -> cheat" bpick"*$ostype*" \
+  cheat/cheat
 
 zt $lightmode wait for \
   atinit"local zew_word_style=whitespace" \
   zdharma-continuum/zsh-editing-workbench \
   pick'shell/key-bindings.zsh' \
   trackbinds bindmap='^T -> ^X^T; \ec -> ^X\ec' \
-  junegunn/fzf 
+  junegunn/fzf \
+  atload'!export CHEAT_USE_FZF=true' pick'scripts/cheat.zsh' \
+  cheat/cheat \
+  id-as'cheat.sh' \
+  binary \
+  nocompile \
+  dl'https://cht.sh/:cht.sh -> cht.sh' \
+  atinit'chmod +x cht.sh' lbin'cht.sh' \
+  zdharma-continuum/null
 
 zt $lightmode wait has'lua' for \
   atload'!export _ZL_DATA=$XDG_CACHE_HOME/.zlua;' \

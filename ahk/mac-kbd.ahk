@@ -6,6 +6,8 @@ SetTitleMatchMode 2
 SetWorkingDir, %A_ScriptDir%
 SetBatchLines,-1
 
+#Include lib/WinClipAPI.ahk
+#Include lib/WinClip.ahk
 
 OnClipboardChange("FuncOnClipChanged", 1)
 global ALT_V_STATUS := 0  ; 1 pressed, 0 released
@@ -194,6 +196,22 @@ $<!Backspace::Send +{Home}{Delete} ; Command-Backspace, delete current point to 
 <#Backspace::Send ^{Backspace}  ; Option-Backspace, delete current point to beginning of word
 #If
 
+
+; https://github.com/valinet/ExplorerPatcher 
+<!`::	; Next Window
+WinGetClass, CurrentActive, A
+WinGet, Instances, Count, ahk_class %CurrentActive%
+If Instances > 1
+	WinSet, Bottom,, A
+WinActivate, ahk_class %CurrentActive%
+return
+<!+`::	; Previous Window
+WinGetClass, CurrentActive, A
+WinGet, Instances, Count, ahk_class %CurrentActive%
+If Instances > 1
+	WinActivateBottom, ahk_class %CurrentActive%
+return
+
 ; wordwise support
 <#b:: Send ^{Left}
 <#f:: Send ^{Right}
@@ -343,7 +361,7 @@ Return
 <!r::Send ^r ; refresh
 ; <!s::Send ^s ; save
 <!t::Send ^t ; new tab, TODO: swap character when in edit 
-; <!v::Send ^v ; paste
+<!+v::Send ^+v ; plain paste
 <!w::Send ^w ; close tab
 ;<!x::Send ^x ; cut
 <!z::Send ^z ; undo
@@ -478,6 +496,12 @@ return
 <!8::Send ^!8
 <!9::Send ^!9
 <!,::Send ^,
+
+<!LButton::
+  Send {Control Down}
+  MouseClick, left
+  Send {Control Up}
+return
 #If
 ; #########################################################################
 ; ####################    END OF Terminals KEYBINGS       #################
@@ -512,13 +536,17 @@ return
 
 pushClip(this) {
   OnClipboardChange("FuncOnClipChanged", 0)
-  content := SaveClipboard()
+
+  wc := new WinClip
+  clipSize := wc.iSnap() ;copies clip data into inner buffer for later using
+  content := wc
+  ;content := SaveClipboard()
   if Clipboard
     label := TrimStr(Clipboard)
   else
     label := "_RawData_"
 
-  find_index := this.find(content)
+  find_index := this.find(label)
   if (find_index) {
     this.removeClip(find_index)
   }
@@ -527,7 +555,7 @@ pushClip(this) {
   }
 
   clip := {}
-  clip.label := label
+  clip.label := ShortenStr(label)
   clip.content := content
   this.contents.InsertAt(1, clip)
   if (find_index) {
@@ -568,13 +596,16 @@ find(this, ByRef content) {
   ; clip := SaveClipboard()
   ;return clip == this.content(index)
   for index, element in this.contents {
-    if (CompareContentObject(content, this.content(index)))
+    if (CompareContentObject(content, this.label(index)))
       return index
   }
   return 0
 }
 
 CompareContentObject(objA,objB) {
+  if objA = objB
+    return true
+  return false
   for property,value in objA {	
     if(objB[property] != value) {
       return false
@@ -607,7 +638,9 @@ clear(this) {
 debugStr(this) {
   msg := ""
   for index, element in this.contents {
-    msg := msg . "`n" . index . " " . element.label . " " . element.content
+    msg := msg . "`n" . index . " " . element.label ;. " " . element.content
+    if (index >6) 
+      break
   }
   return msg
 }
@@ -636,7 +669,7 @@ return
 
 $<!v::
   StartClipMode:
-  ;Critical
+  Critical
   ALT_V_STATUS := 1
   ToolTip, start clip mode
   OnClipboardChange("FuncOnClipChanged", 0)
@@ -646,6 +679,7 @@ $<!v::
   Hotkey, $<!x, CancelAction, On
   clipManager.index := 0
   IterForwardAction()
+  Critical Off
   ;tooltip, paste on
 return
 
@@ -659,7 +693,7 @@ $!v Up::
   {
     if (clipManager.index) {
       ToolTip, % "Paste clip " . clipManager.index . "/" . clipManager.len() . ": " . clipManager.label() . "`n" . clipManager.DebugStr()
-      SetClipboardData(clipManager.content())
+      clipManager.content().iRestore()
     } else {
       ToolTip, % "no history, Paste origin clip `n" . Clipboard
     }
@@ -867,6 +901,10 @@ TrimStr(str) {
   return trim(str, " `t`r`n")
 }
 
+ShortenStr(str) {
+  return SubStr(str, 1, 50)
+}
+
 
 SearchClipAction(CtrlHwnd, GuiEvent, EventInfo, ErrLevel:="") {
   if (GuiEvent != "Normal") {
@@ -922,48 +960,4 @@ DoSearchClip() {
   LV_ModifyCol()  ; Auto-size each column to fit its contents.
 }
 
-SaveClipboard()  {
-  static CF_ENHMETAFILE := 14
-  clipContent := {}, clipFormat := 0
 
-  DllCall("OpenClipboard", Ptr, 0)
-  while clipFormat := DllCall("EnumClipboardFormats", UInt, clipFormat)  {
-    hMem := DllCall("GetClipboardData", UInt, clipFormat, Ptr)
-    if (clipFormat = CF_ENHMETAFILE)  {
-      size := DllCall("GetEnhMetaFileBits", Ptr, hMem, UInt, 0, Ptr, 0)
-      clipContent.SetCapacity(clipFormat, size)
-      DllCall("GetEnhMetaFileBits", Ptr, hMem, UInt, size, Ptr, clipContent.GetAddress(clipFormat))
-    }
-    else  {
-      pMem := DllCall("GlobalLock", Ptr, hMem, Ptr)
-      size := DllCall("GlobalSize", Ptr, pMem)
-      clipContent.SetCapacity(clipFormat, size)
-      DllCall("RtlMoveMemory", Ptr, clipContent.GetAddress(clipFormat), Ptr, pMem, Ptr, size)
-      DllCall("GlobalUnlock", Ptr, hMem)
-    }
-  }
-  DllCall("CloseClipboard")
-  Return clipContent
-}
-
-SetClipboardData(clipContent)  {
-  static CF_ENHMETAFILE := 14, flags := (GMEM_ZEROINIT := 0x40) | (GMEM_MOVEABLE := 0x2)
-  DllCall("OpenClipboard", Ptr, 0)
-  DllCall("EmptyClipboard")
-  for clipFormat in clipContent  {
-    addr := clipContent.GetAddress(clipFormat), size := clipContent.GetCapacity(clipFormat)
-    if (clipFormat = CF_ENHMETAFILE)  {
-      hData := DllCall("SetEnhMetaFileBits", UInt, size, Ptr, addr, Ptr)
-      DllCall("SetClipboardData", UInt, CF_ENHMETAFILE, Ptr, hData, Ptr)
-      DllCall("DeleteEnhMetaFile", Ptr, hData)
-    }
-    else  {
-      hMem := DllCall("GlobalAlloc", UInt, flags, Ptr, size, Ptr)
-      pMem := DllCall("GlobalLock", Ptr, hMem, Ptr)
-      DllCall("RtlMoveMemory", Ptr, pMem, Ptr, addr, Ptr, size)
-      DllCall("SetClipboardData", UInt, clipFormat, Ptr, pMem, Ptr)
-      DllCall("GlobalUnlock", Ptr, hMem)
-    }
-  }
-  DllCall("CloseClipboard")
-}

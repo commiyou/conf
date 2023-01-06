@@ -82,6 +82,7 @@ zt $lightmode wait for \
   has'tmux' atload$'!ZSH_TMUX_FIXTERM=false; \
     ZSH_TMUX_CONFIG=${XDG_CONFIG_HOME:-$HOME/.config}/tmux/tmux.conf; \
     compdef _zsh_tmux_plugin_run=tmux; ' \
+    atload$'unalias ts;' \
   OMZP::tmux 
 
 zt $lightmode wait binary from"gh-r" lman lbin for \
@@ -129,6 +130,8 @@ zt $lightmode wait has'lua' for \
 # fzf-marks, at slot 0, for quick Ctrl-G accessibility
 zt $lightmode wait for \
   hlissner/zsh-autopair \
+  Tarrasch/zsh-functional \
+  ptavares/zsh-direnv \
   Tarrasch/zsh-colors \
   atload'ZSH_COMMAND_TIME_EXCLUDE=(vim v); ZSH_COMMAND_TIME_COLOR=red' \
   popstas/zsh-command-time \

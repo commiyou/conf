@@ -60,14 +60,14 @@ cheatpaths:
   #   'tags': tags that should be automatically applied to sheets on this path
   #   'readonly': shall user-created ('cheat -e') cheatsheets be saved here?
   - name: community
-    path: /home/allride/conf/cheat/cheatsheets/community
+    path: ~/conf/cheat/cheatsheets/community
     tags: [ community ]
     readonly: true
 
   # If you have personalized cheatsheets, list them last. They will take
   # precedence over the more global cheatsheets.
   - name: personal
-    path: /home/allride/conf/cheat/cheatsheets/personal
+    path: ~/conf/cheat/cheatsheets/personal
     tags: [ personal ]
     readonly: false
 

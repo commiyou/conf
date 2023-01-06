@@ -31,6 +31,15 @@ alias -g LG=" | iconv -f gb18030 -t utf8 -c | less"
 alias -g TR1=" | tr '' '\t'"
 alias -g TR,=" | tr ',' '\t'"
 alias -g CSV=" | tr '\t' ',' "
+_column_no() {
+  sep="${1:-\t}"
+  head -1 | xargs -n1 -d"$sep" | cat -n
+}
+alias -g CNO=" | _column_no"
+alias -g H=" | head"
+alias -g H1=" | head -1"
+alias -g T=" | tail "
+alias -g T1=" | tail -1"
 
 alias -g E="luit -encoding gb18030"  # env gb18030 to utf
 if type xdg-open > /dev/null; then

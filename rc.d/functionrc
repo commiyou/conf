@@ -7,6 +7,24 @@ err() {
   echo "$@" 1>&2 
 }
 
+ts(){
+  for ts_ in $@
+  do
+    if [[ ${#ts_} == 16 ]]
+    then
+      let ns=$ts_%1000000
+      let ts_=$ts_/1000000
+      r=$(date -d @$ts_  +"%Y-%m-%d %H:%M:%S")
+      [ -z "$r"  ] && continue
+      red $ts_$ns : $r.$ns 2>/dev/null || echo $ts_$ns : $r.$ns
+    else
+      r=$(date -d @$ts_  +"%Y-%m-%d %H:%M:%S")
+      [ -z "$r"  ] && continue
+      red $ts_: $r.$ns 2>/dev/null || echo $ts_: $r.$ns
+    fi
+  done
+}
+
 # check to see if the variable name passed exists and holds a value.
 # Die if it does not.
 check_or_die() {
@@ -184,4 +202,14 @@ fstash() {
 
 tmux_reset() {
   pkill -10 tmux
+}
+
+swapf() {
+  local f1 f2 tmp_suffix
+  f1=${1}
+  f2=${2:-${1}.bak}
+  tmp_suffix=.tmp.for.swap
+  mv "$f1" "$f1$tmp_suffix"
+  mv "$f2" "$f1"
+  mv "$f1$tmp_suffix" "$f2"
 }

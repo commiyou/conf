@@ -17,9 +17,10 @@ import click
 from requests_html import HTMLSession
 from tendo import singleton
 
+BUG_DIR = "/data/youbin/bugs"
 USER_AGENT = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.0.0 Safari/537.36"
-OSSUTIL64 = "~/bin/ossutil64"
-JQL = "assignee = currentUser() AND resolution = Unresolved and  status != Pending and updatedDate > 2022-10-01 ORDER BY updated DESC"
+OSSUTIL64 = "/usr/local/bin/ossutil64"
+JQL = 'status in ("In Progress", "To Do", Backlog, Pending) AND component = Prediction AND labels = S AND created >= 2022-04-18 AND created <= 2022-12-08 ORDER BY priority DESC, summary ASC, created DESC'
 
 # 车辆：ID6009
 
@@ -159,7 +160,7 @@ class AllrideJira:
 
 
 def clean_issue(jira):
-    bug_dir = "~/bugs"
+    bug_dir = BUG_DIR
     p = pathlib.Path(os.path.expanduser(bug_dir))
     issues = [x for x in p.iterdir() if x.is_dir()]
     for issue in issues:
@@ -184,7 +185,7 @@ def run_sh(ncmd):
 
 
 def download_todo_issues(jira):
-    bug_dir = "~/bugs"
+    bug_dir = BUG_DIR
     p = pathlib.Path(os.path.expanduser(bug_dir))
 
     issues = jira.get_todo_issues()
@@ -217,7 +218,7 @@ def main(name, passwd):
     jira = AllrideJira()
     if not jira.login(name, passwd):
         return False
-    clean_issue(jira)
+    # clean_issue(jira)
     download_todo_issues(jira)
     # issues = jira.get_todo_issues()
 

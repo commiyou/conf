@@ -27,16 +27,31 @@
 ;-----------------------o---------------------------------------------o
 ;|Use it whatever and wherever you like. Hope it help                 |
 ;=====================================================================o
+#Persistent
+#InstallKeybdHook
 #SingleInstance force
+SendMode Input 
+SetTitleMatchMode 2
+SetWorkingDir, %A_ScriptDir%
+SetBatchLines,-1
 DetectHiddenText On
 
-return
+#Include, lib/AccModel.ahk
+#Include, lib/HyperSearch.ahk
 
 
-~RAlt & F8::Reload
-~Pause::
-Suspend
-Pause,,1
+global Mouse_HJKL := false
+global TMouse_DPIRatio :=  A_ScreenDPI / 96
+global mouseSimulation := new AccModel2D(Func("MouseSimulation"), 0.1, TMouse_DPIRatio * 120 * 2 * 1)
+
+; 解决多屏 DPI 问题
+DllCall("Shcore.dll\SetProcessDpiAwareness", "UInt", 2)
+
+
+~F2::Reload
+~F3::
+  Suspend
+  Pause,,1
 return
 ;=====================================================================o
 ;                       CapsLock Initializer                         ;|
@@ -45,135 +60,179 @@ SetCapsLockState, AlwaysOff                                          ;|
 CapsLock::return
 ;---------------------------------------------------------------------o
 #If GetKeyState("CapsLock", "P")
+
 <!::return
 <^::return
 
 `::
-    if GetKeyState("CapsLock", "T")
-        SetCapsLockState, AlwaysOff
-    else
-        SetCapsLockState, AlwaysOn
-    KeyWait, ``
+  if GetKeyState("CapsLock", "T")
+    SetCapsLockState, AlwaysOff
+  else
+    SetCapsLockState, AlwaysOn
+  KeyWait, ``
 return
 
 ; caps + s + h/k/j/l/d/f      ----- mouse movement/click
-s:: return
-s & h:: MouseMove, -10, 0, 0, R
-s & k:: MouseMove, 0, -10, 0, R
-s & j:: MouseMove, 0, 10, 0, R
-s & l:: MouseMove, 10, 0, 0, R
-s & d::
-    SendEvent  {Blind}{LButton down}
-    KeyWait, d
-    SendEvent  {Blind}{LButton up}
+s:: 
+  Mouse_HJKL := !Mouse_HJKL
+  ToolTip, Mouse_HJKL status %Mouse_HJKL%
+  SetTimer, RemoveToolTip, -1500
+  if Mouse_HJKL {
+    ;SetTimer, ToggleMouseHJKL, -5000
+  }
 return
+
+ToggleMouseHJKL:
+Mouse_HJKL := false
+ToolTip, Mouse_HJKL status %Mouse_HJKL%
+SetTimer, RemoveToolTip, -1500
+return
+
+s & d::
+  SendEvent  {Blind}{LButton down}
+  SendEvent  {Blind}{LButton up}
+return
+
 s & f::
-    SendEvent  {Blind}{RButton down}
-    KeyWait, f
-    SendEvent  {Blind}{RButton up}
+  SendEvent  {Blind}{RButton down}
+  KeyWait, f
+  SendEvent  {Blind}{RButton up}
 return
 
 ; caps + h/k/j/l              ------- direction navigator, ctrl alt compatible
 *h::
-    if GetKeyState("control") {
-        if GetKeyState("alt")
-            Send, +^{Left}
-        else
-            Send, ^{Left}
-    }
-    else {
-        if GetKeyState("alt")
-            Send, +{Left}
-        else
-            Send, {Left}
-    }
+  if Mouse_HJKL {
+    mouseSimulation.PressLeft("h")
+    SetTimer, ToggleMouseHJKL, -5000
+    return
+  }
+
+  if GetKeyState("control") {
+    if GetKeyState("alt")
+      Send, +^{Left}
+    else
+      Send, ^{Left}
+  }
+  else {
+    if GetKeyState("alt")
+      Send, +{Left}
+    else
+      Send, {Left}
+  }
 return
 *j::
-    if GetKeyState("control") {
-        if GetKeyState("alt")
-            Send, +^{Down}
-        else
-            Send, ^{Down}
-    }
-    else {
-        if GetKeyState("alt")
-            Send, +{Down}
-        else
-            Send, {Down}
-    }
+  if Mouse_HJKL {
+    mouseSimulation.PressDown("j")
+    SetTimer, ToggleMouseHJKL, -5000
+    return
+  }
+  if GetKeyState("control") {
+    if GetKeyState("alt")
+      Send, +^{Down}
+    else
+      Send, ^{Down}
+  }
+  else {
+    if GetKeyState("alt")
+      Send, +{Down}
+    else
+      Send, {Down}
+  }
 return
 *k::
-    if GetKeyState("control") {
-        if GetKeyState("alt")
-            Send, +^{Up}
-        else
-            Send, ^{Up}
-    }
-    else {
-        if GetKeyState("alt")
-            Send, +{Up}
-        else
-            Send, {Up}
-    }
+  if Mouse_HJKL {
+    mouseSimulation.PressUp("k")
+    SetTimer, ToggleMouseHJKL, -5000
+    return
+  }
+  if GetKeyState("control") {
+    if GetKeyState("alt")
+      Send, +^{Up}
+    else
+      Send, ^{Up}
+  }
+  else {
+    if GetKeyState("alt")
+      Send, +{Up}
+    else
+      Send, {Up}
+  }
 return
 *l::
-    if GetKeyState("control") {
-        if GetKeyState("alt")
-            Send, +^{Right}
-        else
-            Send, ^{Right}
-    }
-    else {
-        if GetKeyState("alt")
-            Send, +{Right}
-        else
-            Send, {Right}
-    }
+  if Mouse_HJKL {
+    mouseSimulation.PressRight("l")
+    SetTimer, ToggleMouseHJKL, -5000
+    return
+  }
+  if GetKeyState("control") {
+    if GetKeyState("alt")
+      Send, +^{Right}
+    else
+      Send, ^{Right}
+  }
+  else {
+    if GetKeyState("alt")
+      Send, +{Right}
+    else
+      Send, {Right}
+  }
 return
 
 ; application 
-a & c:: Run calc.exe   ; -- todo, for uwp
+a & c:: Run calc.exe   ; -- 
+a & b:: Run Chrome.exe   ; -- todo, for uwp
+a & o:: Send ^!z ; qq
+a & h:: Run https://quickref.me/%clipboard%
+
+
 
 ; windows management
 ; space --- alwas on top
 Space::
-    ;WinGetTitle, activeWindow, A
-    WinGet, windowStyle, ExStyle, A
-    isWindowAlwaysOnTop := if (windowStyle & 0x8) ? true : false ; 0x8 is WS_EX_TOPMOST.
-    if !isWindowAlwaysOnTop
-        notificationMessage := "now always on TOP."
-    else
-        notificationMessage := "now no longer always on top."
-    Winset, AlwaysOnTop, , A
-    WinGetPos, , , width, height, A
-    CoordMode, ToolTip, Window
-    ToolTip, %notificationMessage%, % width/3, % height/3
-    SetTimer, RemoveToolTip, -4000
+  ;WinGetTitle, activeWindow, A
+  WinGet, windowStyle, ExStyle, A
+  isWindowAlwaysOnTop := if (windowStyle & 0x8) ? true : false ; 0x8 is WS_EX_TOPMOST.
+  if !isWindowAlwaysOnTop
+    notificationMessage := "always on TOP."
+  else
+    notificationMessage := "NO longer always on top."
+  Winset, AlwaysOnTop, , A
+  WinGetPos, , , width, height, A
+  CoordMode, ToolTip, Window
+  ToolTip, %notificationMessage%, % width/3, % height/3
+  SetTimer, RemoveToolTip, -4000
 return
 
 ;=====================================================================o
 ;                            CapsLock Editor                         ;|
 ;-----------------------------------o---------------------------------o
-x:: Send ^x
-c:: 
-    SendLevel, 1
-    Send !c  ; copy hotkey in mac-kbd.ahk
-return
-v:: 
-    SendLevel, 1
-    Send !v  ; paste hotkey in mac-kbd.ahk
-return
 
 d::
-    Run "https://translate.google.com/#view=home&op=translate&sl=auto&tl=zh-CN&text=%clipboard%"
+  if (Mouse_HJKL) {
+    SendEvent  {Blind}{LButton down}
+    KeyWait, d
+    SendEvent  {Blind}{LButton up}
+    return
+  }
+  ;Run "https://translate.google.com/#view=home&op=translate&sl=auto&tl=zh-CN&text=%clipboard%"
+   ret := Translate(clipboard, "cgdict")
+   tooltip, % ret
+   SetTimer, RemoveToolTip, -5000
 return
 f::
-    Clip := trim(clipboard)
-    if RegExMatch(Clip, "https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)") = 1 {
-        Run %Clip%
-    } else {
-        Run "http://www.google.com/search?q=%Clip%"
-    }
+  if (Mouse_HJKL) {
+    SendEvent  {Blind}{RButton down}
+    KeyWait, f
+    SendEvent  {Blind}{RButton up}
+    return
+  }
+  HyperSearch(clipboard)
+  ;Clip := trim(clipboard)
+  ;if RegExMatch(Clip, "https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)") = 1 {
+  ;  Run %Clip%
+  ;} else {
+  ;  Run "http://www.google.com/search?q=%Clip%"
+  ;}L
 return
 
 ; CpasLock + uiop PageUp HOME END PageDown
@@ -185,318 +244,73 @@ p:: Send, {PgDn}
 #If
 
 ;RShift:: MsgBox, % A_Language  ; todo, show tooltip
- 
+
 
 RemoveToolTip:
-    ToolTip
+ToolTip
 return
 
- 
 
-;
-;
-;;=====================================================================o
-;;                     CapsLock Home/End Navigator                    ;|
-;;-----------------------------------o---------------------------------o
-;;                      CapsLock + i |  Home                          ;|
-;;                      CapsLock + o |  End                           ;|
-;;                      Ctrl, Alt Compatible                          ;|
-;;-----------------------------------o---------------------------------o
-;CapsLock & i::                                                       ;|
-;if GetKeyState("control") = 0                                        ;|
-;{                                                                    ;|
-;    if GetKeyState("alt") = 0                                        ;|
-;        Send, {Home}                                                 ;|
-;    else                                                             ;|
-;        Send, +{Home}                                                ;|
-;    return                                                           ;|
-;}                                                                    ;|
-;else {                                                               ;|
-;    if GetKeyState("alt") = 0                                        ;|
-;        Send, ^{Home}                                                ;|
-;    else                                                             ;|
-;        Send, +^{Home}                                               ;|
-;    return                                                           ;|
-;}                                                                    ;|
-;return                                                               ;|
-;;-----------------------------------o                                ;|
-;CapsLock & o::                                                       ;|
-;if GetKeyState("control") = 0                                        ;|
-;{                                                                    ;|
-;    if GetKeyState("alt") = 0                                        ;|
-;        Send, {End}                                                  ;|
-;    else                                                             ;|
-;        Send, +{End}                                                 ;|
-;    return                                                           ;|
-;}                                                                    ;|
-;else {                                                               ;|
-;    if GetKeyState("alt") = 0                                        ;|
-;        Send, ^{End}                                                 ;|
-;    else                                                             ;|
-;        Send, +^{End}                                                ;|
-;    return                                                           ;|
-;}                                                                    ;|
-;return                                                               ;|
-;;---------------------------------------------------------------------o
-;
-;
-;;=====================================================================o
-;;                      CapsLock Page Navigator                       ;|
-;;-----------------------------------o---------------------------------o
-;;                      CapsLock + u |  PageUp                        ;|
-;;                      CapsLock + p |  PageDown                      ;|
-;;                      Ctrl, Alt Compatible                          ;|
-;;-----------------------------------o---------------------------------o
-;CapsLock & u::                                                       ;|
-;if GetKeyState("control") = 0                                        ;|
-;{                                                                    ;|
-;    if GetKeyState("alt") = 0                                        ;|
-;        Send, {PgUp}                                                 ;|
-;    else                                                             ;|
-;        Send, +{PgUp}                                                ;|
-;    return                                                           ;|
-;}                                                                    ;|
-;else {                                                               ;|
-;    if GetKeyState("alt") = 0                                        ;|
-;        Send, ^{PgUp}                                                ;|
-;    else                                                             ;|
-;        Send, +^{PgUp}                                               ;|
-;    return                                                           ;|
-;}                                                                    ;|
-;return                                                               ;|
-;;-----------------------------------o                                ;|
-;CapsLock & p::                                                       ;|
-;if GetKeyState("control") = 0                                        ;|
-;{                                                                    ;|
-;    if GetKeyState("alt") = 0                                        ;|
-;        Send, {PgDn}                                                 ;|
-;    else                                                             ;|
-;        Send, +{PgDn}                                                ;|
-;    return                                                           ;|
-;}                                                                    ;|
-;else {                                                               ;|
-;    if GetKeyState("alt") = 0                                        ;|
-;        Send, ^{PgDn}                                                ;|
-;    else                                                             ;|
-;        Send, +^{PgDn}                                               ;|
-;    return                                                           ;|
-;}                                                                    ;|
-;return                                                               ;|
-;;---------------------------------------------------------------------o
-;
-;
-;;=====================================================================o
-;;                     CapsLock Mouse Controller                      ;|
-;;-----------------------------------o---------------------------------o
-;;                   CapsLock + Up   |  Mouse Up                      ;|
-;;                   CapsLock + Down |  Mouse Down                    ;|
-;;                   CapsLock + Left |  Mouse Left                    ;|
-;;                  CapsLock + Right |  Mouse Right                   ;|
-;;    CapsLock + Enter(Push Release) |  Mouse Left Push(Release)      ;|
-;;-----------------------------------o---------------------------------o
-;CapsLock & Up::    MouseMove, 0, -10, 0, R                           ;|
-;CapsLock & Down::  MouseMove, 0, 10, 0, R                            ;|
-;CapsLock & Left::  MouseMove, -10, 0, 0, R                           ;|
-;CapsLock & Right:: MouseMove, 10, 0, 0, R                            ;|
-;;-----------------------------------o                                ;|
-;CapsLock & Enter::                                                   ;|
-;SendEvent {Blind}{LButton down}                                      ;|
-;KeyWait Enter                                                        ;|
-;SendEvent {Blind}{LButton up}                                        ;|
-;return                                                               ;|
-;;---------------------------------------------------------------------o
-;
-;
-;;=====================================================================o
-;;                           CapsLock Deletor                         ;|
-;;-----------------------------------o---------------------------------o
-;;                     CapsLock + n  |  Ctrl + Delete (Delete a Word) ;|
-;;                     CapsLock + m  |  Delete                        ;|
-;;                     CapsLock + ,  |  BackSpace                     ;|
-;;                     CapsLock + .  |  Ctrl + BackSpace              ;|
-;;-----------------------------------o---------------------------------o
-;CapsLock & ,:: Send, {Del}                                           ;|
-;CapsLock & .:: Send, ^{Del}                                          ;|
-;CapsLock & m:: Send, {BS}                                            ;|
-;CapsLock & n:: Send, ^{BS}                                           ;|
-;;---------------------------------------------------------------------o
-;
-;
-;;=====================================================================o
-;;                            CapsLock Editor                         ;|
-;;-----------------------------------o---------------------------------o
-;;                     CapsLock + z  |  Ctrl + z (Cancel)             ;|
-;;                     CapsLock + x  |  Ctrl + x (Cut)                ;|
-;;                     CapsLock + c  |  Ctrl + c (Copy)               ;|
-;;                     CapsLock + v  |  Ctrl + z (Paste)              ;|
-;;                     CapsLock + a  |  Ctrl + a (Select All)         ;|
-;;                     CapsLock + y  |  Ctrl + z (Yeild)              ;|
-;;                     CapsLock + w  |  Ctrl + Right(Move as [vim: w]);|
-;;                     CapsLock + b  |  Ctrl + Left (Move as [vim: b]);|
-;;-----------------------------------o---------------------------------o
-;CapsLock & z:: Send, ^z                                              ;|
-;; clipboard manager
-;CapsLock & x::
-;/*
-;Loop, Files, %A_Desktop%\Ditto*
-;{
-;    Run, %A_LoopFileLongPath% /open
-;    ;FileGetShortcut, %A_LoopFileLongPath%, OutTarget
-;    ;Run, %OutTarget% /Open
-;    break
-;}
-;*/
-;Send, ^+!v
-;return
-;
-;
-;#IfWinActive, ahk_exe Hyper.exe
-;CapsLock & c:: Send, ^+c                                              ;|
-;;#c:: Send, ^+c
-;CapsLock & v:: Send, ^+v                                              ;|
-;;#v:: Send, ^+v
-;#If
-;
-;CapsLock & c:: Send, ^c                                              ;|
-;CapsLock & v:: Send, ^v                                              ;|
-;CapsLock & a:: Send, ^a                                              ;|
-;CapsLock & y:: Send, ^y                                              ;|
-;CapsLock & w:: Send, ^{Right}                                        ;|
-;CapsLock & b:: Send, ^{Left}                                         ;|
-;;---------------------------------------------------------------------o
-;
-;
-;;=====================================================================o
-;;                       CapsLock Media Controller                    ;|
-;;-----------------------------------o---------------------------------o
-;;                    CapsLock + F1  |  Volume_Mute                   ;|
-;;                    CapsLock + F2  |  Volume_Down                   ;|
-;;                    CapsLock + F3  |  Volume_Up                     ;|
-;;                    CapsLock + F3  |  Media_Play_Pause              ;|
-;;                    CapsLock + F5  |  Media_Next                    ;|
-;;                    CapsLock + F6  |  Media_Stop                    ;|
-;;-----------------------------------o---------------------------------o
-;CapsLock & F1:: Send, {Volume_Mute}                                  ;|
-;CapsLock & F2:: Send, {Volume_Down}                                  ;|
-;CapsLock & F3:: Send, {Volume_Up}                                    ;|
-;CapsLock & F4:: Send, {Media_Play_Pause}                             ;|
-;CapsLock & F5:: Send, {Media_Next}                                   ;|
-;CapsLock & F6:: Send, {Media_Stop}                                   ;|
-;;---------------------------------------------------------------------o
-;
-;
-;;=====================================================================o
-;;                      CapsLock Window Controller                    ;|
-;;-----------------------------------o---------------------------------o
-;;                     CapsLock + s  |  Ctrl + Tab (Swith Tag)        ;|
-;;                     CapsLock + q  |  Ctrl + W   (Close Tag)        ;|
-;;   (Disabled)  Alt + CapsLock + s  |  AltTab     (Switch Windows)   ;|
-;;               Alt + CapsLock + q  |  Ctrl + Tab (Close Windows)    ;|
-;;                     CapsLock + g  |  AppsKey    (Menu Key)         ;|
-;;-----------------------------------o---------------------------------o
-;;CapsLock & s::Send, ^{Tab}                                           ;|
-;;-----------------------------------o                                ;|
-;CapsLock & q::                                                       ;|
-;if GetKeyState("alt") = 0                                            ;|
-;{                                                                    ;|
-;    Send, ^w                                                         ;|
-;}                                                                    ;|
-;else {                                                               ;|
-;    Send, !{F4}                                                      ;|
-;    return                                                           ;|
-;}                                                                    ;|
-;return                                                               ;|
-;;-----------------------------------o                                ;|
-;CapsLock & g:: Send, {AppsKey}                                       ;|
-;;---------------------------------------------------------------------o
-;
-;
-;;=====================================================================o
-;;                        CapsLock Self Defined Area                  ;|
-;;-----------------------------------o---------------------------------o
-;;                     CapsLock + d  |  Alt + d(Dictionary)           ;|
-;;                     CapsLock + f  |  Alt + f(Search via Everything);|
-;;                     CapsLock + e  |  Open Search Engine            ;|
-;;                     CapsLock + r  |  Open Shell                    ;|
-;;                     CapsLock + t  |  Open Text Editor              ;|
-;;-----------------------------------o---------------------------------o
-;CapsLock & d::
-;    Run "https://translate.google.cn/#view=home&op=translate&sl=auto&tl=zh-CN&text=%clipboard%"
-;return
-;
-;CapsLock & f::
-;    ;WinActive("A") ; sets last found window
-;    ;ControlGetFocus, ctrl
-;    ;ControlGet, text, Selected,, %ctrl%
-;    ;MsgBox, %text%`n%clipboard%
-;    ; MsgBox RegExMatch("%clipboard%", "https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)")
-;    Clip = %clipboard%
-;    if RegExMatch(Clip, "https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)") = 1 {
-;        Run %clipboard%
-;    } else {
-;        Run "http://www.google.com/search?q=%clipboard%"
-;    }
-;return
-;
-;/*
-;RShift::
-;w := DllCall("GetForegroundWindow")
-;pid := DllCall("GetWindowThreadProcessId", "UInt", w, "Ptr", 0)
-;l := DllCall("GetKeyboardLayout", "UInt", pid)
-;if (l = en) {
-;    PostMessage 0x50, 0, %ch%,, A
-;} else {
-;    PostMessage 0x50, 0, %en%,, A
-;}
-;return
-;*/
-;
-;;---------------------------------------------------------------------o
-;
-;
-;;=====================================================================o
-;;                        CapsLock Char Mapping                       ;|
-;;-----------------------------------o---------------------------------o
-;;                     CapsLock + ;  |  Enter (Cancel)                ;|
-;;                     CapsLock + '  |  =                             ;|
-;;                     CapsLock + [  |  Back         (Visual Studio)  ;|
-;;                     CapsLock + ]  |  Goto Define  (Visual Studio)  ;|
-;;                     CapsLock + /  |  Comment      (Visual Studio)  ;|
-;;                     CapsLock + \  |  Uncomment    (Visual Studio)  ;|
-;;                     CapsLock + 1  |  Build and Run(Visual Studio)  ;|
-;;                     CapsLock + 2  |  Debuging     (Visual Studio)  ;|
-;;                     CapsLock + 3  |  Step Over    (Visual Studio)  ;|
-;;                     CapsLock + 4  |  Step In      (Visual Studio)  ;|
-;;                     CapsLock + 5  |  Stop Debuging(Visual Studio)  ;|
-;;                     CapsLock + 6  |  Shift + 6     ^               ;|
-;;                     CapsLock + 7  |  Shift + 7     &               ;|
-;;                     CapsLock + 8  |  Shift + 8     *               ;|
-;;                     CapsLock + 9  |  Shift + 9     (               ;|
-;;                     CapsLock + 0  |  Shift + 0     )               ;|
-;;-----------------------------------o---------------------------------o
-;CapsLock & `;:: Send, {Enter}                                        ;|
-;CapsLock & ':: Send, =                                               ;|
-;CapsLock & [:: Send, ^-                                              ;|
-;CapsLock & ]:: Send, {F12}                                           ;|
-;;-----------------------------------o                                ;|
-;CapsLock & /::                                                       ;|
-;Send, ^e                                                             ;|
-;Send, c                                                              ;|
-;return                                                               ;|
-;;-----------------------------------o                                ;|
-;CapsLock & \::                                                       ;|
-;Send, ^e                                                             ;|
-;Send, u                                                              ;|
-;return                                                               ;|
-;;-----------------------------------o                                ;|
-;CapsLock & 1:: Send,^{F5}                                            ;|
-;CapsLock & 2:: Send,{F5}                                             ;|
-;CapsLock & 3:: Send,{F10}                                            ;|
-;CapsLock & 4:: Send,{F11}                                            ;|
-;CapsLock & 5:: Send,+{F5}                                            ;|
-;;-----------------------------------o                                ;|
-;CapsLock & 6:: Send,+6                                               ;|
-;CapsLock & 7:: Send,+7                                               ;|
-;CapsLock & 8:: Send,+8                                               ;|
-;CapsLock & 9:: Send,+9                                               ;|
-;;---------------------------------------------------------------------o
+CursorHandleGet()
+{
+    VarSetCapacity(PCURSORINFO, 20, 0) ;为鼠标信息 结构 设置出20字节空间
+    NumPut(20, PCURSORINFO, 0, "UInt") ;*声明出 结构 的大小cbSize = 20字节
+    DllCall("GetCursorInfo", "Ptr", &PCURSORINFO) ;获取 结构-光标信息
+    if (NumGet(PCURSORINFO, 4, "UInt") == 0 ) ;当光标隐藏时，直接输出特征码为0
+    Return 0
+    Return NumGet(PCURSORINFO, 8)
+}
+
+CursorShapeChangedQ()
+{
+    static lA_Cursor := CursorHandleGet()
+    if (lA_Cursor == CursorHandleGet()) {
+        Return 0
+    }
+    lA_Cursor := CursorHandleGet()
+    Return 1
+}
+
+; copy & modify from https://github.com/snolab/CapsLockX
+MouseSimulation(dx, dy, State){
+    if (State != "Move") {
+        return
+    }
+    ; Shift 减速 =1
+    if (GetKeyState("Shift", "P")) {
+        sleep 100
+        dx := dx == 0 ?  0 : (dx > 0 ? 1 : -1 )
+        dy := dy == 0 ?  0 : (dy > 0 ? 1 : -1 )
+    }
+        ; 支持64位AHK！
+    ;tooltip, moving %dx% %dy%
+    ;MouseMove, %dx%, %dy%, 0, R
+    SendInput_MouseMove(dx, dy)
+    
+    ; TODO: 撞到屏幕边角就停下来
+    ; if(TMouse_StopAtScreenEdge )
+    ; MouseGetPos, xb, yb
+    ; MouseSimulation.横速 *= dx && xa == xb ? 0 : 1
+    ; MouseSimulation.纵速 *= dy && ya == yb ? 0 : 1
+    
+    
+    ; 在各种按钮上减速，进出按钮时减速80%
+    if (CursorShapeChangedQ()) {
+        MouseSimulation.LateralSpeed *= 0.2
+        MouseSimulation.LongitudeSpeed *= 0.2
+    }
+}
+
+SendInput_MouseMove(x, y)
+{
+    ; (20211105)终于支持64位了
+    ; [SendInput function (winuser.h) - Win32 apps | Microsoft Docs]( https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-sendinput )
+    ; [INPUT (winuser.h) - Win32 apps | Microsoft Docs]( https://docs.microsoft.com/en-us/windows/win32/api/winuser/ns-winuser-input )
+    ; [MOUSEINPUT (winuser.h) - Win32 apps | Microsoft Docs]( https://docs.microsoft.com/en-us/windows/win32/api/winuser/ns-winuser-mouseinput )
+    size := A_PtrSize+4*4+A_PtrSize*2
+    VarSetCapacity(mi, size, 0)
+    NumPut(x, mi, A_PtrSize, "Int")   ; int dx
+    NumPut(y, mi, A_PtrSize+4, "Int")  ; int dy
+    NumPut(0x0001, mi, A_PtrSize+4+4+4, "UInt")   ; DWORD dwFlags MOUSEEVENTF_MOVE
+    DllCall("SendInput", "UInt", 1, "Ptr", &mi, "Int", size )
+}

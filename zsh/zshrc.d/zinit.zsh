@@ -94,7 +94,8 @@ local ostype
 [[ $OSTYPE =~ '.*linux.*' ]] && ostype=linux
 
 zt $lightmode wait binary from"gh-r" for \
-  lman lbin"**/rg -> rg" @BurntSushi/ripgrep \
+  lman lbin"**/rg -> rg" bpick"*$ostype*musl*" \
+  @BurntSushi/ripgrep \
   dl'https://raw.githubusercontent.com/junegunn/fzf/master/man/man1/fzf.1' \
   id-as'fzf-bin' lman lbin bpick"*$ostype*" \
   junegunn/fzf \

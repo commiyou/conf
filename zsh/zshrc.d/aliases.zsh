@@ -12,6 +12,7 @@ hash -d zsh=$XDG_CONFIG_HOME/zsh
 hash -d rc=$XDG_CONFIG_HOME/rc.d
 hash -d cache=$XDG_CACHE_HOME
 hash -d data=$XDG_DATA_HOME
+hash -d lvim=$XDG_DATA_HOME/lunarvim/
 
 # vim last modified file in current dir
 alias -g NF='*(.om[1])'  # newest file

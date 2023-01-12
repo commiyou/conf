@@ -154,6 +154,8 @@ alias gsa="git submodule add"
 alias gsb='git status -sb'
 alias gsh='git show'
 alias gst="git status"
+# gst tracked
+alias gstt="git status -uno"
 
 alias gtd="git tag --delete"
 alias gtdr="_gtdr(){git push origin :refs/tags/$1}; _gtdr"

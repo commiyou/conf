@@ -39,9 +39,5 @@
 	helper = store
 [pull]
 	rebase = true
-[init]
-	templateDir = ~/.git-template
 [interactive]
   diffFilter = diff-so-fancy --patch
-[safe]
-	directory = /home/zengtao/work/prediction_pytorch

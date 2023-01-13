@@ -15,8 +15,8 @@ else # macOS `ls`
 	export LSCOLORS='BxBxhxDxfxhxhxhxhxcxcx'
 fi
 alias ls="ls ${colorflag}"
-alias l="ls -lF"
-alias ll="ls -lhF"
+alias l="ls -lhF"
+alias ll="ls -lF"
 alias la="ls -lhFa"
 alias lrt="ls -lrth"
 alias lrs="ls -lrSh"

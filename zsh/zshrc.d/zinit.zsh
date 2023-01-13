@@ -156,6 +156,8 @@ zt $lightmode wait blockf as"completion" for \
   svn OMZP::docker \
   svn OMZP::ripgrep
 
+zinit load commiyou/zsh-hints
+
 
 zt $lightmode wait'[[ -n $WORK_ENV ]]' svn id-as for \
   https://github.com/commiyou/conf/branches/new/work/$WORK_ENV

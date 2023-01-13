@@ -8,23 +8,29 @@ autoload -Uz $ZDOTDIR/functions/*(:t)
 
 gconfig() {
   local email name tmp_name
-  while true;
-  do
-    echo "git user.email?" 
-    read email
-    if echo "$email" |  grep -E '.+@.+\..+' -q
-    then
-      break
-    fi
-  done
-
-  tmp_name=${email%@*}
-  echo "git user.name<$tmp_name>?" 
-  read  -t 3 tmp_name
-  if [[ -z "$tmp_name" || $tmp_name == "y" || $tmp_name == "Y" ]]; then
+  if [[ $# -eq 1 ]] && echo "$1" |  grep -E '.+@.+\..+' -q
+  then
+    email="$1"
     name=${email%@*}
   else
-    name=$tmp_name
+    while true;
+    do
+      echo "git user.email?" 
+      read email
+      if echo "$email" |  grep -E '.+@.+\..+' -q
+      then
+        break
+      fi
+    done
+
+    tmp_name=${email%@*}
+    echo "git user.name<$tmp_name>?" 
+    read  -t 3 tmp_name
+    if [[ -z "$tmp_name" || $tmp_name == "y" || $tmp_name == "Y" ]]; then
+      name=${email%@*}
+    else
+      name=$tmp_name
+    fi
   fi
 
   echo git config user.name $name, user.email $email

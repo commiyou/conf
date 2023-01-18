@@ -13,6 +13,7 @@ hash -d rc=$XDG_CONFIG_HOME/rc.d
 hash -d cache=$XDG_CACHE_HOME
 hash -d data=$XDG_DATA_HOME
 hash -d lvim=$XDG_DATA_HOME/lunarvim/
+hash -d cheat=$XDG_DATA_HOME/cheat/cheatsheets/personal
 
 # vim last modified file in current dir
 alias -g NF='*(.om[1])'  # newest file

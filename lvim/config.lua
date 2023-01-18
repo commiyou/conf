@@ -119,6 +119,7 @@ lvim.builtin.which_key.mappings["f"] = {
   C = { "<cmd>Telescope commands_history<cr>", "Rerun Commands" },
   c = { "<cmd>Telescope commands<cr>", "Run Commands" },
   d = { find_cwd_files, "find same dir" },
+  D = { "<cmd>DiffviewOpen<cr>", "DiffviewOpen" },
   f = { "<cmd>Telescope find_files<cr>", "Find File" },
   g = { require("lvim.core.telescope.custom-finders").find_project_files, "Find same prj" },
   h = { "<cmd>Telescope help_tags<cr>", "Help" },
@@ -318,6 +319,7 @@ lvim.plugins = {
     end,
   },
   { "simrat39/symbols-outline.nvim" },
+  { "sindrets/diffview.nvim", requires = "nvim-lua/plenary.nvim" },
   { "szw/vim-maximizer" },
   { "tpope/vim-abolish" }, -- :%Subvert/facilit{y,ies}/building{,s}/g
   { "tpope/vim-fugitive" },

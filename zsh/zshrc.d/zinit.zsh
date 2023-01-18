@@ -105,8 +105,8 @@ zt $lightmode wait binary from"gh-r" for \
 zt $lightmode wait for \
   atinit"local zew_word_style=whitespace" \
   zdharma-continuum/zsh-editing-workbench \
-  pick'shell/key-bindings.zsh' \
-  trackbinds bindmap='^T -> ^X^T; \ec -> ^X\ec' \
+  multisrc'shell/*.zsh' \
+  trackbinds bindmap='^T -> ^X^T; \ec -> ^Xc' \
   junegunn/fzf \
   atload'!export CHEAT_USE_FZF=true' pick'scripts/cheat.zsh' \
   cheat/cheat \
@@ -142,6 +142,7 @@ zt $lightmode wait for \
   urbainvaes/fzf-marks \
   atload$'!FORGIT_LOG_FZF_OPTS=\'--bind="ctrl-e:execute(echo {} |grep -Eo [a-f0-9]+ |head -1 |xargs command git show |vim -)"\'; \
     alias gdca="forgit::diff --cached"; \
+    alias gds="forgit::diff --cached"; \
     alias glog="forgit::log --oneline --decorate --graph"; \
     compdef _git gco=git-checkout; \
     ' wfxr/forgit \
@@ -155,9 +156,6 @@ zt $lightmode wait blockf as"completion" for \
   svn OMZP::fd \
   svn OMZP::docker \
   svn OMZP::ripgrep
-
-zinit load commiyou/zsh-hints
-
 
 zt $lightmode wait'[[ -n $WORK_ENV ]]' svn id-as for \
   https://github.com/commiyou/conf/branches/new/work/$WORK_ENV

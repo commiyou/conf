@@ -256,3 +256,8 @@ bash-set-title() {
   TITLE="\[\e]2;$*\a\]"
   PS1=${ORIG}${TITLE}
 }
+
+m() {
+  local _cmd="cht.sh $*; cheat -c $*; "
+  ( eval $_cmd )| fzf --ansi 
+}

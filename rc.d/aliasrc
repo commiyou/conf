@@ -107,7 +107,7 @@ alias gcmsg='git commit -m'
 
 alias gco="git checkout"
 alias gcl='git clone --recurse-submodules'
-alias gclm='_gclm(){git clone --recurse-submodules git@github.com:commiyou/$1 ${2:-$1} && cd ${2:$1}}; _gclm '
+alias gclm='_gclm(){git clone --recurse-submodules git@github.com:commiyou/$1 ${2:-$1} && cd ${2:-$1}}; _gclm '
 alias gcm='git checkout master'
 alias gcot='git checkout --theirs'
 alias gcoo='git checkout --others'

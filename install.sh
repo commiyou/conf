@@ -28,20 +28,13 @@ check_yes_no() {
   done
 }
 
-check_yes_no "install into $INSTALL_DIR ?"
-mkdir -p $INSTALL_DIR 
-mkdir -p $BIN_DIR
-
-echo $PATH | xargs -n1 -d':' | grep -q $BIN_DIR || echo 'export PATH="'$BIN_DIR':$PATH"' >> ~/.bashrc
-#[ -e ~/.zshenv ] && mv ~/.zshenv  ~/.zshenv.$(date +%s)
-cmd="source $SCRIPT_DIR/profile"
-cat ~/.zshenv | grep -q "$cmd" || echo "$cmd" >> ~/.zshenv
 
 
 pkg_install() {
   if command -v pkg &> /dev/null; then
     echo_green termux-change-repo
-    pkg install tmux exa zsh  nodejs lua53 subversion fzf fd wget python
+    pkg up
+    pkg install openssl openssh git tmux exa zsh  nodejs lua53 subversion fzf fd wget python
     ln -sf /data/data/com.termux/files/usr/bin/lua5.3 /data/data/com.termux/files/usr/bin/lua 
     termux-setup-storage
     mv ~/.termux termux
@@ -153,10 +146,22 @@ install_go() {
   echo $INSTALL_DIR/go >> ~/.path
 }
 
-install_ubuntu_pkgs
-install_zsh
-install_node
-install_nvim
+update() {
+  check_yes_no "install into $INSTALL_DIR ?"
+  mkdir -p $INSTALL_DIR 
+  mkdir -p $BIN_DIR
+
+  echo $PATH | xargs -n1 -d':' | grep -q $BIN_DIR || echo 'export PATH="'$BIN_DIR':$PATH"' >> ~/.bashrc
+  #[ -e ~/.zshenv ] && mv ~/.zshenv  ~/.zshenv.$(date +%s)
+  cmd="source $SCRIPT_DIR/profile"
+  cat ~/.zshenv | grep -q "$cmd" || echo "$cmd" >> ~/.zshenv
+}
+
+# update
+# install_ubuntu_pkgs
+# install_zsh
+# install_node
+# install_nvim
 install_lvim
-install_go
-install_miscs
+# install_go
+# install_miscs

@@ -87,7 +87,8 @@ zt $lightmode wait for \
 
 zt $lightmode wait binary from"gh-r" lman lbin for \
   @ogham/exa \
-  @sharkdp/fd 
+  @sharkdp/fd  \
+  PaulJuliusMartinez/jless
 
 local ostype
 [[ $OSTYPE =~ '.*darwin.*' ]] && ostype=darwin
@@ -100,7 +101,7 @@ zt $lightmode wait binary from"gh-r" for \
   id-as'fzf-bin' lman lbin bpick"*$ostype*" \
   junegunn/fzf \
   id-as'cheat-bin' lman lbin"**/cheat* -> cheat" bpick"*$ostype*" \
-  cheat/cheat
+  cheat/cheat 
 
 zt $lightmode wait for \
   atinit"local zew_word_style=whitespace" \

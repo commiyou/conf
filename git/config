@@ -34,10 +34,10 @@
   # Don't consider trailing space change as a cause for merge conflicts
   whitespace = -trailing-space
   autocrlf = input
-  pager = diff-so-fancy | less --tabs=4 -RFX
+	pager = diff-so-fancy | less --tabs=4 -RFX
 [credential]
-	helper = store
+	helper = osxkeychain
 [pull]
 	rebase = true
 [interactive]
-  diffFilter = diff-so-fancy --patch
+	diffFilter = diff-so-fancy --patch

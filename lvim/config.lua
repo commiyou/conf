@@ -247,7 +247,7 @@ formatters.setup({
 -- }
 
 lvim.plugins = {
-  { "andersevenrud/cmp-tmux", requires = "hrsh7th/nvim-cmp", event = "InsertEnter" },
+  { "andersevenrud/cmp-tmux", dependencies = "hrsh7th/nvim-cmp", event = "InsertEnter" },
   { "andymass/vim-matchup" },
   {
     "christoomey/vim-tmux-navigator",
@@ -272,11 +272,11 @@ lvim.plugins = {
   { "farmergreg/vim-lastplace" },
   -- { "f-person/git-blame.nvim" }, -- too slow when big file!
   { "hnamikaw/vim-autohotkey" },
-  { "hrsh7th/cmp-cmdline", requires = "hrsh7th/nvim-cmp", event = "InsertEnter" },
+  { "hrsh7th/cmp-cmdline", dependencies = "hrsh7th/nvim-cmp", event = "InsertEnter" },
   -- { "itchyny/vim-cursorword" },
   {
     "inkarkat/vim-mark",
-    requires = { "inkarkat/vim-ingo-library" },
+    dependencies = { "inkarkat/vim-ingo-library" },
     config = function()
       vim.cmd([[
 	   let g:mwHistAdd = '@'
@@ -313,19 +313,19 @@ lvim.plugins = {
   },
   {
     "RRethy/vim-hexokinase",
-    run = "make hexokinase",
+    build = "make hexokinase",
     config = function()
       vim.g.Hexokinase_highlighters = { "backgroundfull" }
     end,
   },
   { "simrat39/symbols-outline.nvim" },
-  { "sindrets/diffview.nvim", requires = "nvim-lua/plenary.nvim" },
+  { "sindrets/diffview.nvim", dependencies = "nvim-lua/plenary.nvim" },
   { "szw/vim-maximizer" },
   { "tpope/vim-abolish" }, -- :%Subvert/facilit{y,ies}/building{,s}/g
   { "tpope/vim-fugitive" },
   { "tpope/vim-surround" }, --  https://github.com/tpope/vim-surround   cs{char}{char} / ds{char} / ys{motion}{char}
   { "tpope/vim-repeat" }, --
-  { "tzachar/cmp-tabnine", run = "./install.sh", requires = "hrsh7th/nvim-cmp", event = "InsertEnter" },
+  { "tzachar/cmp-tabnine", build = "./install.sh", dependencies = "hrsh7th/nvim-cmp", event = "InsertEnter" },
   { "wellle/tmux-complete.vim" },
   { "yegappan/taglist" },
 }

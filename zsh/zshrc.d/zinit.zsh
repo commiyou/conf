@@ -46,6 +46,7 @@ zt for \
   atinit'Z_A_USECOMP=1' \
   NICHOLAS85/z-a-eval
 
+# use zinit recache to reeval
 zt wait for \
   eval'dircolors -b LS_COLORS' \
   atload'zstyle ":completion:*" list-colors ${(s.:.)LS_COLORS}' \
@@ -148,8 +149,13 @@ zt wait for \
     ' wfxr/forgit \
   as"program" atload'export SSHHOME=$XDG_CONFIG_HOME' pick'sshrc' IngoMeyer441/sshrc \
   atinit"local zew_word_style=whitespace" \
-  zdharma-continuum/zsh-editing-workbench \
-  commiyou/conda-init-zsh-plugin
+  zdharma-continuum/zsh-editing-workbench 
+
+
+zt wait'1' for \
+  commiyou/conda-init-zsh-plugin \
+  blockf as'completion' \
+  conda-incubator/conda-zsh-completion
 
 
 # completions

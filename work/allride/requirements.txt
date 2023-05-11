@@ -1,6 +1,6 @@
 click==8.0.4
 fake_useragent==0.1.11
-lxml==4.9.0
+lxml==4.9.1
 parse==1.19.0
 pyppeteer==1.0.2
 pyquery==1.4.3

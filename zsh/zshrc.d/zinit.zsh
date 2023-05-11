@@ -25,21 +25,20 @@ fi
 
 source $ZINIT[BIN_DIR]/zinit.zsh
 
-zt(){ zinit depth'3' lucid "${@}"; }
+zt(){ zinit depth'3' light-mode lucid "${@}"; }
 #### plugins
 ## light is parallel & load is sequential.
 #load=load
 #[[ $load == light ]] && lightmode=light-mode || lightmode=
 
-lightmode=light-mode
 
-zt $lightmode for \
+zt for \
   romkatv/powerlevel10k \
   atload"source ${ZDOTDIR:-$HOME}/.p10k.zsh" \
   zdharma-continuum/null
 
 
-zt $lightmode for \
+zt for \
   zdharma-continuum/z-a-patch-dl \
   zdharma-continuum/z-a-submods \
   NICHOLAS85/z-a-linkman \
@@ -47,12 +46,12 @@ zt $lightmode for \
   atinit'Z_A_USECOMP=1' \
   NICHOLAS85/z-a-eval
 
-zt $lightmode wait for \
+zt wait for \
   eval'dircolors -b LS_COLORS' \
   atload'zstyle ":completion:*" list-colors ${(s.:.)LS_COLORS}' \
   commiyou/LS_COLORS
 
-zt $lightmode wait for \
+zt wait for \
   trigger-load'!zhooks' \
   agkozak/zhooks \
   trigger-load'!gencomp' blockf \
@@ -61,7 +60,7 @@ zt $lightmode wait for \
   pick'autoenv.zsh' nocompletions \
   Tarrasch/zsh-autoenv 
 
-zt $lightmode wait for \
+zt wait for \
   OMZP::fancy-ctrl-z \
   OMZP::colored-man-pages \
   OMZP::command-not-found \
@@ -85,7 +84,7 @@ zt $lightmode wait for \
     atload$'unalias ts;' \
   OMZP::tmux 
 
-zt $lightmode wait binary from"gh-r" lman lbin for \
+zt wait binary from"gh-r" lman lbin for \
   @ogham/exa \
   @sharkdp/fd  \
   PaulJuliusMartinez/jless
@@ -94,7 +93,7 @@ local ostype
 [[ $OSTYPE =~ '.*darwin.*' ]] && ostype=darwin
 [[ $OSTYPE =~ '.*linux.*' ]] && ostype=linux
 
-zt $lightmode wait binary from"gh-r" for \
+zt wait binary from"gh-r" for \
   lman lbin"**/rg -> rg" bpick"*$ostype*musl*" \
   @BurntSushi/ripgrep \
   dl'https://raw.githubusercontent.com/junegunn/fzf/master/man/man1/fzf.1' \
@@ -103,7 +102,7 @@ zt $lightmode wait binary from"gh-r" for \
   id-as'cheat-bin' lman lbin"**/cheat* -> cheat" bpick"*$ostype*" \
   cheat/cheat 
 
-zt $lightmode wait for \
+zt wait for \
   atinit"local zew_word_style=whitespace" \
   zdharma-continuum/zsh-editing-workbench \
   multisrc'shell/*.zsh' \
@@ -118,7 +117,7 @@ zt $lightmode wait for \
   atinit'chmod +x cht.sh' lbin'cht.sh' \
   zdharma-continuum/null
 
-zt $lightmode wait has'lua' for \
+zt wait has'lua' for \
   atload'!export _ZL_DATA=$XDG_CACHE_HOME/.zlua;' \
   skywind3000/z.lua \
   atload'!function _z() { _zlua "$@"; }; alias z="nocorrect _fz"' \
@@ -130,7 +129,7 @@ zt $lightmode wait has'lua' for \
 #as"program" pick'bin/fzf-tmux' src'shell/key-bindings.zsh'  trackbinds bindmap='^T -> ^X^T; \ec -> ^X\ec' commiyou/fzf \
 # $'string'  quote https://stackoverflow.com/questions/1250079/how-to-escape-single-quotes-within-single-quoted-strings/16605140#16605140
 # fzf-marks, at slot 0, for quick Ctrl-G accessibility
-zt $lightmode wait for \
+zt wait for \
   hlissner/zsh-autopair \
   Tarrasch/zsh-functional \
   ptavares/zsh-direnv \
@@ -153,29 +152,32 @@ zt $lightmode wait for \
 
 
 # completions
-zt $lightmode wait blockf as"completion" for \
+zt wait blockf as"completion" for \
   svn OMZP::fd \
   svn OMZP::docker \
   svn OMZP::ripgrep
 
-zt $lightmode wait'[[ -n $WORK_ENV ]]' svn id-as for \
-  https://github.com/commiyou/conf/branches/new/work/$WORK_ENV
+zt wait'[[ -n $WORK_ENV ]]' id-as for \
+  $XDG_CONFIG_HOME/work/$WORK_ENV
 
-zt $lightmode wait svn for \
+zt wait for \
   blockf as'completion' atpull'zinit creinstall -q .' id-as'commiyou-completions'\
-  https://github.com/commiyou/conf/branches/new/zsh/completions \
+  $XDG_CONFIG_HOME/zsh/completions
 
-zinit ice $lightmode wait lucid pick'roszsh' id-as'roszsh'
-zinit snippet https://raw.githubusercontent.com/ros/ros/melodic-devel/tools/rosbash/roszsh
+#zinit ice $lightmode wait lucid pick'roszsh' id-as'roszsh'
+#zinit snippet https://raw.githubusercontent.com/ros/ros/melodic-devel/tools/rosbash/roszsh
 
 
 # fzf-tab must before Fast-syntax-highlighting & autosuggestions
 # and bellow LS_COLORS
-zt $lightmode wait'0b' for \
-  atinit"zicompinit; zicdreplay; compdef _zinit zi;" \
+zt wait'0b' for \
+  atinit"zicompinit; zicdreplay;" \
   atload"!zstyle ':fzf-tab:complete:(cd|z):*' \
   fzf-preview 'exa -1 --color=always \$realpath';" \
   Aloxaf/fzf-tab \
   zdharma-continuum/fast-syntax-highlighting \
   blockf atpull'zinit creinstall -q .' zsh-users/zsh-completions \
   atload"!_zsh_autosuggest_start" zsh-users/zsh-autosuggestions 
+
+zupdate() { [[ $# -eq 0 ]] && zinit update --all --parallel || zinit update --parallel 15 "$@" }
+zt wait'0c' for atload'compdef _zinit zi; compdef _zinit_update zupate;' zdharma-continuum/null

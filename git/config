@@ -41,3 +41,6 @@
 	rebase = true
 [interactive]
 	diffFilter = diff-so-fancy --patch
+[user]
+	name = Commi You
+	email = commiyou@gmail.com

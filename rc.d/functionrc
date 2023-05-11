@@ -95,9 +95,9 @@ human() {
 }
 
 # calc expresion
-C() {
-	python2 -c "from __future__ import division;print '%.3f' % ($@)"
-}
+# C() {
+# 	python2 -c "from __future__ import division;print '%.3f' % ($@)"
+# }
 
 # re escape, useful for awk/grep
 reescape() {
@@ -212,4 +212,16 @@ swapf() {
   mv "$f1" "$f1$tmp_suffix"
   mv "$f2" "$f1"
   mv "$f1$tmp_suffix" "$f2"
+}
+
+proxy() {
+  local port
+  port=${1:-51354}
+  export https_proxy=http://127.0.0.1:$port http_proxy=http://127.0.0.1:$port all_proxy=socks5://127.0.0.1:$port
+}
+
+proxy_unset() {
+  unset https_proxy
+  unset all_proxy
+  unset http_proxy
 }

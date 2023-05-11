@@ -148,7 +148,8 @@ zt wait for \
     ' wfxr/forgit \
   as"program" atload'export SSHHOME=$XDG_CONFIG_HOME' pick'sshrc' IngoMeyer441/sshrc \
   atinit"local zew_word_style=whitespace" \
-  zdharma-continuum/zsh-editing-workbench
+  zdharma-continuum/zsh-editing-workbench \
+  commiyou/conda-init-zsh-plugin
 
 
 # completions

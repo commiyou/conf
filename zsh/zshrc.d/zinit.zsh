@@ -74,7 +74,7 @@ zt wait for \
   OMZP::jsontools \
   trigger-load'!x;extract;' \
   OMZP::extract \
-  OMZP::thefuck \
+  trigger-load"!fuck" OMZP::thefuck \
   OMZL::clipboard.zsh \
   OMZL::completion.zsh \
   OMZL::functions.zsh \
@@ -153,7 +153,7 @@ zt wait for \
 
 
 zt wait'1' for \
-  commiyou/conda-init-zsh-plugin \
+  trigger-load'!conda' commiyou/conda-init-zsh-plugin \
   blockf as'completion' \
   conda-incubator/conda-zsh-completion
 

@@ -249,7 +249,7 @@ formatters.setup({
 
 lvim.plugins = {
   { "andersevenrud/cmp-tmux", dependencies = "hrsh7th/nvim-cmp", event = "InsertEnter" },
-  { "andymass/vim-matchup" },
+  -- { "andymass/vim-matchup" },
   {
     "christoomey/vim-tmux-navigator",
     config = function()

@@ -217,7 +217,13 @@ swapf() {
 proxy() {
   local port
   port=${1:-51354}
-  export https_proxy=http://127.0.0.1:$port http_proxy=http://127.0.0.1:$port all_proxy=socks5://127.0.0.1:$port
+  local hostip
+  if ! command -v wsl.exe &> /dev/null; then
+    hostip=127.0.0.1
+  else
+    hostip=$(cat /etc/resolv.conf |grep -oP '(?<=nameserver\ ).*')
+  fi
+  export https_proxy=http://${hostip}:$port http_proxy=http:${hostip}:$port all_proxy=socks5://${hostip}:$port
 }
 
 proxy_unset() {

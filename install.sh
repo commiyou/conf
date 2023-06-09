@@ -1,8 +1,10 @@
 #!/bin/bash
 #
+
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 INSTALL_DIR=${1:-$(cd $SCRIPT_DIR/.. && pwd)/.local}
 BIN_DIR="$INSTALL_DIR/bin"
+
 
 
 echo_green() {
@@ -142,8 +144,8 @@ install_go() {
     return
   fi
   wget https://go.dev/dl/go1.19.4.linux-amd64.tar.gz
-  rf rm -rf $INSTALL_DIR/go && tar -C $INSTALL_DIR -xzf go1.19.4.linux-amd64.tar.gz
-  echo $INSTALL_DIR/go >> ~/.path
+  rm -rf $INSTALL_DIR/go && tar -C $INSTALL_DIR -xzf go1.19.4.linux-amd64.tar.gz
+  echo $INSTALL_DIR/go/bin >> ~/.path
 }
 
 update() {
@@ -157,11 +159,21 @@ update() {
   cat ~/.zshenv | grep -q "$cmd" || echo "$cmd" >> ~/.zshenv
 }
 
-# update
-# install_ubuntu_pkgs
-# install_zsh
-# install_node
-# install_nvim
-install_lvim
-# install_go
-# install_miscs
+install_wsl() {
+  if ! command -v wsl.exe &> /dev/null; then
+    return
+  fi
+  echo_red 'wsl version , wsl -l -v; wsl --set-version Ubuntu-18.04 2'
+  echo_red 'wsl, changeuser  ubuntu1804.exe config --default-user root'
+}
+
+
+ #update
+ #install_ubuntu_pkgs
+ #install_wsl
+ #install_zsh
+ #install_node
+ #install_nvim
+ #install_lvim
+ install_go
+ #install_miscs

@@ -23,5 +23,5 @@ unset TMOUT
 umask 022
 
 # load work rcfiles
-export WORK_ENV=allride
+#export WORK_ENV=allride
 #[ -f ~/.Xmodmap ] && xmodmap ~/.Xmodmap

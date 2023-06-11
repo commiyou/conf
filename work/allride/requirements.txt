@@ -4,6 +4,6 @@ lxml==4.9.1
 parse==1.19.0
 pyppeteer==1.0.2
 pyquery==1.4.3
-requests==2.27.1
+requests==2.31.0
 tendo==0.2.15
 w3lib==1.22.0

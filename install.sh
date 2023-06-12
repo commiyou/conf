@@ -30,6 +30,28 @@ check_yes_no() {
   done
 }
 
+replace_apt_repo() {
+	sudo mv /etc/apt/sources.list  /etc/apt/sources.list.org
+   sudo echo '# 默认注释了源码镜像以提高 apt update 速度，如有需要可自行取消注释
+deb https://mirrors.tuna.tsinghua.edu.cn/ubuntu/ bionic main restricted universe multiverse
+# deb-src https://mirrors.tuna.tsinghua.edu.cn/ubuntu/ bionic main restricted universe multiverse
+deb https://mirrors.tuna.tsinghua.edu.cn/ubuntu/ bionic-updates main restricted universe multiverse
+# deb-src https://mirrors.tuna.tsinghua.edu.cn/ubuntu/ bionic-updates main restricted universe multiverse
+deb https://mirrors.tuna.tsinghua.edu.cn/ubuntu/ bionic-backports main restricted universe multiverse
+# deb-src https://mirrors.tuna.tsinghua.edu.cn/ubuntu/ bionic-backports main restricted universe multiverse
+
+# deb https://mirrors.tuna.tsinghua.edu.cn/ubuntu/ bionic-security main restricted universe multiverse
+# # deb-src https://mirrors.tuna.tsinghua.edu.cn/ubuntu/ bionic-security main restricted universe multiverse
+
+deb http://security.ubuntu.com/ubuntu/ bionic-security main restricted universe multiverse
+# deb-src http://security.ubuntu.com/ubuntu/ bionic-security main restricted universe multiverse
+
+# 预发布软件源，不建议启用
+# deb https://mirrors.tuna.tsinghua.edu.cn/ubuntu/ bionic-proposed main restricted universe multiverse
+# # deb-src https://mirrors.tuna.tsinghua.edu.cn/ubuntu/ bionic-proposed main restricted universe multiverse' > /etc/apt/sources.list
+sudo apt update
+
+}
 
 
 pkg_install() {
@@ -50,16 +72,17 @@ install_node() {
     echo_green "installing node"
     kernel="$(uname -s | tr '[A-Z]' '[a-z]')"
     arch="$(uname -m | tr '[A-Z]' '[a-z]')"
+	version=latest-v17.x
     case "$arch" in
       x86_64) node_arch=x64;;
       aarch64) node_arch=arm64;;
       *) node_arch=$arch;;
     esac
-    tar_name=$(curl -fsSL https://nodejs.org/dist/latest/ | grep $kernel-$node_arch.tar.gz | head -1 | cut -f2 -d'"')
+    tar_name=$(curl -fsSL https://nodejs.org/dist/$version/ | grep $kernel-$node_arch.tar.gz | head -1 | cut -f2 -d'"')
     if [ -n "$tar_name" ]; then
-      wget https://nodejs.org/dist/latest/$tar_name && tar xzf $tar_name -C $INSTALL_DIR --strip-components 1
+      wget https://nodejs.org/dist/$version/$tar_name && tar xzf $tar_name -C $INSTALL_DIR --strip-components 1
     else
-      echo_red "can not find $kernel-$node_arch.tar.gz in https://nodejs.org/dist/latest/ " >& 2
+      echo_red "can not find $kernel-$node_arch.tar.gz in https://nodejs.org/dist/$version/ " >& 2
     fi
   fi
 }
@@ -80,10 +103,10 @@ apt_install() {
   pkg=${1}
   cmd=${2:-$pkg}
   ppa=${3}
-  if [[ -n "$ppa" ]] && command -v $cmd &> /dev/null; then
-    echo_green "$cmd installed"
-    return 0
-  fi
+  # if [[ -n "$ppa" ]] && command -v $cmd &> /dev/null; then
+  #   echo_green "$cmd installed"
+  #   return 0
+  # fi
   echo_green "installing $cmd"
   [[ -n "$ppa" ]] && sudo add-apt-repository $ppa && sudo apt update
   sudo apt install -y $pkg || echo_red "apt $pkg install failed"
@@ -94,7 +117,7 @@ install_ubuntu_pkgs() {
   cmd="sudo apt install software-properties-common"
   echo_green "$cmd"
   $cmd
-  apt_install vim vim ppa:jonathonf/vim
+  #apt_install vim vim ppa:jonathonf/vim
   apt_install lua5.3 && sudo ln -sf /usr/bin/lua5.3 $BIN_DIR/lua 
   apt_install unzip
   apt_install subversion svn
@@ -167,13 +190,17 @@ install_wsl() {
   echo_red 'wsl, changeuser  ubuntu1804.exe config --default-user root'
 }
 
+install_conda(){
+  wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
+}
+
 
  #update
- #install_ubuntu_pkgs
+ install_ubuntu_pkgs
  #install_wsl
  #install_zsh
  #install_node
  #install_nvim
  #install_lvim
- install_go
+ #install_go
  #install_miscs

@@ -6,8 +6,9 @@ while [ -L "$SOURCE" ]; do # resolve $SOURCE until the file is no longer a symli
 done
 DIR=$( cd -P "$( dirname "$SOURCE" )" >/dev/null 2>&1 && pwd )
 
-source $DIR/rc.d/aliasrc
-source $DIR/rc.d/functionrc
+for file in $DIR/rc.d/*rc; do
+  source "$file"
+done
 
 if [ $(ps -ef|grep -c com.termux ) -gt 0 ]
 then

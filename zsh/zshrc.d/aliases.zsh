@@ -44,6 +44,8 @@ alias -g T=" | tail "
 alias -g T1=" | tail -1"
 
 alias -g E="luit -encoding gb18030"  # env gb18030 to utf
-if type xdg-open > /dev/null; then
+if type wslview > /dev/null; then
+  alias open="wslview"
+elif type xdg-open > /dev/null; then
   alias open=xdg-open
 fi

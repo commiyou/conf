@@ -153,7 +153,7 @@ zt wait for \
 
 
 zt wait'1' for \
-  trigger-load'!conda' commiyou/conda-init-zsh-plugin \
+  trigger-load'!conda;!ipython;' commiyou/conda-init-zsh-plugin \
   blockf as'completion' \
   conda-incubator/conda-zsh-completion
 

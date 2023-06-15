@@ -138,7 +138,8 @@ lvim.builtin.which_key.mappings["f"] = {
   -- t = { "<cmd>TagbarToggle<cr>", "Tags" },
 }
 lvim.builtin.which_key.mappings["Ls"] = { "<cmd>Pmsg lua put(lvim)<cr>", "Show Confs" }
-lvim.builtin.which_key.mappings["o"] = { -- toggle options
+lvim.builtin.which_key.mappings["o"] = {
+  -- toggle options
   p = { "<cmd>setlocal paste!<cr>", "paste" },
   c = {
     "<cmd>lua if vim.o.clipboard == '' then vim.o.clipboard = 'unnamedplus' else vim.o.clipboard = '' end<cr>",
@@ -212,8 +213,8 @@ lvim.builtin.treesitter.highlight.enabled = true
 local formatters = require("lvim.lsp.null-ls.formatters")
 formatters.setup({
   -- { command = "stylua", filetypes = { "lua" } }, -- cargo install stylua
-  { command = "black", filetypes = { "python" } },
-  { command = "isort", filetypes = { "python" } },
+  { command = "black",       filetypes = { "python" } },
+  { command = "isort",       filetypes = { "python" } },
   -- { command = "clang-format", args = { "--style={BasedOnStyle: Google, DerivePointerAlignment: false}" } },
   { command = "clang-format" },
 })
@@ -265,6 +266,17 @@ lvim.plugins = {
       vim.g.alternateNoFindBuffer = 1
     end,
   },
+  {
+    "AckslD/nvim-neoclip.lua",
+    dependencies = {
+      -- you'll need at least one of these
+      { 'nvim-telescope/telescope.nvim' },
+      -- {'ibhagwan/fzf-lua'},
+    },
+    config = function()
+      require('neoclip').setup()
+    end,
+  },
   { "ConradIrwin/vim-bracketed-paste" },
   { "dbeniamine/cheat.sh-vim" },
   { "elzr/vim-json" },
@@ -272,7 +284,7 @@ lvim.plugins = {
   { "farmergreg/vim-lastplace" },
   -- { "f-person/git-blame.nvim" }, -- too slow when big file!
   { "hnamikaw/vim-autohotkey" },
-  { "hrsh7th/cmp-cmdline", dependencies = "hrsh7th/nvim-cmp", event = "InsertEnter" },
+  { "hrsh7th/cmp-cmdline",            dependencies = "hrsh7th/nvim-cmp", event = "InsertEnter" },
   -- { "itchyny/vim-cursorword" },
   {
     "inkarkat/vim-mark",
@@ -283,10 +295,11 @@ lvim.plugins = {
 	   let g:mwAutoLoadMarks = 1
 	   let g:mw_no_mappings = 1
 	   nmap <leader>M <Plug>MarkSet
-	   ]] )
+	   ]])
     end,
   },
-  { "MattesGroeger/vim-bookmarks",
+  {
+    "MattesGroeger/vim-bookmarks",
     config = function()
       vim.cmd([[
       let g:bookmark_no_default_key_mappings = 1
@@ -297,7 +310,7 @@ lvim.plugins = {
       nmap <Leader>mk <Plug>BookmarkPrev
       nmap <Leader>mc <Plug>BookmarkClear
       nmap <Leader>mx <Plug>BookmarkClearAll
-	   ]] )
+	   ]])
     end,
   },
   { "mildred/vim-bufmru" },
@@ -319,13 +332,19 @@ lvim.plugins = {
     end,
   },
   { "simrat39/symbols-outline.nvim" },
-  { "sindrets/diffview.nvim", dependencies = "nvim-lua/plenary.nvim" },
+  { "sindrets/diffview.nvim",       dependencies = "nvim-lua/plenary.nvim" },
   { "szw/vim-maximizer" },
-  { "tpope/vim-abolish" }, -- :%Subvert/facilit{y,ies}/building{,s}/g
+  { "tpope/vim-abolish" },  -- :%Subvert/facilit{y,ies}/building{,s}/g
   { "tpope/vim-fugitive" },
   { "tpope/vim-surround" }, --  https://github.com/tpope/vim-surround   cs{char}{char} / ds{char} / ys{motion}{char}
-  { "tpope/vim-repeat" }, --
-  { "tzachar/cmp-tabnine", build = "./install.sh", dependencies = "hrsh7th/nvim-cmp", event = "InsertEnter" },
+  { "tpope/vim-repeat" },   --
+  -- {
+  --   "tzachar/cmp-tabnine",
+  --   build = "./install.sh",
+  --   dependencies = "hrsh7th/nvim-cmp",
+  --   event =
+  --   "InsertEnter"
+  -- },
   { "wellle/tmux-complete.vim" },
   { "yegappan/taglist" },
 }
@@ -369,7 +388,7 @@ cmp.setup.cmdline("/", {
 --   { "BufWinEnter", "*.lua", "setlm.opt.relativenumber = true -- lua print(vim.o.rnu)
 vim.o.rnu = true
 vim.o.gdefault = true -- the :substitute flag 'g' is default on
-vim.o.eol = false -- no auto add <EOL>
+vim.o.eol = false     -- no auto add <EOL>
 vim.o.wrap = true
 vim.opt.isfname = vim.opt.isfname - "="
 vim.o.mouse = "h"

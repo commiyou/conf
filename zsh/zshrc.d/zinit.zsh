@@ -70,9 +70,9 @@ zt wait for \
   OMZP::rsync \
   OMZP::systemadmin \
   OMZP::urltools \
-  trigger-load'!pp_json;is_json;urlencode_json;urldecode_json;pp_ndjson;is_ndjson;' \
+  trigger-load'!pp_json;!is_json;!urlencode_json;!urldecode_json;!pp_ndjson;!is_ndjson;' \
   OMZP::jsontools \
-  trigger-load'!x;extract;' \
+  trigger-load'!x;!extract;' \
   OMZP::extract \
   trigger-load"!fuck" OMZP::thefuck \
   OMZL::clipboard.zsh \
@@ -153,7 +153,7 @@ zt wait for \
 
 
 zt wait'1' for \
-  trigger-load'!conda;ipython;' commiyou/conda-init-zsh-plugin \
+  trigger-load'!conda;!ipython;!pip;!python;' commiyou/conda-init-zsh-plugin \
   blockf as'completion' \
   conda-incubator/conda-zsh-completion
 

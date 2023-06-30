@@ -257,9 +257,9 @@ cd () {
   local dname=$(dirname "$@")
   local fname=$(basename "$@")
   if ! command -v fzf &> /dev/null; then
-    builtin cd "$@" || builtin cd $(find "$dname" -type d -maxdepth 1 | awk '{print $NF}' | grep -i "$fname") && echog "cd done!"
+    builtin cd "$@" || builtin cd $(find "$dname" -maxdepth 1 -type d | awk '{print $NF}' | grep -i "$fname") && echog "cd done!"
   else 
-    builtin cd "$@" || builtin cd $(find "$dname" -type d -maxdepth 1 | awk '{print $NF}' | grep -i "$fname" | fzf -1 ) && echog "cd done!"
+    builtin cd "$@" || builtin cd $(find "$dname" -maxdepth 1 -type d| awk '{print $NF}' | grep -i "$fname" | fzf -1 ) && echog "cd done!"
   fi
   #set +x
 }

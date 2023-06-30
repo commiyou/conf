@@ -10,7 +10,7 @@ for file in $DIR/rc.d/*rc; do
   source "$file"
 done
 
-if [ $(ps -ef|grep -c com.termux ) -gt 0 ]
+if [ $(ps -ef| grep -v grep | grep -c com.termux ) -gt 0 ]
 then
     pgrep sshd > /dev/null 2>&1 || sshd 
     # ln -s ~/conf/bashrc ~/.suroot/.bashrc

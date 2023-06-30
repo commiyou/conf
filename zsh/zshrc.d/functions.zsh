@@ -165,27 +165,6 @@ swap() {
     mv "$1" $TMPFILE && mv "$2" "$1" && mv $TMPFILE $2
 }
 
-# Reset
-Color_Off='\033[0m'       # Text Reset
-
-# Regular Colors
-Black='\033[0;30m'        # Black
-Red='\033[0;31m'          # Red
-Green='\033[0;32m'        # Green
-Yellow='\033[0;33m'       # Yellow
-Blue='\033[0;34m'         # Blue
-Purple='\033[0;35m'       # Purple
-Cyan='\033[0;36m'         # Cyan
-White='\033[0;37m'        # White
-
-echor () {
-  echo -e "${Red}$*${Color_Off}"
-}
-
-echog () {
-  echo -e "${Green}$*${Color_Off}"
-}
-
 set_iterm_profile () {
 	local profile=${1:-gbk}
 	send-terminal-sequence "\033]50;SetProfile=$profile\a"

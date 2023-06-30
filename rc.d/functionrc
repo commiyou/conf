@@ -7,6 +7,28 @@ err() {
   echo "$@" 1>&2 
 }
 
+# Reset
+Color_Off='\033[0m'       # Text Reset
+
+# Regular Colors
+Black='\033[0;30m'        # Black
+Red='\033[0;31m'          # Red
+Green='\033[0;32m'        # Green
+Yellow='\033[0;33m'       # Yellow
+Blue='\033[0;34m'         # Blue
+Purple='\033[0;35m'       # Purple
+Cyan='\033[0;36m'         # Cyan
+White='\033[0;37m'        # White
+
+echor () {
+  echo -e "${Red}$*${Color_Off}"
+}
+
+echog () {
+  echo -e "${Green}$*${Color_Off}"
+}
+
+
 ts(){
   for ts_ in $@
   do
@@ -146,14 +168,6 @@ diffd() {
 
 }
 
-cd () {
-  if [[ -e "$1" && ! -d "$1" ]]; then
-    builtin cd "${1%/*}"
-  else
-    builtin cd "$@"
-  fi
-}
-
 
 # fco- checkout git branch/tag, with a preview showing the commits between the tag/branch and HEAD
 fco() {
@@ -216,7 +230,7 @@ swapf() {
 
 proxy() {
   local port
-  port=${1:-51354}
+  port=${1:-1080}
   local hostip
   if ! command -v wsl.exe &> /dev/null; then
     hostip=127.0.0.1
@@ -230,4 +244,22 @@ proxy_unset() {
   unset https_proxy
   unset all_proxy
   unset http_proxy
+}
+
+cd () {
+  #set -x
+  [ $# -eq 0 ] && builtin cd  && return 
+
+  if [[ -e "$1" && ! -d "$1" ]]; then
+    builtin cd "${1%/*}" && return
+  fi
+
+  local dname=$(dirname "$@")
+  local fname=$(basename "$@")
+  if ! command -v fzf &> /dev/null; then
+    builtin cd "$@" || builtin cd $(find "$dname" -type d -maxdepth 1 | awk '{print $NF}' | grep -i "$fname") && echog "cd done!"
+  else 
+    builtin cd "$@" || builtin cd $(find "$dname" -type d -maxdepth 1 | awk '{print $NF}' | grep -i "$fname" | fzf -1 ) && echog "cd done!"
+  fi
+  #set +x
 }

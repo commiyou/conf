@@ -1,5 +1,5 @@
 # vim: ft=sh
-shopt expand_aliases 2>/dev/null # bash 
+shopt expand_aliases 1>&2 2>/dev/null # bash 
 
 alias pl='print -rl --'
 

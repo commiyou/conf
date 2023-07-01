@@ -246,20 +246,34 @@ proxy_unset() {
   unset http_proxy
 }
 
-cd () {
+cd_ () {
   #set -x
-  [ $# -eq 0 ] && builtin cd  && return 
 
   if [[ -e "$1" && ! -d "$1" ]]; then
     builtin cd "${1%/*}" && return
   fi
+  if [[ $# -eq 0 || -d "$1" ]]; then
+    builtin cd "$@"  && return 
+  fi
 
   local dname=$(dirname "$@")
   local fname=$(basename "$@")
-  if ! command -v fzf &> /dev/null; then
-    builtin cd "$@" || builtin cd $(find "$dname" -maxdepth 1 -type d | awk '{print $NF}' | grep -i "$fname") && echog "cd done!"
-  else 
-    builtin cd "$@" || builtin cd $(find "$dname" -maxdepth 1 -type d| awk '{print $NF}' | grep -i "$fname" | fzf -1 ) && echog "cd done!"
+  local file
+  if command -v fzf &> /dev/null; then
+    file=$(find "$dname" -maxdepth 1 -type d  | fzf -1 -q "$fname" --prompt='Search the dir: ' -n -1 -d /)
+  else
+    local files=$(find "$dname" -maxdepth 1 -type d | grep -i "$fname")
+    echo "$files" | awk '{print NR ": " $0}'
+    echog "Enter the index of the directory you want: "
+    read choice 
+    file=$(echo "$files" | sed -n "$choice p")
   fi
+  if [ -d "$file" ]; then
+    builtin cd "$file" && echog "cd $file done!"
+  else
+    echor "cd $@ failed!"
+  fi
+
   #set +x
 }
+alias cd="cd_"

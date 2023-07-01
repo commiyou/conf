@@ -260,9 +260,9 @@ cd_ () {
   local fname=$(basename "$@")
   local file
   if command -v fzf &> /dev/null; then
-    file=$(find "$dname" -maxdepth 1 -type d  | fzf -1 -q "$fname" --prompt='Search the dir: ' -n -1 -d /)
+    file=$(find -L "$dname" -maxdepth 1 -type d  | fzf -1 -q "$fname" --prompt='Search the dir: ' -n -1 -d /)
   else
-    local files=$(find "$dname" -maxdepth 1 -type d | grep -i "$fname")
+    local files=$(find -L "$dname" -maxdepth 1 -type d | grep -i "$fname")
     echo "$files" | awk '{print NR ": " $0}'
     echog "Enter the index of the directory you want: "
     read choice 

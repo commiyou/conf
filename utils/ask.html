@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ChatGPT Web UI</title>
+  <style>
+    :root {
+      box-sizing: border-box;
+      --main-color: #4d5156;
+      --main-bg-color: #fff;
+      /*--main-bg-color: rgba(255, 255, 255, 1);*/
+
+      --main-dark-color: #dddee1;
+      --main-dark-bg-color: #202124;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        box-sizing: border-box;
+
+        --main-color: #dddee1;
+        --main-bg-color: #202124;
+      }
+
+      input {
+        background: none;
+        color: white;
+      }
+    }
+
+    pre {
+      white-space: pre-wrap;
+      /* Since CSS 2.1 */
+      white-space: -moz-pre-wrap;
+      /* Mozilla, since 1999 */
+      white-space: -pre-wrap;
+      /* Opera 4-6 */
+      white-space: -o-pre-wrap;
+      /* Opera 7 */
+      word-wrap: break-word;
+      /* Internet Explorer 5.5+ */
+
+    }
+
+    .sticky-bottom {
+      position: sticky;
+      bottom: 0;
+      width: 100%;
+    }
+
+    *,
+    *::before,
+    *::after {
+      box-sizing: inherit;
+    }
+
+    body {
+      font-family: Helvetica, Arial, sans-serif;
+      margin: 0 auto;
+      color: var(--main-color);
+      background-color: var(--main-bg-color);
+    }
+
+    #chat-container {
+      width: 100%;
+      overflow-y: auto;
+      height: 90vh;
+    }
+
+    #user-input-container {
+      display: flex;
+      align-items: flex-end;
+      height: auto;
+    }
+
+
+    textarea {
+      resize: none;
+      overflow: hidden;
+      min-height: 1em;
+      max-height: 10em;
+    }
+
+    #user-input {
+      flex: 1;
+    }
+
+    #user-buttons {
+      display: flex;
+      flex-direction: column;
+    }
+
+    button {
+      width: 3em;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="chat-container"></div>
+  <div id="user-input-container" class="sticky-bottom">
+    <textarea id="user-input" oninput="auto_grow(this)" placeholder="Enter details here..."></textarea>
+    <div id="user-buttons">
+      <button id="ask-button">Ask</button>
+      <button id="en-button">En</button>
+      <button id="ok-button">Ok</button>
+    </div>
+  </div>
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      document.getElementById('ask-button').addEventListener('click', function (event) {
+        updateChat("ask");
+      });
+      document.getElementById('en-button').addEventListener('click', function (event) {
+        updateChat("english");
+      });
+      document.getElementById('ok-button').addEventListener('click', function (event) {
+        updateChat("ok");
+      });
+    });
+
+    function updateChat(_type) {
+      var userInput = document.getElementById('user-input').value;
+      var chatContainer = document.getElementById('chat-container');
+      document.getElementById('user-input').value = '';
+      const formData = new FormData();
+      formData.append("q", userInput);
+      chatContainer.innerHTML += '<strong>You:</strong><p/> <pre>' + userInput + '</pre>';
+
+      // Send user input to the server and receive response
+      fetch(`http://127.0.0.1:5000/${_type}`, { // Replace with your API endpoint
+        method: 'POST',
+        body: formData
+      })
+        .then(response => {
+          let json = response.json()
+          console.log(json)
+          return json
+        })
+        .then(data => {
+          chatContainer.innerHTML += '<strong>ChatGPT:</strong> <p/> <pre>' + (data?.answer || '') + '</pre>';
+          chatContainer.scrollTop = chatContainer.scrollHeight;
+        })
+        .catch(error => {
+          console.error('Error:', error)
+          chatContainer.innerHTML += '<p><strong>ChatGPT:</strong> ' + error + '</p>';
+          chatContainer.scrollTop = chatContainer.scrollHeight;
+
+        }
+        );
+    }
+    function auto_grow(element) {
+      element.style.height = "5px";
+      element.style.height = (element.scrollHeight) + "px";
+    }
+  </script>
+</body>
+
+</html>

@@ -1,3 +1,4 @@
+#!/data/data/com.termux/files/usr/bin/python
 ""
 from flask import Flask, request
 from revChatGPT.V1 import Chatbot,configure

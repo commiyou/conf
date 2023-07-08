@@ -78,7 +78,7 @@
     textarea {
       resize: none;
       overflow: hidden;
-      min-height: 1em;
+      min-height: 3em;
       max-height: 10em;
     }
 
@@ -91,21 +91,24 @@
       flex-direction: column;
     }
 
+    pre b {
+      color: blue;
+    }
+
     button {
       width: 3em;
+      height: 3em;
     }
   </style>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 </head>
 
 <body>
   <div id="chat-container"></div>
   <div id="user-input-container" class="sticky-bottom">
+    <button id="en-button">En</button>
     <textarea id="user-input" oninput="auto_grow(this)" placeholder="Enter details here..."></textarea>
-    <div id="user-buttons">
-      <button id="ask-button">Ask</button>
-      <button id="en-button">En</button>
-      <button id="ok-button">Ok</button>
-    </div>
+    <button id="ask-button">Ask</button>
   </div>
   <script>
     document.addEventListener('DOMContentLoaded', function () {
@@ -115,18 +118,19 @@
       document.getElementById('en-button').addEventListener('click', function (event) {
         updateChat("english");
       });
-      document.getElementById('ok-button').addEventListener('click', function (event) {
-        updateChat("ok");
+      document.getElementById('ask-button').addEventListener('contextmenu', function (event) {
+        updateChat("ask");
       });
     });
 
+    const input = document.getElementById('user-input');
     function updateChat(_type) {
-      var userInput = document.getElementById('user-input').value;
+      var userInput = input.value;
       var chatContainer = document.getElementById('chat-container');
-      document.getElementById('user-input').value = '';
+      input.value = '';
       const formData = new FormData();
       formData.append("q", userInput);
-      chatContainer.innerHTML += '<strong>You:</strong><p/> <pre>' + userInput + '</pre>';
+      chatContainer.innerHTML += '<hr/><strong>You:</strong><p/> <pre>' + userInput + '</pre>';
 
       // Send user input to the server and receive response
       fetch(`http://127.0.0.1:5000/${_type}`, { // Replace with your API endpoint
@@ -139,13 +143,15 @@
           return json
         })
         .then(data => {
-          chatContainer.innerHTML += '<strong>ChatGPT:</strong> <p/> <pre>' + (data?.answer || '') + '</pre>';
-          chatContainer.scrollTop = chatContainer.scrollHeight;
+          chatContainer.innerHTML += '<strong>ChatGPT:</strong> <p/> <pre>' + marked.parse(data?.answer || '') + '</pre>';
+          //chatContainer.scrollTop = chatContainer.scrollHeight;
+          scrollToLastHr()
         })
         .catch(error => {
           console.error('Error:', error)
           chatContainer.innerHTML += '<p><strong>ChatGPT:</strong> ' + error + '</p>';
-          chatContainer.scrollTop = chatContainer.scrollHeight;
+          //chatContainer.scrollTop = chatContainer.scrollHeight;
+          scrollToLastHr()
 
         }
         );
@@ -154,6 +160,23 @@
       element.style.height = "5px";
       element.style.height = (element.scrollHeight) + "px";
     }
+
+    function scrollToLastHr() {
+      const hrElements = document.querySelectorAll("hr");
+      const lastHrElement = hrElements[hrElements.length - 1];
+      lastHrElement.scrollIntoView({
+        behavior: "smooth",
+      });
+    }
+
+
+    document.addEventListener("visibilitychange", () => {
+      if (document.hidden) {
+      } else {
+        input.focus();
+        input.select();
+      }
+    });
   </script>
 </body>
 

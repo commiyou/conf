@@ -131,6 +131,8 @@
       const formData = new FormData();
       formData.append("q", userInput);
       chatContainer.innerHTML += '<hr/><strong>You:</strong><p/> <pre>' + userInput + '</pre>';
+      auto_grow(input);
+      scrollToLastHr();
 
       // Send user input to the server and receive response
       fetch(`http://127.0.0.1:5000/${_type}`, { // Replace with your API endpoint
@@ -145,13 +147,11 @@
         .then(data => {
           chatContainer.innerHTML += '<strong>ChatGPT:</strong> <p/> <pre>' + marked.parse(data?.answer || '') + '</pre>';
           //chatContainer.scrollTop = chatContainer.scrollHeight;
-          scrollToLastHr()
         })
         .catch(error => {
           console.error('Error:', error)
           chatContainer.innerHTML += '<p><strong>ChatGPT:</strong> ' + error + '</p>';
           //chatContainer.scrollTop = chatContainer.scrollHeight;
-          scrollToLastHr()
 
         }
         );

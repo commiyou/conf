@@ -3,63 +3,13 @@
 
 <head>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link id="theme-css" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/mini.css/3.0.1/mini-dark.min.css">
   <title>ChatGPT Web UI</title>
   <style>
-    :root {
-      box-sizing: border-box;
-      --main-color: #4d5156;
-      --main-bg-color: #fff;
-      /*--main-bg-color: rgba(255, 255, 255, 1);*/
-
-      --main-dark-color: #dddee1;
-      --main-dark-bg-color: #202124;
-    }
-
-    @media (prefers-color-scheme: dark) {
-      :root {
-        box-sizing: border-box;
-
-        --main-color: #dddee1;
-        --main-bg-color: #202124;
-      }
-
-      input {
-        background: none;
-        color: white;
-      }
-    }
-
-    pre {
-      white-space: pre-wrap;
-      /* Since CSS 2.1 */
-      white-space: -moz-pre-wrap;
-      /* Mozilla, since 1999 */
-      white-space: -pre-wrap;
-      /* Opera 4-6 */
-      white-space: -o-pre-wrap;
-      /* Opera 7 */
-      word-wrap: break-word;
-      /* Internet Explorer 5.5+ */
-
-    }
-
     .sticky-bottom {
       position: sticky;
       bottom: 0;
       width: 100%;
-    }
-
-    *,
-    *::before,
-    *::after {
-      box-sizing: inherit;
-    }
-
-    body {
-      font-family: Helvetica, Arial, sans-serif;
-      margin: 0 auto;
-      color: var(--main-color);
-      background-color: var(--main-bg-color);
     }
 
     #chat-container {
@@ -68,50 +18,47 @@
       height: 90vh;
     }
 
-    #user-input-container {
-      display: flex;
-      align-items: flex-end;
-      height: auto;
-    }
-
-
     textarea {
-      resize: none;
-      overflow: hidden;
-      min-height: 3em;
-      max-height: 10em;
-    }
-
-    #user-input {
       flex: 1;
     }
 
-    #user-buttons {
-      display: flex;
-      flex-direction: column;
-    }
-
-    pre b {
-      color: blue;
-    }
-
     button {
-      width: 3em;
-      height: 3em;
+      margin: 0;
+      width: 15%;
     }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
 </head>
 
 <body>
-  <div id="chat-container"></div>
-  <div id="user-input-container" class="sticky-bottom">
-    <button id="en-button">Zh</button>
-    <textarea id="user-input" oninput="auto_grow(this)" placeholder="Enter details here..."></textarea>
-    <button id="ask-button">Ask</button>
+  <div class="container">
+    <div id="chat-container"></div>
+    <div id="user-input-container" class="sticky-bottom row">
+      <button id="en-button">Zh</button>
+      <textarea id="user-input" class="doc" oninput="auto_grow(this)" placeholder="Enter details here..."></textarea>
+      <button id="ask-button">Ask</button>
+    </div>
   </div>
   <script>
+    // 检测设备是否开启了黑暗模式
+    function isDarkMode() {
+      return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    }
+
+    // 根据设备的黑暗模式切换CSS链接
+    function updateTheme() {
+      var themeCSS = document.getElementById('theme-css');
+      if (isDarkMode()) {
+        themeCSS.href = 'https://cdnjs.cloudflare.com/ajax/libs/mini.css/3.0.1/mini-dark.min.css';
+      } else {
+        themeCSS.href = 'https://cdnjs.cloudflare.com/ajax/libs/mini.css/3.0.1/mini-default.min.css';
+      }
+    }
+
+
     document.addEventListener('DOMContentLoaded', function () {
+      updateTheme()
       document.getElementById('ask-button').addEventListener('click', function (event) {
         updateChat("ask");
       });
@@ -119,20 +66,25 @@
         updateChat("voice");
       });
       document.getElementById('ask-button').addEventListener('contextmenu', function (event) {
-        updateChat("ask");
+        updateChat("reset");
       });
     });
 
     const input = document.getElementById('user-input');
+    const spinner = document.createElement('div');
+    spinner.className = 'spinner';
     function updateChat(_type) {
-      var userInput = input.value;
-      var chatContainer = document.getElementById('chat-container');
-      input.value = '';
+      let userInput = input.value;
+      let chatContainer = document.getElementById('chat-container');
       const formData = new FormData();
-      formData.append("q", userInput);
-      chatContainer.innerHTML += '<hr/><strong>You:</strong><p/> <pre>' + userInput + '</pre>';
-      auto_grow(input);
-      scrollToLastHr();
+      if (_type !== "reset") {
+        input.value = '';
+        formData.append("q", userInput);
+        chatContainer.innerHTML += '<hr/><mark class="tertiary">You</mark><p/>  <pre>' + funEncodeHTML(userInput) + '</pre>';
+        auto_grow(input);
+        scrollToLastElement(".tertiary");
+      }
+      chatContainer.appendChild(spinner)
 
       // Send user input to the server and receive response
       fetch(`http://127.0.0.1:5000/${_type}`, { // Replace with your API endpoint
@@ -141,30 +93,34 @@
       })
         .then(response => {
           let json = response.json()
-          console.log(json)
+          //console.log(json)
           return json
         })
         .then(data => {
-          chatContainer.innerHTML += '<strong>ChatGPT:</strong> <p/> <div>' + marked.parse(data?.answer || '') + '</div>';
+          chatContainer.removeChild(spinner)
+          chatContainer.innerHTML += '<mark>ChatGPT</mark> <p/> <div class="card fluid">' + marked.parse(data?.answer || '') + '</div>';
           //chatContainer.scrollTop = chatContainer.scrollHeight;
         })
         .catch(error => {
           console.error('Error:', error)
-          chatContainer.innerHTML += '<p><strong>ChatGPT:</strong> ' + error + '</p>';
+          chatContainer.removeChild(spinner)
+          chatContainer.innerHTML += '<p><mark>ChatGPT</mark>  <div class="card">' + error + '</div>';
           //chatContainer.scrollTop = chatContainer.scrollHeight;
 
         }
         );
+      scrollToLastElement("mark");
+
     }
     function auto_grow(element) {
-      element.style.height = "5px";
+      element.style.height = "8vh";
       element.style.height = (element.scrollHeight) + "px";
     }
 
-    function scrollToLastHr() {
-      const hrElements = document.querySelectorAll("hr");
-      const lastHrElement = hrElements[hrElements.length - 1];
-      lastHrElement.scrollIntoView({
+    function scrollToLastElement(selecter) {
+      const lastHrElement = document.querySelector(`${selecter}:last-of-type`);
+      console.log(lastHrElement)
+      lastHrElement?.scrollIntoView({
         behavior: "smooth",
       });
     }
@@ -177,6 +133,20 @@
         input.select();
       }
     });
+
+    var funEncodeHTML = function (str) {
+      if (typeof str == 'string') {
+        return str.replace(/<|&|>/g, function (matches) {
+          return ({
+            '<': '&lt;',
+            '>': '&gt;',
+            '&': '&amp;'
+          })[matches];
+        });
+      }
+
+      return '';
+    };
   </script>
 </body>
 

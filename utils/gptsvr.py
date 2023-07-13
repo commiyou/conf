@@ -43,16 +43,25 @@ ch_init = """
 You will translate my non-English input into English, rephrase my English input to make it more accurate and natural, and then you will respond to my questions in Chinese.
 Now, here’s my first question: "Hello"
 """
-en_gpt = init_chatbot(en_init)
-ch_gpt = init_chatbot(ch_init)
 
-gpts = {"ask": en_gpt, "english": en_gpt, "voice": ch_gpt}
+gpts = None
 
-pattern = r"\*\*Answer\*\*:\s*(.*)"
+
+def init():
+    en_gpt = init_chatbot(en_init)
+    ch_gpt = init_chatbot(ch_init)
+    return {"ask": en_gpt, "english": en_gpt, "voice": ch_gpt}
+
+
+gpts = init()
 
 
 @app.route("/<op>", methods=["GET", "POST"])
 def ask(op):
+    global gpts
+    if op == "reset":
+        gpts = init()
+        return dict(answer="Reset success.")
     question = request.values.get("q")
     # print("get", op, question, request.values)
     if not question:
@@ -61,11 +70,6 @@ def ask(op):
     gpt = gpts.get(op, "ask")
     for data in gpt.ask(question):
         response["answer"] = data["message"]
-        # match = re.search(pattern, data["message"])
-        # if match:
-        #     extracted_content = match.group(1)
-        #     response["ans"] = extracted_content
-
     # print("result", response)
     return response
 

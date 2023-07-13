@@ -1,4 +1,5 @@
 #!/data/data/com.termux/files/usr/bin/python
+import re
 import textwrap
 
 from flask import Flask, request
@@ -19,8 +20,16 @@ vim ~/.config/revChatGPT/config.json
 app = Flask(__name__)
 CORS(app)
 
-chatbot = Chatbot(config=configure())
-init = """
+
+def init_chatbot(prompt=""):
+    chatbot = Chatbot(config=configure())
+    for data in chatbot.ask(prompt):
+        # print("init", data["message"])
+        pass
+    return chatbot
+
+
+en_init = """
 You will translate my non-English input into English, rephrase my English input to make it more accurate and natural, and you will first show the translated/corrected English input and then respond to my questions in English.
 Your output format should be:
 
@@ -29,9 +38,17 @@ Your output format should be:
 
 Now, here’s my first question: "你好"
 """
-chatbot.ask(init)
 
-prompts = {"ask": "", "english": ""}
+ch_init = """
+You will translate my non-English input into English, rephrase my English input to make it more accurate and natural, and then you will respond to my questions in Chinese.
+Now, here’s my first question: "Hello"
+"""
+en_gpt = init_chatbot(en_init)
+ch_gpt = init_chatbot(ch_init)
+
+gpts = {"ask": en_gpt, "english": en_gpt, "voice": ch_gpt}
+
+pattern = r"\*\*Answer\*\*:\s*(.*)"
 
 
 @app.route("/<op>", methods=["GET", "POST"])
@@ -41,9 +58,13 @@ def ask(op):
     if not question:
         return {}
     response = {}
-    prompt = textwrap.dedent(prompts.get(op, ""))
-    for data in chatbot.ask(prompt + question):
+    gpt = gpts.get(op, "ask")
+    for data in gpt.ask(question):
         response["answer"] = data["message"]
+        # match = re.search(pattern, data["message"])
+        # if match:
+        #     extracted_content = match.group(1)
+        #     response["ans"] = extracted_content
 
     # print("result", response)
     return response

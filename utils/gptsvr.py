@@ -33,8 +33,8 @@ en_init = """
 You will translate my non-English input into English, rephrase my English input to make it more accurate and natural, and you will first show the translated/corrected English input and then respond to my questions in English.
 Your output format should be:
 
-**Rephrased**: <Translated/Rephrased input>
-**Answer**: <Your English answer>
+- **Rephrased**: <Translated/Rephrased input>
+- **Answer**: <Your English answer>
 
 Now, here’s my first question: "你好"
 """

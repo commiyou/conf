@@ -106,7 +106,7 @@
 <body>
   <div id="chat-container"></div>
   <div id="user-input-container" class="sticky-bottom">
-    <button id="en-button">En</button>
+    <button id="en-button">Zh</button>
     <textarea id="user-input" oninput="auto_grow(this)" placeholder="Enter details here..."></textarea>
     <button id="ask-button">Ask</button>
   </div>
@@ -116,7 +116,7 @@
         updateChat("ask");
       });
       document.getElementById('en-button').addEventListener('click', function (event) {
-        updateChat("english");
+        updateChat("voice");
       });
       document.getElementById('ask-button').addEventListener('contextmenu', function (event) {
         updateChat("ask");
@@ -145,7 +145,7 @@
           return json
         })
         .then(data => {
-          chatContainer.innerHTML += '<strong>ChatGPT:</strong> <p/> <pre>' + marked.parse(data?.answer || '') + '</pre>';
+          chatContainer.innerHTML += '<strong>ChatGPT:</strong> <p/> <div>' + marked.parse(data?.answer || '') + '</div>';
           //chatContainer.scrollTop = chatContainer.scrollHeight;
         })
         .catch(error => {

@@ -109,6 +109,15 @@ myip() {
   fi
 }
 
+
+myip() {
+  if [[ -n "$SSH_CONNECTION" ]]; then
+    echo $SSH_CONNECTION | cut -f3 -d' '
+  else
+    hostname -i | tail -n +1 | xargs -n1
+  fi
+}
+
 fp() {
 	[[ $# = 0 ]] && echo $(myip | head -1):$(filepath .) && return
 	for file in "$@"; do

@@ -17,7 +17,7 @@ import click
 from requests_html import HTMLSession
 from tendo import singleton
 
-BUG_DIR = "/data/youbin/bugs"
+BUG_DIR = "~/bugs"
 USER_AGENT = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.0.0 Safari/537.36"
 OSSUTIL64 = "/usr/local/bin/ossutil64"
 JQL = 'status in ("In Progress", "To Do", Backlog, Pending) AND component = Prediction AND labels = S AND created >= 2022-04-18 AND created <= 2022-12-08 ORDER BY priority DESC, summary ASC, created DESC'

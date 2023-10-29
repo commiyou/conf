@@ -204,3 +204,4 @@ install_conda(){
  #install_lvim
  #install_go
  #install_miscs
+ # https://github.com/Karmenzind/monaco-nerd-fonts/blob/master/fonts/Monaco%20Nerd%20Font%20Complete%20Mono.ttf

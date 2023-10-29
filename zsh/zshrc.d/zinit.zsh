@@ -86,21 +86,18 @@ zt wait for \
   OMZP::tmux 
 
 zt wait binary from"gh-r" lman lbin for \
-  @ogham/exa \
-  @sharkdp/fd  \
-  PaulJuliusMartinez/jless
+  if'[[ -z "$commands[exa]" ]]' @ogham/exa \
+  if'[[ -z "$commands[fd]" ]]' @sharkdp/fd  \
+  if'[[ -z "$commands[jless]" ]]' PaulJuliusMartinez/jless
 
-local ostype
-[[ $OSTYPE =~ '.*darwin.*' ]] && ostype=darwin
-[[ $OSTYPE =~ '.*linux.*' ]] && ostype=linux
 
 zt wait binary from"gh-r" for \
-  lman lbin"**/rg -> rg" bpick"*$ostype*musl*" \
-  @BurntSushi/ripgrep \
+  lman lbin"**/rg -> rg" \
+  if'[[ -z "$commands[rg]" ]]' @BurntSushi/ripgrep \
   dl'https://raw.githubusercontent.com/junegunn/fzf/master/man/man1/fzf.1' \
-  id-as'fzf-bin' lman lbin bpick"*$ostype*" \
-  junegunn/fzf \
-  id-as'cheat-bin' lman lbin"**/cheat* -> cheat" bpick"*$ostype*" \
+  id-as'fzf-bin' lman lbin \
+  if'[[ -z "$commands[fzf]" ]]' junegunn/fzf \
+  id-as'cheat-bin' lman lbin"**/cheat* -> cheat" \
   cheat/cheat 
 
 zt wait for \
@@ -159,10 +156,10 @@ zt wait'1' for \
 
 
 # completions
-zt wait blockf as"completion" for \
-  svn OMZP::fd \
-  svn OMZP::docker \
-  svn OMZP::ripgrep
+#zt wait blockf as"completion" for \
+#  svn OMZP::fd \
+#  svn OMZP::docker \
+#  svn OMZP::ripgrep
 
 zt wait'[[ -n $WORK_ENV ]]' id-as for \
   $XDG_CONFIG_HOME/work/$WORK_ENV

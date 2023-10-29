@@ -11,15 +11,16 @@ an executable
 -- general
 lvim.log.level = "warn"
 lvim.format_on_save = true
-lvim.colorscheme = "onedarker"
+-- lvim.colorscheme = "onedarker"
+lvim.colorscheme = "sonokai"
 -- to disable icons and use a minimalist setup, uncomment the following
 -- lvim.use_icons = false
 
 -- keymappings [view all the defaults by pressing <leader>Lk]
 lvim.leader = "space"
 -- add your own keymapping
-lvim.keys.normal_mode["H"] = ":bp<cr>"
-lvim.keys.normal_mode["L"] = ":bN<cr>"
+lvim.keys.normal_mode["H"] = ":BufferLineCyclePrev<cr>"
+lvim.keys.normal_mode["L"] = ":BufferLineCycleNext<cr>"
 lvim.keys.normal_mode["<C-s>"] = ":w<cr>"
 lvim.keys.normal_mode["<C-b>"] = "<left>"
 lvim.keys.normal_mode["<C-f>"] = "<right>"
@@ -141,6 +142,8 @@ lvim.builtin.which_key.mappings["Ls"] = { "<cmd>Pmsg lua put(lvim)<cr>", "Show C
 lvim.builtin.which_key.mappings["o"] = {
   -- toggle options
   p = { "<cmd>setlocal paste!<cr>", "paste" },
+  g = { "<cmd>e ++enc=gbk<cr>", "fenc gbk" },
+  u = { "<cmd>e ++enc=utf8<cr>", "fenc utf8" },
   c = {
     "<cmd>lua if vim.o.clipboard == '' then vim.o.clipboard = 'unnamedplus' else vim.o.clipboard = '' end<cr>",
     "clipboard",
@@ -291,28 +294,21 @@ lvim.plugins = {
     dependencies = { "inkarkat/vim-ingo-library" },
     config = function()
       vim.cmd([[
-	   let g:mwHistAdd = '@'
-	   let g:mwAutoLoadMarks = 1
-	   let g:mw_no_mappings = 1
-	   nmap <leader>M <Plug>MarkSet
-	   ]])
+     let g:mwHistAdd = '@'
+     let g:mwAutoLoadMarks = 1
+     let g:mw_no_mappings = 1
+     nmap <leader>M <Plug>MarkSet
+     ]])
     end,
   },
   {
-    "MattesGroeger/vim-bookmarks",
+    -- https://github.com/daipeihust/im-select install binary
+    "keaising/im-select.nvim",
     config = function()
-      vim.cmd([[
-      let g:bookmark_no_default_key_mappings = 1
-      nmap <Leader>mm <Plug>BookmarkToggle
-      nmap <Leader>mi <Plug>BookmarkAnnotate
-      nmap <Leader>ma <Plug>BookmarkShowAll
-      nmap <Leader>mj <Plug>BookmarkNext
-      nmap <Leader>mk <Plug>BookmarkPrev
-      nmap <Leader>mc <Plug>BookmarkClear
-      nmap <Leader>mx <Plug>BookmarkClearAll
-	   ]])
+      require("im_select").setup({})
     end,
   },
+  { "mbbill/fencview" },
   { "mildred/vim-bufmru" },
   { "morhetz/gruvbox" },
   {
@@ -334,6 +330,7 @@ lvim.plugins = {
   { "simrat39/symbols-outline.nvim" },
   { "sindrets/diffview.nvim",       dependencies = "nvim-lua/plenary.nvim" },
   { "szw/vim-maximizer" },
+  { "sainnhe/sonokai" },
   { "tpope/vim-abolish" },  -- :%Subvert/facilit{y,ies}/building{,s}/g
   { "tpope/vim-fugitive" },
   { "tpope/vim-surround" }, --  https://github.com/tpope/vim-surround   cs{char}{char} / ds{char} / ys{motion}{char}
@@ -410,17 +407,17 @@ end
 
 vim.cmd([[
 function! s:pmsg(cmd)
-  redir => message
-  silent execute a:cmd
-  redir END
-  if empty(message)
-    echoerr "no output"
-  else
-    " use "new" instead of "tabnew" below if you prefer split windows instead of tabs
-    new
-    setlocal buftype=nofile bufhidden=hide noswapfile nomodified
-    silent put=message
-  endif
+redir => message
+silent execute a:cmd
+redir END
+if empty(message)
+echoerr "no output"
+else
+" use "new" instead of "tabnew" below if you prefer split windows instead of tabs
+new
+setlocal buftype=nofile bufhidden=hide noswapfile nomodified
+silent put=message
+endif
 endfunction
 command! -nargs=+ -complete=command Pmsg call s:pmsg(<q-args>)
 
@@ -437,6 +434,7 @@ autocmd FileType c,cpp nnoremap <silent> [f :call
 " jump to the next function
 autocmd FileType c,cpp nnoremap <silent> ]f :call
 \ search('\(\(if\\|for\\|while\\|switch\\|catch\)\_s*\)\@64<!(\_[^)]*)\_[^;{}()]*\zs{', "w")<CR>
+" autocmd FileType c,cpp :FencAutoDetect
 
 set tags=./tags;,tags;
 nnoremap gt :ts <C-R>=expand("<cword>")<CR><CR>

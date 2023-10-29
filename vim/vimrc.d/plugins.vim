@@ -354,7 +354,7 @@ if g:config.vimrc.plugin_on
         " debug deoplete
         " call deoplete#custom#option('profile', v:true)
         " call deoplete#enable_logging('DEBUG', 'deoplete.log')
-        "let $NVIM_PYTHON_LOG_FILE="/data1/youbin/nvim_log"
+        "let $NVIM_PYTHON_LOG_FILE="~/nvim_log"
         " let $NVIM_PYTHON_LOG_LEVEL="DEBUG"
     catch
     endtry

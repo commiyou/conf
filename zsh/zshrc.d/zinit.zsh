@@ -100,12 +100,21 @@ zt wait binary from"gh-r" for \
   id-as'cheat-bin' lman lbin"**/cheat* -> cheat" \
   cheat/cheat 
 
+#
+#zinit ice if'[[ -n "$commands[rg]" ]]' binary from"gh-r" lman lbin"**/rg -> rg" 
+#zinit load @BurntSushi/ripgrep
+#
+#zinit ice if'[[ -n "$commands[cheat]" ]]' binary id-as'cheat-bin' lman lbin"**/cheat* -> cheat"
+#zinit load cheat/cheat
+#
 zt wait for \
   atinit"local zew_word_style=whitespace" \
   zdharma-continuum/zsh-editing-workbench \
   multisrc'shell/*.zsh' \
   trackbinds bindmap='^T -> ^X^T; \ec -> ^Xc' \
-  junegunn/fzf \
+  junegunn/fzf 
+
+zt wait for \
   atload'!export CHEAT_USE_FZF=true' pick'scripts/cheat.zsh' \
   cheat/cheat \
   id-as'cheat.sh' \
@@ -127,10 +136,10 @@ zt wait has'lua' for \
 #as"program" pick'bin/fzf-tmux' src'shell/key-bindings.zsh'  trackbinds bindmap='^T -> ^X^T; \ec -> ^X\ec' commiyou/fzf \
 # $'string'  quote https://stackoverflow.com/questions/1250079/how-to-escape-single-quotes-within-single-quoted-strings/16605140#16605140
 # fzf-marks, at slot 0, for quick Ctrl-G accessibility
+#ptavares/zsh-direnv \
 zt wait for \
   hlissner/zsh-autopair \
   Tarrasch/zsh-functional \
-  ptavares/zsh-direnv \
   Tarrasch/zsh-colors \
   atload'ZSH_COMMAND_TIME_EXCLUDE=(vim v); ZSH_COMMAND_TIME_COLOR=red' \
   popstas/zsh-command-time \

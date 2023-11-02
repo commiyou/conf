@@ -10,6 +10,8 @@ for file in $DIR/rc.d/*rc; do
   source "$file"
 done
 
+[[ ! -f ~/.self.sh ]] || source ~/.self.sh
+
 # pkg install termux-services
 # sv-enable sshd
 #if [ $(ps -ef| grep -v grep | grep -c com.termux ) -gt 0 ]

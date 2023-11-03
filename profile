@@ -10,7 +10,7 @@ export XDG_DATA_HOME
 export XDG_RUNTIME_DIR
 
 export EDITOR=vim
-[ -f $XDG_CONFIG_HOME/vim/vimrc ] && export VIMINIT="source $XDG_CONFIG_HOME/vim/vimrc"
+#[ -f $XDG_CONFIG_HOME/vim/vimrc ] && export VIMINIT="source $XDG_CONFIG_HOME/vim/vimrc"
 
 export LESS="-igRFX"
 

@@ -179,6 +179,8 @@ lvim.builtin.treesitter.ensure_installed = {
 lvim.builtin.treesitter.ignore_install = { "haskell" }
 lvim.builtin.treesitter.highlight.enabled = true
 
+require("nvim-treesitter.install").prefer_git = true
+
 
 -- https://github.com/neovim/nvim-lspconfig
 -- pyright
@@ -304,6 +306,7 @@ lvim.plugins = {
   {
     -- https://github.com/daipeihust/im-select install binary
     "keaising/im-select.nvim",
+    enabled = function() return jit.os == "OSX" end,
     config = function()
       require("im_select").setup({})
     end,

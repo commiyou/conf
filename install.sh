@@ -198,7 +198,7 @@ install_conda(){
  #update
  #install_ubuntu_pkgs
  #install_wsl
- install_zsh
+# install_zsh
  #install_node
  #install_nvim
  install_lvim

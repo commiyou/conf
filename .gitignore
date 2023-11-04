@@ -48,3 +48,4 @@ menus/
 /menus
 .DS_Store
 lvim.old
+lvim/lazy-lock.json

@@ -314,6 +314,13 @@ lvim.plugins = {
   { "mbbill/fencview" },
   { "mildred/vim-bufmru" },
   { "morhetz/gruvbox" },
+  { 'ojroques/nvim-osc52',
+    config = function()
+      vim.keymap.set('n', '<leader>c', require('osc52').copy_operator, {expr = true})
+      vim.keymap.set('n', '<leader>cc', '<leader>c_', {remap = true})
+      vim.keymap.set('v', '<leader>c', require('osc52').copy_visual)
+    end
+  },
   {
     "phaazon/hop.nvim",
     event = "BufRead",
@@ -443,3 +450,7 @@ set tags=./tags;,tags;
 nnoremap gt :ts <C-R>=expand("<cword>")<CR><CR>
 
 ]])
+
+vim.keymap.set('n', '<leader>y', require('osc52').copy_operator, {expr = true})
+vim.keymap.set('n', '<leader>yy', '<leader>y_', {remap = true})
+vim.keymap.set('v', '<leader>y', require('osc52').copy_visual)

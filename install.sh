@@ -195,6 +195,7 @@ install_conda(){
 }
 
 
+#yum install xsel
  #update
  #install_ubuntu_pkgs
  #install_wsl

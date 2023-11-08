@@ -88,6 +88,8 @@ zt wait for \
 zt wait binary from"gh-r" lman lbin for \
   if'[[ -z "$commands[exa]" ]]' @ogham/exa \
   if'[[ -z "$commands[fd]" ]]' @sharkdp/fd  \
+  if'[[ -z "$commands[gron]" ]]' @tomnomnom/gron  \
+  if'[[ -z "$commands[tig]" ]]' @jonas/tig \
   if'[[ -z "$commands[jless]" ]]' PaulJuliusMartinez/jless
 
 

@@ -49,3 +49,5 @@ menus/
 .DS_Store
 lvim.old
 lvim/lazy-lock.json
+zsh/.zsh_sessions/
+.android

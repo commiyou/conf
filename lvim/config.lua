@@ -252,6 +252,12 @@ formatters.setup({
 --   },
 -- }
 
+
+local function echo(text, hl_group)
+  --vim.api.nvim_echo({ { string.format('[conf] %s', text), hl_group or 'Normal' } }, false, {})
+  print(string.format('[conf] %s', text))
+end
+
 lvim.plugins = {
   { "andersevenrud/cmp-tmux", dependencies = "hrsh7th/nvim-cmp", event = "InsertEnter" },
   -- { "andymass/vim-matchup" },
@@ -314,21 +320,29 @@ lvim.plugins = {
   { "mbbill/fencview" },
   { "mildred/vim-bufmru" },
   { "morhetz/gruvbox" },
-  { 'ojroques/nvim-osc52',
-    -- iterm2 
+  {
+    'ojroques/nvim-osc52',
+    -- enabled = #(os.getenv('SSH_TTY') or "") > 0, -- if inside SSH
+    -- iterm2
     config = function()
       require('osc52').setup {
-        max_length = 0,           -- Maximum length of selection (0 for no limit)
-        silent = false,           -- Disable message on successful copy
+        max_length = 0,          -- Maximum length of selection (0 for no limit)
+        silent = true,           -- Disable message on successful copy
         trim = true,             -- Trim surrounding whitespaces before copy
         tmux_passthrough = true, -- Use tmux passthrough (requires tmux: set -g allow-passthrough on)
+        --
+        -- Use tmux passthrough (requires tmux: set -g allow-passthrough on)
+        --tmux_passthrough = #(os.getenv('SSH_TTY') or "") > 0, -- if inside SSH
       }
-      function copy()
+      local function copy()
+        -- echo(vim.v.event.operator .. vim.v.event.regname)
+        -- check vim.o.clipboard not override
         if vim.v.event.operator == 'y' and (vim.v.event.regname == '' or vim.v.event.regname == '+') then
           require('osc52').copy_register('+')
         end
       end
-      vim.api.nvim_create_autocmd('TextYankPost', {callback = copy})
+
+      vim.api.nvim_create_autocmd('TextYankPost', { callback = copy })
     end
   },
   {
@@ -410,8 +424,9 @@ vim.o.wrap = true
 vim.opt.isfname = vim.opt.isfname - "="
 vim.o.mouse = "h"
 vim.o.splitbelow = false
-vim.o.clipboard = ""
+vim.o.clipboard = #(os.getenv('SSH_TTY') or "") > 0 and "unnamedplus" or "" -- if inside SSH enable
 vim.o.et = true
+
 
 -- put({1, 2, 3})
 function _G.put(...)
@@ -460,3 +475,31 @@ set tags=./tags;,tags;
 nnoremap gt :ts <C-R>=expand("<cword>")<CR><CR>
 
 ]])
+
+local function curr_clipboard()
+  return vim.o.clipboard == "unnamedplus" and "CB" or ""
+end
+local function curr_paste()
+  return vim.o.paste and "P" or ""
+end
+
+
+local components = require "lvim.core.lualine.components"
+--tableMerge(lvim.builtin.lualine.sections.lualine_x, lvim.builtin.lualine.sections.lualine_x, { 'encoding' })
+--
+lvim.builtin.lualine.sections.lualine_c = {
+  components.diff,
+  components.python_env,
+  curr_clipboard,
+  curr_paste,
+  'searchcount',
+
+}
+lvim.builtin.lualine.sections.lualine_x = {
+  'hostname',
+  components.encoding,
+  components.diagnostics,
+  components.lsp,
+  components.spaces,
+  components.filetype,
+}

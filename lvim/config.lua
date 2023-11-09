@@ -458,6 +458,7 @@ command! -nargs=+ -complete=command Pmsg call s:pmsg(<q-args>)
 
 set ttm=10
 set tm=500
+set fileencodings=gb18030,utf8
 
 nnoremap <silent><C-w>z :MaximizerToggle<CR>
 vnoremap <silent><C-w>z :MaximizerToggle<CR>gv

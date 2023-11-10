@@ -44,7 +44,3 @@
 [user]
 	name = Commi You
 	email = commiyou@gmail.com
-[https]
-	proxy = http://agent.baidu.com:8118
-[http]
-	proxy = http://agent.baidu.com:8118

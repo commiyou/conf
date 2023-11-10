@@ -263,9 +263,8 @@ proxy_unset() {
   unset http_proxy
 }
 
-cd_ () {
+__cd () {
   #set -x
-
   if [[ -e "$1" && ! -d "$1" ]]; then
     builtin cd "${1%/*}" && return
   fi
@@ -293,4 +292,4 @@ cd_ () {
 
   #set +x
 }
-alias cd="cd_"
+alias c="__cd"

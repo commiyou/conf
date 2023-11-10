@@ -21,7 +21,7 @@ alias -g ND='*(/om[1])'  # newest directory
 alias vn='vim *(.om[1]^D)'
 
 alias -g L=" | less"
-alias -g LR="| command less -R"  # less with colors support
+alias -g LC="| command less -R"  # less with colors support
 alias -g G=" | LC_ALL=C command grep -i --color=auto -a"
 alias -g P=" | pprint | less"
 alias -g NE="2> /dev/null"
@@ -42,6 +42,7 @@ alias -g H=" | head"
 alias -g H1=" | head -1"
 alias -g T=" | tail "
 alias -g T1=" | tail -1"
+alias -g WL=" | wc -l"
 
 alias -g E="luit -encoding gb18030"  # env gb18030 to utf
 if type wslview > /dev/null; then

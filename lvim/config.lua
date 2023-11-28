@@ -10,7 +10,7 @@ an executable
 
 -- general
 lvim.log.level = "warn"
-lvim.format_on_save = false
+--#lvim.format_on_save = true
 -- lvim.colorscheme = "onedarker"
 lvim.colorscheme = "sonokai"
 -- to disable icons and use a minimalist setup, uncomment the following
@@ -298,7 +298,7 @@ lvim.plugins = {
   { "hrsh7th/cmp-cmdline",            dependencies = "hrsh7th/nvim-cmp", event = "InsertEnter" },
   -- { "itchyny/vim-cursorword" },
   {
-    "inkarkat/vim-mark",
+    "commiyou/vim-mark",
     dependencies = { "inkarkat/vim-ingo-library" },
     config = function()
       vim.cmd([[
@@ -308,6 +308,31 @@ lvim.plugins = {
      nmap <leader>M <Plug>MarkSet
      ]])
     end,
+  },
+  {
+    -- quick motion
+    -- s/S/gs<char><char>: search forward/backward/other window
+    -- s<space><space> to jump to an empty line. 
+    -- s{char}<space> to jump to the end of a line
+    -- s<enter> to repeat the last search.
+    -- s<enter><enter>... or s{char}<enter><enter>... to traverse through the matches.
+    "ggandor/leap.nvim",
+    dependencies = "tpope/vim-repeat" ,
+    config = function()
+      require('leap').add_default_mappings()
+    end
+  },
+  {
+    -- TODO
+    --Delete/fold/comment/etc. paragraphs without leaving your position (zfarp[leap]).
+    -- Clone text objects in the blink of an eye, even from another window, by turning on paste_on_remote_yank (yaRp[leap]).
+    -- Do the above stunt in Insert mode (...<C-o>yaRW[leap]...).
+    -- Fix a typo with a short, atomic command sequence (cimw[leap][correction]).
+    -- Operate on distant lines: drr[leap].
+    -- Use count: e.g. y3rr[leap] yanks 3 lines, just as 3yy would do.
+
+    "ggandor/leap-spooky.nvim",
+    dependencies = "ggandor/leap.nvim" ,
   },
   {
     -- https://github.com/daipeihust/im-select install binary
@@ -346,13 +371,52 @@ lvim.plugins = {
     end
   },
   {
-    "phaazon/hop.nvim",
-    event = "BufRead",
+    "romgrk/nvim-treesitter-context",
     config = function()
-      require("hop").setup()
-      vim.api.nvim_set_keymap("n", "s", ":HopChar2<cr>", { silent = true })
-      vim.api.nvim_set_keymap("n", "S", ":HopWord<cr>", { silent = true })
-    end,
+      require("treesitter-context").setup{
+        enable = true, -- Enable this plugin (Can be enabled/disabled later via commands)
+        throttle = true, -- Throttles plugin updates (may improve performance)
+        max_lines = 0, -- How many lines the window should span. Values <= 0 mean no limit.
+        patterns = { -- Match patterns for TS nodes. These get wrapped to match at word boundaries.
+          -- For all filetypes
+          -- Note that setting an entry here replaces all other patterns for this entry.
+          -- By setting the 'default' entry below, you can control which nodes you want to
+          -- appear in the context window.
+          default = {
+            'class',
+            'function',
+            'method',
+          },
+        },
+      }
+    end
+  },
+  -- {
+  --   "phaazon/hop.nvim",
+  --   event = "BufRead",
+  --   config = function()
+  --     require("hop").setup()
+  --     vim.api.nvim_set_keymap("n", "s", ":HopChar2<cr>", { silent = true })
+  --     vim.api.nvim_set_keymap("n", "S", ":HopWord<cr>", { silent = true })
+  --   end,
+  -- },
+  {
+    "rmagatti/goto-preview",
+    config = function()
+      require('goto-preview').setup {
+        width = 120; -- Width of the floating window
+        height = 25; -- Height of the floating window
+        default_mappings = false; -- Bind default mappings
+        debug = false; -- Print debug information
+        opacity = nil; -- 0-100 opacity level of the floating window where 100 is fully transparent.
+        post_open_hook = nil -- A function taking two arguments, a buffer and a window to be ran as a hook.
+        -- You can use "default_mappings = true" setup option
+        -- Or explicitly set keybindings
+        -- vim.cmd("nnoremap gpd <cmd>lua require('goto-preview').goto_preview_definition()<CR>")
+        -- vim.cmd("nnoremap gpi <cmd>lua require('goto-preview').goto_preview_implementation()<CR>")
+        -- vim.cmd("nnoremap gP <cmd>lua require('goto-preview').close_all_win()<CR>")
+      }
+    end
   },
   {
     "RRethy/vim-hexokinase",
@@ -364,11 +428,20 @@ lvim.plugins = {
   { "simrat39/symbols-outline.nvim" },
   { "sindrets/diffview.nvim",       dependencies = "nvim-lua/plenary.nvim" },
   { "szw/vim-maximizer" },
-  { "sainnhe/sonokai" },
+  { "sainnhe/sonokai",
+    config = function()
+      vim.g.sonokai_style = 'default'
+      vim.g.sonokai_transparent_background = 0
+      vim.g.sonokai_diagnostic_text_highlight = 1
+      vim.g.sonokai_diagnostic_line_highlight = 1
+      vim.g.sonokai_better_performance = 1
+    end
+  },
   { "tpope/vim-abolish" },  -- :%Subvert/facilit{y,ies}/building{,s}/g
   { "tpope/vim-fugitive" },
-  { "tpope/vim-surround" }, --  https://github.com/tpope/vim-surround   cs{char}{char} / ds{char} / ys{motion}{char}
-  { "tpope/vim-repeat" },   --
+  { "tpope/vim-surround" }, --  https://github.com/tpope/vim-surround   cs{from_char}{to_char} / ds{char} / ys{motion}{char}
+  -- yssb - wrap the entire line in parentheses
+  { "tpope/vim-repeat" },   -- ysiw<em> 
   -- {
   --   "tzachar/cmp-tabnine",
   --   build = "./install.sh",
@@ -424,7 +497,8 @@ vim.o.wrap = true
 vim.opt.isfname = vim.opt.isfname - "="
 vim.o.mouse = "h"
 vim.o.splitbelow = false
-vim.o.clipboard = #(os.getenv('SSH_TTY') or "") > 0 and "unnamedplus" or "" -- if inside SSH enable
+--vim.o.clipboard = #(os.getenv('SSH_TTY') or "") > 0 and "unnamedplus" or "" -- if inside SSH enable
+vim.o.clipboard = ""
 vim.o.et = true
 
 
@@ -458,7 +532,7 @@ command! -nargs=+ -complete=command Pmsg call s:pmsg(<q-args>)
 
 set ttm=10
 set tm=500
-set fileencodings=gb18030,utf8
+set fileencodings=utf8,gb18030
 
 nnoremap <silent><C-w>z :MaximizerToggle<CR>
 vnoremap <silent><C-w>z :MaximizerToggle<CR>gv
@@ -473,7 +547,23 @@ autocmd FileType c,cpp nnoremap <silent> ]f :call
 " autocmd FileType c,cpp :FencAutoDetect
 
 set tags=./tags;,tags;
+set lcs=tab::\|\,trail:-\,eol:$   " listchars
 nnoremap gt :ts <C-R>=expand("<cword>")<CR><CR>
+if filereadable(expand("~/.self.vimrc"))
+source ~/.self.vimrc
+endif
+
+" https://github.com/tmux/tmux/issues/1246
+" Enable true color 启用终端24位色
+" if exists('+termguicolors')
+"   let &t_8f = "\<Esc>[38;2;%lu;%lu;%lum"
+"   let &t_8b = "\<Esc>[48;2;%lu;%lu;%lum"
+"   set termguicolors
+" endif
+
+if (has("termguicolors"))
+  set termguicolors
+endif
 
 ]])
 
@@ -498,9 +588,10 @@ lvim.builtin.lualine.sections.lualine_c = {
 }
 lvim.builtin.lualine.sections.lualine_x = {
   'hostname',
-  components.encoding,
+  'encoding',
   components.diagnostics,
   components.lsp,
   components.spaces,
   components.filetype,
 }
+

@@ -130,7 +130,7 @@ zt wait has'lua' for \
   atload'!export _ZL_DATA=$XDG_CACHE_HOME/.zlua;' \
   skywind3000/z.lua \
   atload'!function _z() { _zlua "$@"; }; alias z="nocorrect _fz"' \
-  changyuheng/fz 
+  commiyou/fz.sh
 
 #zplugin ice wait'1' lucid
 #zplugin light laggardkernel/zsh-thefuck
@@ -160,10 +160,10 @@ zt wait for \
   zdharma-continuum/zsh-editing-workbench 
 
 
-zt wait'1' for \
-  trigger-load'!conda;!ipython;!pip;!python;' commiyou/conda-init-zsh-plugin \
-  blockf as'completion' \
-  conda-incubator/conda-zsh-completion
+#zt wait'1' for \
+#  trigger-load'!conda;!ipython;!pip;!python;' commiyou/conda-init-zsh-plugin \
+#  blockf as'completion' \
+#  conda-incubator/conda-zsh-completion
 
 
 # completions

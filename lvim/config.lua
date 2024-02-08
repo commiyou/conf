@@ -9,12 +9,15 @@ an executable
 -- THESE ARE EXAMPLE CONFIGS FEEL FREE TO CHANGE TO WHATEVER YOU WANT
 
 -- general
+--lvim.use_icons = false
 lvim.log.level = "warn"
---#lvim.format_on_save = true
--- lvim.colorscheme = "onedarker"
+lvim.format_on_save.enabled = true
+lvim.format_on_save.pattern = { "*.sh", "*.py", "*.lua" }
+
+--lvim.colorscheme = "onedarker"
 lvim.colorscheme = "sonokai"
 -- to disable icons and use a minimalist setup, uncomment the following
--- lvim.use_icons = false
+lvim.use_icons = false
 
 -- keymappings [view all the defaults by pressing <leader>Lk]
 lvim.leader = "space"
@@ -151,6 +154,15 @@ lvim.builtin.which_key.mappings["o"] = {
 }
 lvim.builtin.which_key.mappings["[b"] = { "<cmd>BufMRUPrev<cr>", "BufMRUPrev" }
 lvim.builtin.which_key.mappings["]b"] = { "<cmd>BufMRUNext<cr>", "BufMRUNext" }
+lvim.builtin.which_key.mappings["t"] = {
+  name = "Diagnostics",
+  t = { "<cmd>TroubleToggle<cr>", "trouble" },
+  w = { "<cmd>TroubleToggle workspace_diagnostics<cr>", "workspace" },
+  d = { "<cmd>TroubleToggle document_diagnostics<cr>", "document" },
+  q = { "<cmd>TroubleToggle quickfix<cr>", "quickfix" },
+  l = { "<cmd>TroubleToggle loclist<cr>", "loclist" },
+  r = { "<cmd>TroubleToggle lsp_references<cr>", "references" },
+}
 
 -- TODO: User Config for predefined plugins
 -- After changing plugin config exit and reopen LunarVim, Run :PackerInstall :PackerCompile
@@ -218,8 +230,9 @@ require("nvim-treesitter.install").prefer_git = true
 local formatters = require("lvim.lsp.null-ls.formatters")
 formatters.setup({
   -- { command = "stylua", filetypes = { "lua" } }, -- cargo install stylua
-  { command = "black",       filetypes = { "python" } },
-  { command = "isort",       filetypes = { "python" } },
+  --  pip3 install click==7.1.2 'black[python2]==21.4b0'
+  { command = "black", filetypes = { "python" } },
+  { command = "isort", filetypes = { "python" } },
   -- { command = "clang-format", args = { "--style={BasedOnStyle: Google, DerivePointerAlignment: false}" } },
   { command = "clang-format" },
 })
@@ -260,6 +273,7 @@ end
 
 lvim.plugins = {
   { "andersevenrud/cmp-tmux", dependencies = "hrsh7th/nvim-cmp", event = "InsertEnter" },
+
   -- { "andymass/vim-matchup" },
   {
     "christoomey/vim-tmux-navigator",
@@ -291,17 +305,121 @@ lvim.plugins = {
   { "ConradIrwin/vim-bracketed-paste" },
   { "dbeniamine/cheat.sh-vim" },
   { "elzr/vim-json" },
-  { "folke/trouble.nvim" },
+  {
+    -- https://github.com/echasnovski/mini.align
+    -- ga/gA to enter split lua pattern
+    -- Press s to enter split Lua pattern.
+    -- Press j to choose justification side from available ones ("left", "center", "right", "none").
+    -- Press m to enter merge delimiter.
+    -- Press f to enter filter Lua expression to configure which parts will be affected (like "align only first column").
+    -- Press i to ignore some commonly unwanted split matches.
+    -- Press p to pair neighboring parts so they be aligned together.
+    -- Press t to trim whitespace from parts.
+    -- Press <BS> (backspace) to delete some last pre-step.
+    "echasnovski/mini.align",
+    version = "*",
+    keys = { "ga", "gA" },
+    opts = function()
+      require("mini.align").setup()
+    end,
+  },
+  {
+    'echasnovski/mini.hipatterns',
+    event = { "BufReadPost", "BufNewFile", "BufWritePre" },
+    opts = function()
+      local hi = require("mini.hipatterns")
+      return {
+        highlighters = {
+          fixme = { pattern = '%f[%w]()FIXME()%f[%W]', group = 'MiniHipatternsFixme' },
+          hack  = { pattern = '%f[%w]()HACK()%f[%W]',  group = 'MiniHipatternsHack'  },
+          todo  = { pattern = '%f[%w]()TODO()%f[%W]',  group = 'MiniHipatternsTodo'  },
+          note  = { pattern = '%f[%w]()NOTE()%f[%W]',  group = 'MiniHipatternsNote'  },
+
+          -- Highlight hex color strings (`#rrggbb`) using that color
+          hex_color = hi.gen_highlighter.hex_color(),
+        },
+      }
+    end,
+  },
+  { 
+    -- https://github.com/echasnovski/mini.nvim/blob/main/readmes/mini-bracketed.md
+    -- Buffer	[B [b ]b ]B	MiniBracketed.buffer()
+    -- Comment block	[C [c ]c ]C	MiniBracketed.comment()
+    -- Conflict marker	[X [x ]x ]X	MiniBracketed.conflict()
+    -- Diagnostic	[D [d ]d ]D	MiniBracketed.diagnostic()
+    -- File on disk	[F [f ]f ]F	MiniBracketed.file()
+    -- Indent change	[I [i ]i ]I	MiniBracketed.indent()
+    -- Jump from jumplist inside current buffer	[J [j ]j ]J	MiniBracketed.jump()
+    -- Location from location list	[L [l ]l ]L	MiniBracketed.location()
+    -- Old files	[O [o ]o ]O	MiniBracketed.oldfile()
+    -- Quickfix entry from quickfix list	[Q [q ]q ]Q	MiniBracketed.quickfix()
+    -- Tree-sitter node and parents	[T [t ]t ]T	MiniBracketed.treesitter()
+    -- Undo states from specially tracked linear history	[U [u ]u ]U	MiniBracketed.undo()
+    -- Window in current tab	[W [w ]w ]W	MiniBracketed.window()
+    -- Yank selection replacing latest put region	[Y [y ]y ]Y	MiniBracketed.yank()
+    'echasnovski/mini.bracketed', version = false ,
+    opts = function()
+      require("mini.jump").setup()
+    end,
+  },
+  { 
+    --     object_scope = 'ii',
+    -- object_scope_with_border = 'ai',
+
+    -- Motions (jump to respective border line; if not present - body line)
+    -- goto_top = '[i',
+    -- goto_bottom = ']i',
+    'echasnovski/mini.indentscope', version = false ,
+    opts = function()
+      require("mini.indentscope").setup()
+    end,
+  },
+
+  { 
+    -- forward = 'f',
+    -- backward = 'F',
+    -- forward_till = 't',
+    -- backward_till = 'T',
+    -- repeat_jump = ';',
+    'echasnovski/mini.jump', version = false ,
+
+    opts = function()
+      require("mini.jump").setup()
+    end,
+  },
+  { 'echasnovski/mini.fuzzy', version = false ,
+    opts = function()
+      require("mini.fuzzy").setup()
+      require('telescope').setup({
+        defaults = {
+          generic_sorter = require('mini.fuzzy').get_telescope_sorter
+        }
+      })
+
+    end,
+  },
+  -- { 'echasnovski/mini.completion', version = false ,
+  --   opts = function()
+  --     require("mini.completion").setup()
+  --   end,
+  -- },
+
+  { "folke/trouble.nvim",
+    cmd = "TroubleToggle",
+  },
   { "farmergreg/vim-lastplace" },
   -- { "f-person/git-blame.nvim" }, -- too slow when big file!
   { "hnamikaw/vim-autohotkey" },
-  { "hrsh7th/cmp-cmdline",            dependencies = "hrsh7th/nvim-cmp", event = "InsertEnter" },
+  { "hrsh7th/cmp-cmdline",
+    dependencies = "hrsh7th/nvim-cmp", 
+    event = "InsertEnter" },
   -- { "itchyny/vim-cursorword" },
   {
     "commiyou/vim-mark",
     dependencies = { "inkarkat/vim-ingo-library" },
     config = function()
       vim.cmd([[
+     let g:mwDefaultHighlightingPalette = 'extended'
      let g:mwHistAdd = '@'
      let g:mwAutoLoadMarks = 1
      let g:mw_no_mappings = 1
@@ -342,9 +460,258 @@ lvim.plugins = {
       require("im_select").setup({})
     end,
   },
+  --  {
+  -- 	-- https://github.com/karb94/neoscroll.nvim
+  -- 	"karb94/neoscroll.nvim",
+  -- 	keys = {
+  -- 		"<C-u>",
+  -- 		"<C-d>",
+  -- 		"<C-b>",
+  -- 		"<C-f>",
+  -- 		"<C-y>",
+  -- 		"<C-e>",
+  -- 		"zt",
+  -- 		"zz",
+  -- 		"zb",
+  -- 	},
+  -- 	config = function()
+  -- 		require("neoscroll").setup()
+  -- 	end,
+  -- },
   { "mbbill/fencview" },
   { "mildred/vim-bufmru" },
   { "morhetz/gruvbox" },
+  {
+    -- https://github.com/xeho91/.dotfiles/blob/main/editors/nvim/lazyvim/lua/plugins/dial.lua
+    "monaqa/dial.nvim",
+    -- stylua: ignore
+    keys = {
+      { mode = "n", "<C-a>", function() return require("dial.map").inc_normal() end, expr = true, desc = "Increment" },
+      { mode = "n", "<C-x>", function() return require("dial.map").dec_normal() end, expr = true, desc = "Decrement" },
+      { mode = "v" ,"<C-a>", function() return require("dial.map").inc_visual() end, expr = true, desc = "Increment" },
+      { mode = "v" ,"<C-x>", function() return require("dial.map").dec_visual() end, expr = true, desc = "Decrement" },
+    },
+    config = function()
+      local augend = require("dial.augend")
+      require("dial.config").augends:register_group({
+        default = {
+          augend.integer.alias.decimal,
+          augend.integer.alias.decimal_int,
+          augend.integer.alias.hex,
+          augend.integer.alias.octal,
+          augend.integer.alias.binary,
+          augend.date.alias["%Y/%m/%d"],
+          augend.date.alias["%m/%d/%Y"],
+          augend.date.alias["%d/%m/%Y"],
+          augend.date.alias["%m/%d/%y"],
+          augend.date.alias["%d/%m/%y"],
+          augend.date.alias["%m/%d"],
+          augend.date.alias["%-m/%-d"],
+          augend.date.alias["%Y-%m-%d"],
+          augend.date.alias["%Y年%-m月%-d日"],
+          augend.date.alias["%Y年%-m月%-d日(%ja)"],
+          augend.date.alias["%H:%M:%S"],
+          augend.date.alias["%H:%M"],
+          augend.constant.alias.ja_weekday,
+          augend.constant.alias.ja_weekday_full,
+          augend.constant.alias.bool,
+          augend.constant.alias.alpha,
+          augend.constant.alias.Alpha,
+          augend.constant.new({
+            elements = { "and", "or" },
+            word = true,
+            cyclic = true,
+          }),
+          augend.constant.new({
+            elements = { "AND", "OR" },
+            word = true,
+            cyclic = true,
+          }),
+          augend.constant.new({
+            elements = { "enable", "disable" },
+            word = true,
+            cyclic = true,
+          }),
+          augend.constant.new({
+            elements = { "Enable", "Disable" },
+            word = true,
+            cyclic = true,
+          }),
+          augend.constant.new({
+            elements = { "ENABLE", "DISABLE" },
+            word = true,
+            cyclic = true,
+          }),
+          augend.constant.new({
+            elements = { "on", "off" },
+            word = true,
+            cyclic = true,
+          }),
+          augend.constant.new({
+            elements = { "On", "Off" },
+            word = true,
+            cyclic = true,
+          }),
+          augend.constant.new({
+            elements = { "ON", "OFF" },
+            word = true,
+            cyclic = true,
+          }),
+          augend.constant.new({
+            elements = { "info", "warning", "error" },
+            word = true,
+            cyclic = true,
+          }),
+          augend.constant.new({
+            elements = { "INFO", "WARN", "ERROR" },
+            word = true,
+            cyclic = true,
+          }),
+          augend.constant.new({
+            elements = { "Info", "Warn", "Error" },
+            word = true,
+            cyclic = true,
+          }),
+          augend.constant.new({
+            elements = { "TODO", "FIXME" },
+            word = true,
+            cyclic = true,
+          }),
+          augend.constant.new({
+            elements = { "&&", "||" },
+            word = false,
+            cyclic = true,
+          }),
+          augend.constant.new({
+            elements = { "up", "down" },
+            word = true,
+            cyclic = true,
+          }),
+          augend.constant.new({
+            elements = { "Up", "Down" },
+            word = true,
+            cyclic = true,
+          }),
+          augend.constant.new({
+            elements = { "UP", "DOWN" },
+            word = true,
+            cyclic = true,
+          }),
+          augend.constant.new({
+            elements = { "top", "left", "right", "bottom" },
+            word = true,
+            cyclic = true,
+          }),
+          augend.constant.new({
+            elements = { "Top", "Left", "Right", "Bottom" },
+            word = true,
+            cyclic = true,
+          }),
+          augend.constant.new({
+            elements = { "TOP", "LEFT", "RIGHT", "BOTTOM" },
+            word = true,
+            cyclic = true,
+          }),
+          augend.constant.new({
+            elements = { "north", "east", "south", "west" },
+            word = true,
+            cyclic = true,
+          }),
+          augend.constant.new({
+            elements = { "North", "East", "South", "West" },
+            word = true,
+            cyclic = true,
+          }),
+          augend.constant.new({
+            elements = { "NORTH", "EAST", "SOUTH", "WEST" },
+            word = true,
+            cyclic = true,
+          }),
+          augend.constant.new({
+            elements = { "min", "max" },
+            word = true,
+            cyclic = true,
+          }),
+          augend.constant.new({
+            elements = { "Min", "Max" },
+            word = true,
+            cyclic = true,
+          }),
+          augend.constant.new({
+            elements = { "MIN", "MAX" },
+            word = true,
+            cyclic = true,
+          }),
+          augend.semver.alias.semver,
+        },
+
+        typescript = {
+          augend.integer.alias.decimal,
+          augend.integer.alias.hex,
+          augend.constant.new({ elements = { "let", "const" } }),
+        },
+
+        visual = {
+          augend.integer.alias.decimal,
+          augend.integer.alias.hex,
+          augend.date.alias["%Y/%m/%d"],
+          augend.constant.alias.alpha,
+          augend.constant.alias.Alpha,
+        },
+      })
+    end,
+  },
+  -- {
+  --   -- https://github.com/nathom/filetype.nvim
+  --   "nathom/filetype.nvim",
+  --   config = function()
+  --     require("filetype").setup({
+  --       overrides = {
+  --         extensions = {
+  --           html = "html",
+  --           cts = "typescript",
+  --           mts = "typescript",
+  --           -- Set the filetype of *.pn files to potion
+  --           pn = "potion",
+  --           hbs = "html.handlebars",
+  --         },
+  --         literal = {
+  --           ["editorconfig"] = "editorconfig",
+  --           -- Set the filetype of files named "MyBackupFile" to lua
+  --           MyBackupFile = "lua",
+
+  --         },
+  --         complex = {
+  --           -- Set the filetype of any full filename matching the regex to gitconfig
+  --           [".*git/config"] = "gitconfig", -- Included in the plugin
+  --         },
+
+  --         -- The same as the ones above except the keys map to functions
+  --         function_extensions = {
+  --           ["cpp"] = function()
+  --             vim.bo.filetype = "cpp"
+  --             -- Remove annoying indent jumping
+  --             vim.bo.cinoptions = vim.bo.cinoptions .. "L0"
+  --           end,
+  --           ["pdf"] = function()
+  --             vim.bo.filetype = "pdf"
+  --             -- Open in PDF viewer (Skim.app) automatically
+  --             vim.fn.jobstart("open -a skim " .. '"' .. vim.fn.expand("%") .. '"')
+  --           end,
+  --         },
+  --         function_literal = {
+  --           Brewfile = function()
+  --             vim.cmd("syntax off")
+  --           end,
+  --         },
+  --         shebang = {
+  --           -- Set the filetype of files with a dash shebang to sh
+  --           dash = "sh",
+  --         },
+  --       },
+  --     })
+  --   end,
+  -- },
   {
     'ojroques/nvim-osc52',
     -- enabled = #(os.getenv('SSH_TTY') or "") > 0, -- if inside SSH
@@ -369,6 +736,11 @@ lvim.plugins = {
 
       vim.api.nvim_create_autocmd('TextYankPost', { callback = copy })
     end
+  },
+  {
+    "ray-x/lsp_signature.nvim",
+    event = "BufRead",
+    config = function() require"lsp_signature".on_attach() end,
   },
   {
     "romgrk/nvim-treesitter-context",
@@ -425,16 +797,103 @@ lvim.plugins = {
       vim.g.Hexokinase_highlighters = { "backgroundfull" }
     end,
   },
-  { "simrat39/symbols-outline.nvim" },
-  { "sindrets/diffview.nvim",       dependencies = "nvim-lua/plenary.nvim" },
+  {
+    "simrat39/symbols-outline.nvim",
+    config = function()
+      require('symbols-outline').setup()
+    end
+  },
+  {
+    "sindrets/diffview.nvim", 
+    dependencies = "nvim-lua/plenary.nvim" 
+  },
+  {
+    -- https://github.com/sQVe/sort.nvim
+    --   -- List of delimiters, in descending order of priority, to automatically sort on.
+    -- delimiters = {
+    --   ',',
+    --   '|',
+    --   ';',
+    --   ':',
+    --   's', -- Space
+    --   't', -- Tab
+    --   }
+    --   Cmd :[range]Sort[!] [delimiter][b][i][n][o][u][x]
+    --   Use [!] to reverse the sort order.
+    --   Use [b] to sort based on the first binary number in the word.
+    --   Use [i] to ignore the case when sorting.
+    --   Use [n] to sort based on the first decimal number in the word.
+    --   Use [o] to sort based on the first octal number in the word.
+    --   Use [u] to only keep the first instance of words within the selection. Leading and trailing whitespace are not considered when testing for uniqueness.
+    --   Use [x] to sort based on the first hexadecimal number in the word. A leading 0x or 0X is ignored.
+    "sQVe/sort.nvim",
+    cmd = { "Sort" },
+    config = function()
+      require("sort").setup({})
+    end,
+  },
+  {
+    "smoka7/multicursors.nvim",
+    event = "VeryLazy",
+    dependencies = {
+      'smoka7/hydra.nvim',
+    },
+    opts = {},
+    cmd = { 'MCstart', 'MCvisual', 'MCclear', 'MCpattern', 'MCvisualPattern', 'MCunderCursor' },
+    keys = {
+      {
+        mode = { 'v', 'n' },
+        '<Leader>ee',
+        '<cmd>MCstart<cr>',
+        desc = 'Create a selection for selected text or word under the cursor',
+      },
+    },
+  },
   { "szw/vim-maximizer" },
   { "sainnhe/sonokai",
     config = function()
+      vim.cmd([[
+        function! s:sonokai_custom() abort
+        " Link a highlight group to a predefined highlight group.
+        " See `colors/sonokai.vim` for all predefined highlight groups.
+        " highlight! link groupA groupB
+        " highlight! link groupC groupD
+
+        " Initialize the color palette.
+        " The first parameter is a valid value for `g:sonokai_style`,
+        " and the second parameter is a valid value for `g:sonokai_colors_override`.
+        let l:palette = sonokai#get_palette('default', {})
+        " Define a highlight group.
+        " The first parameter is the name of a highlight group,
+        " the second parameter is the foreground color,
+        " the third parameter is the background color,
+        " the fourth parameter is for UI highlighting which is optional,
+        " and the last parameter is for `guisp` which is also optional.
+        " See `autoload/sonokai.vim` for the format of `l:palette`.
+        " call sonokai#highlight('NonText', l:palette.red, l:palette.none, 'undercurl', l:palette.red)
+
+        " 
+        " The "NonText" highlighting will be used for "eol", "extends" and "precedes".  "Whitespace" for "nbsp", "tab" and "trail".
+        " SpecialKey Unprintable characters: Text displayed differently from what it realy is. But not 'listchars' whitespace
+        call sonokai#highlight('NonText', l:palette.grey, l:palette.none)
+        call sonokai#highlight('SpecialKey', l:palette.grey, l:palette.none)
+        call sonokai#highlight('Whitespace', l:palette.grey, l:palette.none)
+
+        endfunction
+
+        augroup SonokaiCustom
+        autocmd!
+        autocmd ColorScheme sonokai call s:sonokai_custom()
+        augroup END
+        ]])
+
       vim.g.sonokai_style = 'default'
       vim.g.sonokai_transparent_background = 0
       vim.g.sonokai_diagnostic_text_highlight = 1
       vim.g.sonokai_diagnostic_line_highlight = 1
       vim.g.sonokai_better_performance = 1
+      -- vim.g.sonokai_enable_italic = 1
+      vim.g.sonokai_disable_italic_comment = 1
     end
   },
   { "tpope/vim-abolish" },  -- :%Subvert/facilit{y,ies}/building{,s}/g
@@ -451,6 +910,12 @@ lvim.plugins = {
   -- },
   { "wellle/tmux-complete.vim" },
   { "yegappan/taglist" },
+  {
+    -- hint when you type
+    "ray-x/lsp_signature.nvim",
+    event = "BufRead",
+    config = function() require"lsp_signature".on_attach() end,
+  },
 }
 
 local cmp = require("cmp")
@@ -460,13 +925,13 @@ cmp.setup({
     { name = "tmux" },
   },
 })
-cmp.setup.cmdline(":", {
-  mapping = cmp.mapping.preset.cmdline(),
-  sources = {
-    { name = "path" },
-    { name = "cmdline" },
-  },
-})
+-- cmp.setup.cmdline(":", {
+--   mapping = cmp.mapping.preset.cmdline(),
+--   sources = {
+--     { name = "path" },
+--     { name = "cmdline" },
+--   },
+-- })
 cmp.setup.cmdline("/", {
   mapping = cmp.mapping.preset.cmdline(),
   sources = {
@@ -547,7 +1012,9 @@ autocmd FileType c,cpp nnoremap <silent> ]f :call
 " autocmd FileType c,cpp :FencAutoDetect
 
 set tags=./tags;,tags;
-set lcs=tab::\|\,trail:-\,eol:$   " listchars
+set list
+" set lcs=tab:>-,trail:·,eol:$   " listchars
+set lcs=tab:>-,trail:·
 nnoremap gt :ts <C-R>=expand("<cword>")<CR><CR>
 if filereadable(expand("~/.self.vimrc"))
 source ~/.self.vimrc
@@ -562,7 +1029,7 @@ endif
 " endif
 
 if (has("termguicolors"))
-  set termguicolors
+set termguicolors
 endif
 
 ]])

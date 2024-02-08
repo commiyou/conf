@@ -1,0 +1,42 @@
+#!/usr/bin/expect
+# relay用户名
+# [可选]开发机地址, 如：user@host
+set HOST [lindex $argv 0]
+# [可选]开发机密码
+set PASSWORD [lindex $argv 1]
+
+# encoding system utf-8
+
+# 自动调整窗口大小
+trap {
+set rows [stty rows]
+set cols [stty columns]
+stty rows $rows columns $cols < $spawn_out(slave,name)
+} WINCH
+
+# 登录relay
+spawn relay-cli -t fp
+#fconfigure $spawn_id -encoding utf-8
+# 打开调试模式
+#exp_internal 1
+# relay EMAIL_PWD + Hi手势认证
+expect {
+    # 自动登录开发机
+    -re "-bash-baidu-ssl*" { 
+        if { "$HOST" != "" } {
+            send "ssh --silent $HOST\r" 
+            # [可选]自动开发机输入密码
+            if { "$PASSWORD" != "" } {
+                expect {
+                    -timeout 1
+                    -re "password:" { send "$PASSWORD\r" }
+                } 
+            }
+        }
+    }
+    exp_continue
+}
+# 关闭调试模式
+#exp_internal 0
+interact
+exit

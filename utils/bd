@@ -1,0 +1,9 @@
+#!/bin/zsh
+target=${1:-kf}
+pwfile=~/.servers.txt
+host=$(cat $pwfile | awk '$1~/'$target'/' | cut -f2 -d " ")
+pw=$(cat $pwfile | awk '$1~/'$target'/' | cut -f3 -d " ")
+echo $host, $pw
+
+#relay-cli -t fp || exit 1
+expect ~/.local/bin/expect_relay-cli  "$host" "$pw"

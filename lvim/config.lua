@@ -206,9 +206,31 @@ require("nvim-treesitter.install").prefer_git = true
 
 -- ---configure a server manually. !!Requires `:LvimCacheReset` to take effect!!
 -- ---see the full default list `:lua print(vim.inspect(lvim.lsp.automatic_configuration.skipped_servers))`
--- vim.list_extend(lvim.lsp.automatic_configuration.skipped_servers, { "pyright" })
--- local opts = {} -- check the lspconfig documentation for a list of all possible options
--- require("lvim.lsp.manager").setup("pyright", opts)
+vim.list_extend(lvim.lsp.automatic_configuration.skipped_servers, { "pyright" })
+local pyright_opts = {
+  single_file_support = true,
+  settings = {
+    pyright = {
+      disableLanguageServices = false,
+      disableOrganizeImports = false
+    },
+    python = {
+      analysis = {
+        autoImportCompletions = true,
+        autoSearchPaths = true,
+        --diagnosticMode = "workspace", -- openFilesOnly, workspace
+        diagnosticMode = "openFilesOnly", -- openFilesOnly, workspace
+        typeCheckingMode = "basic", -- off, basic, strict
+        useLibraryCodeForTypes = true,
+        reportUnusedImport = "none",
+        reportUnusedClass = "none",
+        reportUnusedFunction = "none",
+        reportUnusedVariable = "none",
+      }
+    }
+  },
+}
+require("lvim.lsp.manager").setup("pyright", pyright_opts)
 
 -- ---remove a server from the skipped list, e.g. eslint, or emmet_ls. !!Requires `:LvimCacheReset` to take effect!!
 -- ---`:LvimInfo` lists which server(s) are skiipped for the current filetype
@@ -1016,7 +1038,9 @@ autocmd FileType c,cpp nnoremap <silent> ]f :call
 \ search('\(\(if\\|for\\|while\\|switch\\|catch\)\_s*\)\@64<!(\_[^)]*)\_[^;{}()]*\zs{', "w")<CR>
 " autocmd FileType c,cpp :FencAutoDetect
 
-set tags=./tags;,tags;
+"set tags=./tags;,tags;../tags;
+set tags=./tags;$HOME
+map <C-\> :tab split<CR>:exec("tag ".expand("<cword>"))<CR>
 set list
 " set lcs=tab:>-,trail:·,eol:$   " listchars
 set lcs=tab:>-,trail:·

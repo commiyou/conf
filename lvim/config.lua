@@ -44,6 +44,12 @@ nnoremap <expr> n  'Nn'[v:searchforward]
 nnoremap <expr> N  'nN'[v:searchforward]
 ]])
 
+
+lvim.builtin.telescope.defaults.layout_config.width = 0.7
+lvim.builtin.telescope.defaults.layout_config.preview_cutoff = 75
+
+
+
 -- unmap a default keymapping
 -- vim.keymap.del("n", "<C-Up>")
 -- override a default keymapping
@@ -253,8 +259,8 @@ local formatters = require("lvim.lsp.null-ls.formatters")
 formatters.setup({
   -- { command = "stylua", filetypes = { "lua" } }, -- cargo install stylua
   --  pip3 install click==7.1.2 'black[python2]==21.4b0'
-  { command = "black", filetypes = { "python" } },
-  { command = "isort", filetypes = { "python" } },
+  { command = "black",       filetypes = { "python" } },
+  { command = "isort",       filetypes = { "python" } },
   -- { command = "clang-format", args = { "--style={BasedOnStyle: Google, DerivePointerAlignment: false}" } },
   { command = "clang-format" },
 })
@@ -352,10 +358,10 @@ lvim.plugins = {
       local hi = require("mini.hipatterns")
       return {
         highlighters = {
-          fixme = { pattern = '%f[%w]()FIXME()%f[%W]', group = 'MiniHipatternsFixme' },
-          hack  = { pattern = '%f[%w]()HACK()%f[%W]',  group = 'MiniHipatternsHack'  },
-          todo  = { pattern = '%f[%w]()TODO()%f[%W]',  group = 'MiniHipatternsTodo'  },
-          note  = { pattern = '%f[%w]()NOTE()%f[%W]',  group = 'MiniHipatternsNote'  },
+          fixme     = { pattern = '%f[%w]()FIXME()%f[%W]', group = 'MiniHipatternsFixme' },
+          hack      = { pattern = '%f[%w]()HACK()%f[%W]', group = 'MiniHipatternsHack' },
+          todo      = { pattern = '%f[%w]()TODO()%f[%W]', group = 'MiniHipatternsTodo' },
+          note      = { pattern = '%f[%w]()NOTE()%f[%W]', group = 'MiniHipatternsNote' },
 
           -- Highlight hex color strings (`#rrggbb`) using that color
           hex_color = hi.gen_highlighter.hex_color(),
@@ -363,7 +369,7 @@ lvim.plugins = {
       }
     end,
   },
-  { 
+  {
     -- https://github.com/echasnovski/mini.nvim/blob/main/readmes/mini-bracketed.md
     -- Buffer	[B [b ]b ]B	MiniBracketed.buffer()
     -- Comment block	[C [c ]c ]C	MiniBracketed.comment()
@@ -379,37 +385,42 @@ lvim.plugins = {
     -- Undo states from specially tracked linear history	[U [u ]u ]U	MiniBracketed.undo()
     -- Window in current tab	[W [w ]w ]W	MiniBracketed.window()
     -- Yank selection replacing latest put region	[Y [y ]y ]Y	MiniBracketed.yank()
-    'echasnovski/mini.bracketed', version = false ,
+    'echasnovski/mini.bracketed',
+    version = false,
     opts = function()
       require("mini.jump").setup()
     end,
   },
-  { 
+  {
     --     object_scope = 'ii',
     -- object_scope_with_border = 'ai',
 
     -- Motions (jump to respective border line; if not present - body line)
     -- goto_top = '[i',
     -- goto_bottom = ']i',
-    'echasnovski/mini.indentscope', version = false ,
+    'echasnovski/mini.indentscope',
+    version = false,
     opts = function()
       require("mini.indentscope").setup()
     end,
   },
 
-  { 
+  {
     -- forward = 'f',
     -- backward = 'F',
     -- forward_till = 't',
     -- backward_till = 'T',
     -- repeat_jump = ';',
-    'echasnovski/mini.jump', version = false ,
+    'echasnovski/mini.jump',
+    version = false,
 
     opts = function()
       require("mini.jump").setup()
     end,
   },
-  { 'echasnovski/mini.fuzzy', version = false ,
+  {
+    'echasnovski/mini.fuzzy',
+    version = false,
     opts = function()
       require("mini.fuzzy").setup()
       require('telescope').setup({
@@ -417,7 +428,6 @@ lvim.plugins = {
           generic_sorter = require('mini.fuzzy').get_telescope_sorter
         }
       })
-
     end,
   },
   -- { 'echasnovski/mini.completion', version = false ,
@@ -426,15 +436,18 @@ lvim.plugins = {
   --   end,
   -- },
 
-  { "folke/trouble.nvim",
+  {
+    "folke/trouble.nvim",
     cmd = "TroubleToggle",
   },
   { "farmergreg/vim-lastplace" },
   -- { "f-person/git-blame.nvim" }, -- too slow when big file!
   { "hnamikaw/vim-autohotkey" },
-  { "hrsh7th/cmp-cmdline",
-    dependencies = "hrsh7th/nvim-cmp", 
-    event = "InsertEnter" },
+  {
+    "hrsh7th/cmp-cmdline",
+    dependencies = "hrsh7th/nvim-cmp",
+    event = "InsertEnter"
+  },
   -- { "itchyny/vim-cursorword" },
   {
     "commiyou/vim-mark",
@@ -452,12 +465,12 @@ lvim.plugins = {
   {
     -- quick motion
     -- s/S/gs<char><char>: search forward/backward/other window
-    -- s<space><space> to jump to an empty line. 
+    -- s<space><space> to jump to an empty line.
     -- s{char}<space> to jump to the end of a line
     -- s<enter> to repeat the last search.
     -- s<enter><enter>... or s{char}<enter><enter>... to traverse through the matches.
     "ggandor/leap.nvim",
-    dependencies = "tpope/vim-repeat" ,
+    dependencies = "tpope/vim-repeat",
     config = function()
       require('leap').add_default_mappings()
     end
@@ -472,7 +485,7 @@ lvim.plugins = {
     -- Use count: e.g. y3rr[leap] yanks 3 lines, just as 3yy would do.
 
     "ggandor/leap-spooky.nvim",
-    dependencies = "ggandor/leap.nvim" ,
+    dependencies = "ggandor/leap.nvim",
   },
   {
     -- https://github.com/daipeihust/im-select install binary
@@ -510,8 +523,8 @@ lvim.plugins = {
     keys = {
       { mode = "n", "<C-a>", function() return require("dial.map").inc_normal() end, expr = true, desc = "Increment" },
       { mode = "n", "<C-x>", function() return require("dial.map").dec_normal() end, expr = true, desc = "Decrement" },
-      { mode = "v" ,"<C-a>", function() return require("dial.map").inc_visual() end, expr = true, desc = "Increment" },
-      { mode = "v" ,"<C-x>", function() return require("dial.map").dec_visual() end, expr = true, desc = "Decrement" },
+      { mode = "v", "<C-a>", function() return require("dial.map").inc_visual() end, expr = true, desc = "Increment" },
+      { mode = "v", "<C-x>", function() return require("dial.map").dec_visual() end, expr = true, desc = "Decrement" },
     },
     config = function()
       local augend = require("dial.augend")
@@ -762,16 +775,16 @@ lvim.plugins = {
   {
     "ray-x/lsp_signature.nvim",
     event = "BufRead",
-    config = function() require"lsp_signature".on_attach() end,
+    config = function() require "lsp_signature".on_attach() end,
   },
   {
     "romgrk/nvim-treesitter-context",
     config = function()
-      require("treesitter-context").setup{
-        enable = true, -- Enable this plugin (Can be enabled/disabled later via commands)
+      require("treesitter-context").setup {
+        enable = true,   -- Enable this plugin (Can be enabled/disabled later via commands)
         throttle = true, -- Throttles plugin updates (may improve performance)
-        max_lines = 0, -- How many lines the window should span. Values <= 0 mean no limit.
-        patterns = { -- Match patterns for TS nodes. These get wrapped to match at word boundaries.
+        max_lines = 0,   -- How many lines the window should span. Values <= 0 mean no limit.
+        patterns = {     -- Match patterns for TS nodes. These get wrapped to match at word boundaries.
           -- For all filetypes
           -- Note that setting an entry here replaces all other patterns for this entry.
           -- By setting the 'default' entry below, you can control which nodes you want to
@@ -798,12 +811,12 @@ lvim.plugins = {
     "rmagatti/goto-preview",
     config = function()
       require('goto-preview').setup {
-        width = 120; -- Width of the floating window
-        height = 25; -- Height of the floating window
-        default_mappings = false; -- Bind default mappings
-        debug = false; -- Print debug information
-        opacity = nil; -- 0-100 opacity level of the floating window where 100 is fully transparent.
-        post_open_hook = nil -- A function taking two arguments, a buffer and a window to be ran as a hook.
+        width = 120,              -- Width of the floating window
+        height = 25,              -- Height of the floating window
+        default_mappings = false, -- Bind default mappings
+        debug = false,            -- Print debug information
+        opacity = nil,            -- 0-100 opacity level of the floating window where 100 is fully transparent.
+        post_open_hook = nil      -- A function taking two arguments, a buffer and a window to be ran as a hook.
         -- You can use "default_mappings = true" setup option
         -- Or explicitly set keybindings
         -- vim.cmd("nnoremap gpd <cmd>lua require('goto-preview').goto_preview_definition()<CR>")
@@ -826,8 +839,8 @@ lvim.plugins = {
     end
   },
   {
-    "sindrets/diffview.nvim", 
-    dependencies = "nvim-lua/plenary.nvim" 
+    "sindrets/diffview.nvim",
+    dependencies = "nvim-lua/plenary.nvim"
   },
   {
     -- https://github.com/sQVe/sort.nvim
@@ -872,12 +885,13 @@ lvim.plugins = {
     },
   },
   { "simrat39/symbols-outline.nvim" },
-  { 
+  {
     "sindrets/diffview.nvim",
-    dependencies = "nvim-lua/plenary.nvim" 
+    dependencies = "nvim-lua/plenary.nvim"
   },
   { "szw/vim-maximizer" },
-  { "sainnhe/sonokai",
+  {
+    "sainnhe/sonokai",
     config = function()
       vim.cmd([[
         function! s:sonokai_custom() abort
@@ -899,7 +913,7 @@ lvim.plugins = {
         " See `autoload/sonokai.vim` for the format of `l:palette`.
         " call sonokai#highlight('NonText', l:palette.red, l:palette.none, 'undercurl', l:palette.red)
 
-        " 
+        "
         " The "NonText" highlighting will be used for "eol", "extends" and "precedes".  "Whitespace" for "nbsp", "tab" and "trail".
         " SpecialKey Unprintable characters: Text displayed differently from what it realy is. But not 'listchars' whitespace
         call sonokai#highlight('NonText', l:palette.grey, l:palette.none)
@@ -927,7 +941,7 @@ lvim.plugins = {
   { "tpope/vim-fugitive" },
   { "tpope/vim-surround" }, --  https://github.com/tpope/vim-surround   cs{from_char}{to_char} / ds{char} / ys{motion}{char}
   -- yssb - wrap the entire line in parentheses
-  { "tpope/vim-repeat" },   -- ysiw<em> 
+  { "tpope/vim-repeat" },   -- ysiw<em>
   -- {
   --   "tzachar/cmp-tabnine",
   --   build = "./install.sh",
@@ -941,7 +955,7 @@ lvim.plugins = {
     -- hint when you type
     "ray-x/lsp_signature.nvim",
     event = "BufRead",
-    config = function() require"lsp_signature".on_attach() end,
+    config = function() require "lsp_signature".on_attach() end,
   },
 }
 
@@ -1061,7 +1075,7 @@ if (has("termguicolors"))
 set termguicolors
 endif
 
-" Enable true color ÆôÓÃÖÕ¶Ë24Î»É«
+" Enable true color ?????Õ¶?24Î»É«
 if exists('+termguicolors')
   let &t_8f = "\<Esc>[38;2;%lu;%lu;%lum"
   let &t_8b = "\<Esc>[48;2;%lu;%lu;%lum"
@@ -1071,10 +1085,10 @@ endif
 ]])
 
 local function curr_clipboard()
-  return vim.o.clipboard == "unnamedplus" and "CB" or ""
+  return vim.o.clipboard == "unnamedplus" and "ó±‰«" or ""
 end
 local function curr_paste()
-  return vim.o.paste and "P" or ""
+  return vim.o.paste and "îž£" or ""
 end
 
 
@@ -1097,4 +1111,3 @@ lvim.builtin.lualine.sections.lualine_x = {
   components.spaces,
   components.filetype,
 }
-

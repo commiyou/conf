@@ -11,3 +11,4 @@ umask 022
 
 export ARTISTIC_STYLE_OPTIONS=${XDG_CONFIG_HOME}/astylerc
 
+export RIPGREP_CONFIG_PATH=${XDG_CONFIG_HOME}/ripgreprc

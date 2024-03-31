@@ -1,4 +1,4 @@
-import collections  # type: ignore
+import collections
 import contextlib
 import io
 import itertools

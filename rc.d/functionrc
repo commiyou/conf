@@ -104,15 +104,8 @@ filepath() {
 myip() {
   if [[ -n "$SSH_CONNECTION" ]]; then
     echo $SSH_CONNECTION | cut -f3 -d' '
-  else
-    hostname -i | tail -n +1 | xargs -n1
-  fi
-}
-
-
-myip() {
-  if [[ -n "$SSH_CONNECTION" ]]; then
-    echo $SSH_CONNECTION | cut -f3 -d' '
+  elif [[ $(uname -s) =~ Darwin* ]]; then
+    ipconfig getifaddr en0
   else
     hostname -i | tail -n +1 | xargs -n1
   fi
@@ -293,3 +286,17 @@ __cd () {
   #set +x
 }
 alias c="__cd"
+
+ncsend() {
+  [[ ! $# -eq 2 ]] && return 1
+  echo "nc send $2 to $1.."
+  echo "nc -l 8188 > $2"
+  echo "ncget $2"
+  nc -w 1 "$1" 8188 < "$2"
+}
+
+ncget() {
+  echo "ncget $1"
+  echo "nc -w 1 $(myip) 8188 < $1"
+  nc -l 8188 > "$1"
+}

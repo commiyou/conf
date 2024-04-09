@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+"""python3 utils"""
 import collections
 import contextlib
 import io
@@ -37,6 +39,7 @@ class MetaChar(type):
     """for type hint"""
 
     def __instancecheck__(self, instance: str):
+        """check is cahr"""
         return isinstance(instance, str) and len(instance) == 1
 
 
@@ -47,7 +50,7 @@ class Char(str, metaclass=MetaChar):
 
 
 def _make_bytes(value: object, encoding="utf8"):
-    """Set/Map/Sequence to json str, then to bytes
+    r"""Set/Map/Sequence to json str, then to bytes.
 
     >>> _make_bytes({1,2,3})
     b'[1, 2, 3]'
@@ -108,8 +111,8 @@ def is_chinese_or_alnum(uchar: Char) -> bool:
 
 
 def norm_term(term: str, strict=True, stop_chars: set[Char] = set()) -> str:
-    """
-    Convert the term to lowercase and remove whitespace characters
+    """Convert the term to lowercase and remove whitespace characters
+
     strict: just keep chinese/alnum chars(no punctions/emojis)
     stop_chars : stop chars to remove
 
@@ -128,10 +131,7 @@ def norm_term(term: str, strict=True, stop_chars: set[Char] = set()) -> str:
 
 
 def split_str(s: str, sep: str = "\t", maxsplit: int = -1):
-    """Remove the trailing newline from the Unicode string,
-    split by sep,
-    and remove leading and trailing whitespace from each split term.
-    """
+    """split Unicode string and return list"""
     return funcy.lmap(lambda x: x.strip(), s.rstrip("\n").split(sep, maxsplit))
 
 
@@ -219,7 +219,6 @@ def group_file_by_key(
     decode_error_tolerance_count=10,
 ):
     """read file line by line and split by sep and group by key, return like itertools.groupby"""
-
     key_func = make_key_func(key)
     f = read_file(
         input_,
@@ -242,8 +241,8 @@ def list_to_dict(
     skip_header=False,
     decode_error_tolerance_count=3,
 ):
-    """
-    Convert a list to a dictionary with specified key and value.
+    """Convert a list to a dictionary with specified key and value.
+
     The value will be selected from the list, and the final value will be processed using value_accumulate,
     which defaults to taking the first value.
 
@@ -274,6 +273,7 @@ def list_to_dict(
 
 
 def load_files(*files, map_func=None, sep="\t", encoding="utf8"):
+    """load files"""
     if map_func is None:
         map_func = partial(split_str, sep=sep)
     for fname in files:
@@ -336,42 +336,50 @@ def get_set_bits(recall_src: str | int) -> set[int]:
 
 class redirect_stdout_to_file(contextlib.ContextDecorator):
     """redirect_stdout_to_file
+
     >>> with redirect_stdout_to_file("test", "w"):
     ...     print(123)
     """
 
     def __init__(self, fname, mode="w"):
+        """file name and write mode"""
         self.fname = fname
         self.mode = mode
 
     def __enter__(self):
+        """enter"""
         self.file = open(self.fname, self.mode)
         self.old_stdout = sys.stdout
         sys.stdout = self.file
         return self.file
 
     def __exit__(self, *exc):
+        """exit"""
         sys.stdout = self.old_stdout
         self.file.close()
 
 
 class redirect_stderr_to_file(contextlib.ContextDecorator):
     """redirect_stderr_to_file
+
     >>> with redirect_stderr_to_file("test", "w"):
     ...     print(123,file=sys.stderr)
     """
 
     def __init__(self, fname, mode="w"):
+        """file name and write mode"""
         self.fname = fname
         self.mode = mode
 
     def __enter__(self):
+        """enter"""
         self.file = open(self.fname, self.mode)
         self.old_stderr = sys.stderr
         sys.stderr = self.file
         return self.file
 
     def __exit__(self, *exc):
+        """exit"""
         sys.stderr = self.old_stderr
         self.file.close()
 

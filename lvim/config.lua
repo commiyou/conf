@@ -217,7 +217,7 @@ require("nvim-treesitter.install").prefer_git = true
 
 -- ---configure a server manually. !!Requires `:LvimCacheReset` to take effect!!
 -- ---see the full default list `:lua print(vim.inspect(lvim.lsp.automatic_configuration.skipped_servers))`
---vim.list_extend(lvim.lsp.automatic_configuration.skipped_servers, { "pyright" })
+vim.list_extend(lvim.lsp.automatic_configuration.skipped_servers, { "pyright", "bashls" })
 --local pyright_opts = {
 --  cmd = { "pyright-langserver", "--stdio" },
 --  filetypes = { "python" },
@@ -266,17 +266,30 @@ require("nvim-treesitter.install").prefer_git = true
 
 --local linters = require "lvim.lsp.null-ls.linters"
 --linters.setup { { command = "pyright", filetypes = { "python" } } }
+--
+require("null-ls").setup({
+   debug = true,
+})
+
+
+-- open log
+-- :NullLsLog  
+
 local linters = require "lvim.lsp.null-ls.linters"
-linters.setup { { command = "flake8" , args = {"--max-line-length=119", "--ignore=F401"}, filetypes = { "python" } } }
+-- pip install flake8 flake8-docstrings
+linters.setup { 
+    { command = "flake8" , args = {"--max-line-length", "119", "--ignore", "F401"}, filetypes = { "python" } },
+    -- https://www.pydocstyle.org/en/stable/error_codes.html
+    { command = "pydocstyle" ,  args= {"--ignore=D203,D204,D213,D400,D401,D402,D403,D415,D417"}, filetypes = { "python" } },
+
+}
 
 -- -- set a formatter, this will override the language server formatting capabilities (if it exists)
 local formatters = require("lvim.lsp.null-ls.formatters")
 formatters.setup({
   -- { command = "stylua", filetypes = { "lua" } }, -- cargo install stylua
   --  pip3 install click==7.1.2 'black[python2]==21.4b0'
-  { command = "black",
-    args= {"--stdin-filename", "$FILENAME", "--quiet", "-"},
-    filetypes = { "python" } },
+  { command = "black", filetypes = { "python" } },
   { command = "isort",       filetypes = { "python" } },
   { command = "beautysh",       filetypes = { "sh" } },
   -- { command = "clang-format", args = { "--style={BasedOnStyle: Google, DerivePointerAlignment: false}" } },

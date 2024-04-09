@@ -41,6 +41,7 @@
 	rebase = true
 [interactive]
 	diffFilter = diff-so-fancy --patch || diff
-[user]
-	name = Commi You
-	email = commiyou@gmail.com
+[includeIf "gitdir:~/conf"]
+  path = ./gitconfig-github
+[includeIf "gitdir:~/work/*"]
+  path = ~/.gitconfig-work

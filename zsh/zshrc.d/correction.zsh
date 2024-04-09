@@ -11,6 +11,7 @@ alias sudo='nocorrect sudo'
 alias which='nocorrect which -a'
 alias touch='nocorrect touch'
 alias hadoop='nocorrect hadoop'
+alias afs='nocorrect afs'
 
 CORRECT_IGNORE_FILE='.*'
 CORRECT_IGNORE="[_|.]*"

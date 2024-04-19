@@ -71,8 +71,10 @@ def _make_bytes(value: object, encoding="utf8"):
         return str(value).encode(encoding)
 
 
-def xprint(*values, suffix="", sep="\t", flush=True, file=sys.stdout, encoding="utf8") -> None:
+def xprint(*values, suffix="", sep="\t", flush=True, file=None, encoding="utf8") -> None:
     """print with default sep and suffix and encoding"""
+    if file is None:
+        file = sys.stdout
     end = suffix + "\n"
     values = [_make_bytes(value, encoding) for value in values]
     sep_bytes = sep.encode(encoding)
@@ -348,7 +350,11 @@ class redirect_stdout_to_file(contextlib.ContextDecorator):
 
     def __enter__(self):
         """enter"""
-        self.file = open(self.fname, self.mode)
+        if self.fname is not None:
+            self.file = open(self.fname, self.mode)
+        else:
+            self.file = sys.stdout
+
         self.old_stdout = sys.stdout
         sys.stdout = self.file
         return self.file
@@ -373,7 +379,10 @@ class redirect_stderr_to_file(contextlib.ContextDecorator):
 
     def __enter__(self):
         """enter"""
-        self.file = open(self.fname, self.mode)
+        if self.fname is not None:
+            self.file = open(self.fname, self.mode)
+        else:
+            self.file = sys.stderr
         self.old_stderr = sys.stderr
         sys.stderr = self.file
         return self.file

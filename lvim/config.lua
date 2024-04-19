@@ -278,9 +278,11 @@ require("null-ls").setup({
 local linters = require "lvim.lsp.null-ls.linters"
 -- pip install flake8 flake8-docstrings
 linters.setup { 
-    { command = "flake8" , args = {"--max-line-length", "119", "--ignore", "F401"}, filetypes = { "python" } },
-    -- https://www.pydocstyle.org/en/stable/error_codes.html
-    { command = "pydocstyle" ,  args= {"--ignore=D203,D204,D213,D400,D401,D402,D403,D415,D417"}, filetypes = { "python" } },
+  -- https://flake8.pycqa.org/en/2.5.5/warnings.html 
+  -- https://pep8.readthedocs.io/en/latest/intro.html#error-codes
+  { command = "flake8" , args = {"--max-line-length", "119", "--ignore", "F401", "--select", "E203"}, filetypes = { "python" } },
+  -- https://www.pydocstyle.org/en/stable/error_codes.html
+  { command = "pydocstyle" ,  args= {"--ignore=D203,D204,D213,D400,D401,D402,D403,D415,D417"}, filetypes = { "python" } },
 
 }
 

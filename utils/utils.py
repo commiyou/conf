@@ -21,7 +21,7 @@ import boltons
 import funcy
 import more_itertools
 import toolz
-import tqdm
+import tqdm as tqdm_
 from traceback_with_variables import activate_by_import
 
 if locale.getencoding() != "UTF-8":
@@ -138,17 +138,20 @@ def split_str(s: str, sep: str = "\t", maxsplit: int = -1):
 
 
 def read_file(
-    input_: Union[Text, Path, TextIO, BinaryIO] = sys.stdin.buffer,
+    input_: Union[Text, Path, TextIO, BinaryIO, None] = sys.stdin.buffer,
     sep: str = "\t",
     encoding="utf-8",
     maxsplit: int = -1,
     decode_error_tolerance_count=10,
     skip_header=False,
+    tqdm=False,
 ) -> Iterator[list[str]]:
     """Read the file line by line with a specified encoding and return iterator of list after splitting by sep.
 
     input_: file name/path or io
     """
+    if input_ is None:
+        input_ = sys.stdin.buffer
     with ExitStack() as stack:
         if isinstance(input_, Text):
             input_ = Path(input_)
@@ -159,7 +162,7 @@ def read_file(
         if skip_header:
             input_ = funcy.rest(input_)  # type:ignore
 
-        for i, line in enumerate(input_):  # type:ignore
+        for i, line in enumerate(tqdm_.tqdm(input_) if tqdm else input_):  # type:ignore
             if not isinstance(line, str):
                 try:
                     uline: str = line.decode(encoding)  # type:ignore
@@ -213,7 +216,7 @@ def make_key_func(f: int | slice | Sequence | Mapping | Set | Callable[..., Any]
 
 
 def group_file_by_key(
-    input_: Union[Text, Path, TextIO, BinaryIO] = sys.stdin.buffer,
+    input_: Union[Text, Path, TextIO, BinaryIO, None] = sys.stdin.buffer,
     key: Callable[..., Any] | Sequence[int] | Set | Mapping | slice | int = 0,
     sep: str = "\t",
     encoding="utf-8",
@@ -292,18 +295,52 @@ def safe_divide(p1: int | float, p2: int | float, digits=2, percentage=False) ->
     """return n/a if divide 0 else value with str type
 
     >>> safe_divide(1,0)
-    'n/a'
+    'nan'
     >>> safe_divide(10,3)
     '3.33'
     >>> safe_divide(1,3, percentage=True)
     '33.33%'
     """
     if p2 == 0:
-        return "n/a"
+        return "nan"
     if percentage:
         return f"{{:.{digits}%}}".format(p1 / p2)
     else:
         return f"{{:.{digits}f}}".format(p1 / p2)
+
+
+def safe_diff(p1: int | float | str, p2: int | float | str, digits=2, percentage=True) -> str:
+    """return n/a if divide 0 else value with str type
+
+    >>> safe_diff(1,0)
+    'n/a'
+    >>> safe_diff(3,10)
+    '-70%'
+    """
+    p1 = to_number(p1)
+    p2 = to_number(p2)
+    if p2 == 0:
+        return float("nan")
+    if percentage:
+        return f"{{:.{digits}%}}".format(p1 / p2 - 1)
+    else:
+        return f"{{:.{digits}f}}".format(p1 / p2 - 1)
+
+
+def to_number(s: str | float | int):
+    """str to float/int"""
+    if isinstance(s, (float, int)):
+        return s
+
+    if isinstance(s, str):
+        s = s.strip()
+        if s.endswith("%"):
+            s = float(s[:-1]) / 100
+            return s
+        else:
+            s = int(s) if s.isnumeric() else float(s)
+            return s
+    return float("nan")
 
 
 def is_mr() -> str | None:
@@ -343,9 +380,11 @@ class redirect_stdout_to_file(contextlib.ContextDecorator):
     ...     print(123)
     """
 
-    def __init__(self, fname, mode="w"):
+    def __init__(self, fname: str | Path, mode="w", tpl: str | None = None):
         """file name and write mode"""
-        self.fname = fname
+        if tpl is None:
+            tpl = "{}"
+        self.fname = tpl.format(fname) if fname else None
         self.mode = mode
 
     def __enter__(self):
@@ -372,9 +411,11 @@ class redirect_stderr_to_file(contextlib.ContextDecorator):
     ...     print(123,file=sys.stderr)
     """
 
-    def __init__(self, fname, mode="w"):
+    def __init__(self, fname: str | None, mode: str = "w", tpl: str | None = None):
         """file name and write mode"""
-        self.fname = fname
+        if tpl is None:
+            tpl = "{}"
+        self.fname = tpl.format(fname) if fname else None
         self.mode = mode
 
     def __enter__(self):
@@ -383,6 +424,7 @@ class redirect_stderr_to_file(contextlib.ContextDecorator):
             self.file = open(self.fname, self.mode)
         else:
             self.file = sys.stderr
+
         self.old_stderr = sys.stderr
         sys.stderr = self.file
         return self.file
@@ -391,6 +433,28 @@ class redirect_stderr_to_file(contextlib.ContextDecorator):
         """exit"""
         sys.stderr = self.old_stderr
         self.file.close()
+
+
+def sample(fname: str = None, n: int = 100, query_idx: int = 0, pv_idx: int = -1, skip_header=False):
+    """weighted sample with replacement"""
+    import random
+
+    population = []
+    weights = []
+    for ll in read_file(fname, skip_header=skip_header):
+        q = ll[query_idx]
+        if len(ll) > 1:
+            try:
+                pv = int(ll[pv_idx])
+            except:
+                continue
+        else:
+            pv = 1
+        population.append(q)
+        weights.append(pv)
+
+    for q in random.choices(population=population, weights=weights, k=n):
+        xprint(q)
 
 
 def doctest():

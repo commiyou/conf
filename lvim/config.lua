@@ -280,7 +280,8 @@ local linters = require "lvim.lsp.null-ls.linters"
 linters.setup { 
   -- https://flake8.pycqa.org/en/2.5.5/warnings.html 
   -- https://pep8.readthedocs.io/en/latest/intro.html#error-codes
-  { command = "flake8" , args = {"--max-line-length", "119", "--ignore", "F401", "--select", "E203"}, filetypes = { "python" } },
+  --{ command = "flake8" , args = {"--max-line-length", "119", "--ignore", "F401", "--select", "E203"}, filetypes = { "python" } },
+  { command = "flake8" , args = {"--max-line-length", "119", "--ignore", "F401", }, filetypes = { "python" } },
   -- https://www.pydocstyle.org/en/stable/error_codes.html
   { command = "pydocstyle" ,  args= {"--ignore=D203,D204,D213,D400,D401,D402,D403,D415,D417"}, filetypes = { "python" } },
 
@@ -506,7 +507,12 @@ lvim.plugins = {
     "ggandor/leap.nvim",
     dependencies = "tpope/vim-repeat",
     config = function()
-      require('leap').add_default_mappings()
+      -- require('leap').add_default_mappings()
+      vim.keymap.set({'n', 'x', 'o'}, 's',  '<Plug>(leap-forward-to)')
+      vim.keymap.set({'n', 'x', 'o'}, 'S',  '<Plug>(leap-backward-to)')
+      -- vim.keymap.set({'x', 'o'},      'x',  '<Plug>(leap-forward-till)')
+      -- vim.keymap.set({'x', 'o'},      'X',  '<Plug>(leap-backward-till)')
+      -- vim.keymap.set({'n', 'x', 'o'}, 'gs', '<Plug>(leap-from-window)')
     end
   },
   {

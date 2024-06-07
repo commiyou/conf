@@ -2,6 +2,7 @@
 """python3 utils"""
 import collections
 import contextlib
+import dataclasses
 import io
 import itertools
 import json
@@ -144,7 +145,7 @@ def read_file(
     maxsplit: int = -1,
     decode_error_tolerance_count=10,
     skip_header=False,
-    tqdm=False,
+    tqdm: str | bool = False,
 ) -> Iterator[list[str]]:
     """Read the file line by line with a specified encoding and return iterator of list after splitting by sep.
 
@@ -162,7 +163,9 @@ def read_file(
         if skip_header:
             input_ = funcy.rest(input_)  # type:ignore
 
-        for i, line in enumerate(tqdm_.tqdm(input_) if tqdm else input_):  # type:ignore
+        for i, line in enumerate(
+            tqdm_.tqdm(input_, desc=tqdm if isinstance(tqdm, str) else None) if tqdm else input_
+        ):  # type:ignore
             if not isinstance(line, str):
                 try:
                     uline: str = line.decode(encoding)  # type:ignore
@@ -286,9 +289,21 @@ def load_files(*files, map_func=None, sep="\t", encoding="utf8"):
             yield map_func(line)
 
 
+class JsonCustomEncoder(json.JSONEncoder):
+    """支持set、datacalss"""
+
+    def default(self, obj):
+        """api"""
+        if isinstance(obj, set):
+            return list(obj)
+        if dataclasses.is_dataclass(obj):
+            return dataclasses.asdict(obj)
+        return json.JSONEncoder.default(self, obj)
+
+
 def dump_json(obj: Any, indent=None) -> str:
-    """dump json into str"""
-    return json.dumps(obj, ensure_ascii=False, indent=indent)
+    """dump json into str, 支持set、dataclass"""
+    return json.dumps(obj, ensure_ascii=False, indent=indent, cls=JsonCustomEncoder)
 
 
 def safe_divide(p1: int | float, p2: int | float, digits=2, percentage=False) -> str:

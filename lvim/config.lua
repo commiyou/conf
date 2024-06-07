@@ -12,6 +12,7 @@ an executable
 --lvim.use_icons = false
 lvim.log.level = "warn"
 lvim.format_on_save.enabled = true
+lvim.format_on_save.timeout = 2000
 lvim.format_on_save.pattern = { "*.sh", "*.py", "*.lua" }
 
 --lvim.colorscheme = "onedarker"
@@ -117,42 +118,48 @@ local function find_cwd_files(prompt_bufnr)
   local opt = {
     cwd = vim.fn.expand("%:p:h"),
   }
-  require("telescope.builtin").find_files(opt)
+  require('fzf-lua').files(opt)
 end
 
+local function find_gitroot_files(prompt_bufnr)
+  local file_dir = vim.fn.expand('%:p:h')
+  local result = vim.fn.system("cd " .. file_dir .. "; git rev-parse --show-toplevel 2>/dev/null || pwd")
+  local opt = {
+    cwd = vim.trim(result)
+  }
+  require('fzf-lua').files(opt)
+end
 -- binding for switching
 lvim.builtin.which_key.mappings["C"] = {
   name = "Python",
   c = { "<cmd>lua require('swenv.api').pick_venv()<cr>", "Choose Env" },
 }
-lvim.builtin.which_key.mappings["b"] = { "<cmd>Telescope buffers<cr>", "Open Buffers" }
-lvim.builtin.which_key.mappings["m"] = { "<cmd>Telescope oldfiles<cr>", "Open Recent File" }
+lvim.builtin.which_key.mappings["b"] = { "<cmd>lua require('fzf-lua').buffers()<cr>", "Open Buffers" }
+lvim.builtin.which_key.mappings["m"] = { "<cmd>lua require('fzf-lua').oldfiles()<cr>", "Open Recent File" }
 lvim.builtin.which_key.mappings["f"] = {
   name = "Find",
   a = { "<cmd>Telescope builtin<cr>", "All builtins" },
-  b = { "<cmd>Telescope buffers<cr>", "Open Buffers" },
+  b = { "<cmd>lua require('fzf-lua').buffers()<cr>", "Open Buffers" },
   C = { "<cmd>Telescope commands_history<cr>", "Rerun Commands" },
   c = { "<cmd>Telescope commands<cr>", "Run Commands" },
   d = { find_cwd_files, "find same dir" },
   D = { "<cmd>DiffviewOpen<cr>", "DiffviewOpen" },
-  f = { "<cmd>Telescope find_files<cr>", "Find File" },
-  g = { require("lvim.core.telescope.custom-finders").find_project_files, "Find same prj" },
+  f = { "<cmd>lua require('fzf-lua').files({ resume = true })<CR>", "Find File" },
+  g = { find_gitroot_files, "Find same prj" },
   h = { "<cmd>Telescope help_tags<cr>", "Help" },
   k = { "<cmd>Telescope keymaps<cr>", "keymappings" },
-  m = { "<cmd>Telescope oldfiles<cr>", "Open Recent File" },
+  m = { "<cmd>lua require('fzf-lua').oldfiles()<cr>", "Open Recent File" },
   O = { "<cmd>Telescope vim_options<cr>", "Vim Options" },
-  p = { "<cmd>Telescope registers<cr>", "Paste registers" },
+  p = { "<cmd>lua require('fzf-lua').registers({ resume = true })<cr>", "Paste registers" },
   P = { "<cmd>Telescope projects<CR>", "Projects" },
-  r = { "<cmd>Telescope live_grep<cr>", "Live Grep" },
-  s = { "<cmd>Telescope lsp_document_symbols<cr>", "Buffer Symbol" },
-  S = { "<cmd>Telescope lsp_workspace_symbols<cr>", "WorkSpace Symbol" },
-  -- t = { "<cmd>Telescope tags<cr>", "Ctags" },
+  r = { "<cmd>lua require('fzf-lua').live_grep_resume()<cr>", "Live Grep" },
+  s = { "<cmd>lua require('fzf-lua').lsp_document_symbols({ resume = true })<cr>", "Buffer Symbol" },
+  S = { "<cmd>ua require('fzf-lua').lsp_workspace_symbols({ resume = true })<cr>", "WorkSpace Symbol" },
   t = { "<cmd>TlistToggle<cr>", "taglist" },
   T = { "<cmd>SymbolsOutline<cr>", "Symbols" },
-  w = { "<cmd>Telescope grep_string<cr>", "Grep Word" },
-  -- t = { "<cmd>TagbarToggle<cr>", "Tags" },
+  w = { "<cmd>lua require('fzf-lua').grep_cword({ resume = true })<cr>", "Grep Word" },
 }
-lvim.builtin.which_key.mappings["Ls"] = { "<cmd>Pmsg lua put(lvim)<cr>", "Show Confs" }
+lvim.builtin.which_key.mappings["Ls"] = { "<cmd>Pmsg lua print(vim.inspect(lvim))<cr>", "Show Confs" }
 lvim.builtin.which_key.mappings["o"] = {
   -- toggle options
   p = { "<cmd>setlocal paste!<cr>", "paste" },
@@ -173,6 +180,12 @@ lvim.builtin.which_key.mappings["t"] = {
   q = { "<cmd>TroubleToggle quickfix<cr>", "quickfix" },
   l = { "<cmd>TroubleToggle loclist<cr>", "loclist" },
   r = { "<cmd>TroubleToggle lsp_references<cr>", "references" },
+}
+lvim.builtin.which_key.mappings["l"]["f"] = {
+  function()
+    require("lvim.lsp.utils").format { timeout_ms = 2000 }
+  end,
+  "Format",
 }
 
 -- TODO: User Config for predefined plugins
@@ -298,6 +311,16 @@ formatters.setup({
   -- { command = "clang-format", args = { "--style={BasedOnStyle: Google, DerivePointerAlignment: false}" } },
   { command = "clang-format" },
 })
+
+lvim.lsp.automatic_configuration.skipped_servers = vim.tbl_filter(function(server)
+  return server ~= "sqlls"
+end, lvim.lsp.automatic_configuration.skipped_servers)
+
+-- require("lvim.lsp.manager").setup("sqlls", {
+--   cmd = {"sql-language-server", "up", "--method", "stdio"};
+--   filetypes = {"sql", "mysql"};
+--   root_dir = function() return vim.loop.cwd() end;
+-- })
 --   {
 --     -- each formatter accepts a list of options identical to https://github.com/jose-elias-alvarez/null-ls.nvim/blob/main/doc/BUILTINS.md#Configuration
 --     command = "prettier",
@@ -387,16 +410,31 @@ lvim.plugins = {
     end,
   },
   {
+    "ibhagwan/fzf-lua",
+    -- optional for icon support
+    dependencies = { "nvim-tree/nvim-web-devicons" },
+    config = function()
+      -- calling `setup` is optional for customization
+      -- :edit $NVIM_LOG_FILE
+      --  Vim:Failed to start server: no such file or directory
+      require("fzf-lua").setup({
+        fzf_opts = { ['--cycle'] = true}, 
+        --keymap={builtin={["ctrl-]"]  = "preview-page-down",["ctrl-["]    = "preview-page-up",}}
+      })
+      vim.api.nvim_set_keymap('i', '<C-x><C-f>', '<cmd>lua require("fzf-lua").complete_path()<CR>', {noremap = true})
+    end
+  },
+  {
     'echasnovski/mini.hipatterns',
     event = { "BufReadPost", "BufNewFile", "BufWritePre" },
     opts = function()
       local hi = require("mini.hipatterns")
       return {
         highlighters = {
-          fixme     = { pattern = '%f[%w]()FIXME()%f[%W]', group = 'MiniHipatternsFixme' },
-          hack      = { pattern = '%f[%w]()HACK()%f[%W]', group = 'MiniHipatternsHack' },
-          todo      = { pattern = '%f[%w]()TODO()%f[%W]', group = 'MiniHipatternsTodo' },
-          note      = { pattern = '%f[%w]()NOTE()%f[%W]', group = 'MiniHipatternsNote' },
+          -- fixme     = { pattern = '%f[%w]()FIXME()%f[%W]', group = 'MiniHipatternsFixme' },
+          -- hack      = { pattern = '%f[%w]()HACK()%f[%W]', group = 'MiniHipatternsHack' },
+          -- todo      = { pattern = '%f[%w]()TODO()%f[%W]', group = 'MiniHipatternsTodo' },
+          -- note      = { pattern = '%f[%w]()NOTE()%f[%W]', group = 'MiniHipatternsNote' },
 
           -- Highlight hex color strings (`#rrggbb`) using that color
           hex_color = hi.gen_highlighter.hex_color(),
@@ -426,19 +464,19 @@ lvim.plugins = {
       require("mini.jump").setup()
     end,
   },
-  {
-    --     object_scope = 'ii',
-    -- object_scope_with_border = 'ai',
+  -- {
+  --   --     object_scope = 'ii',
+  --   -- object_scope_with_border = 'ai',
 
-    -- Motions (jump to respective border line; if not present - body line)
-    -- goto_top = '[i',
-    -- goto_bottom = ']i',
-    'echasnovski/mini.indentscope',
-    version = false,
-    opts = function()
-      require("mini.indentscope").setup()
-    end,
-  },
+  --   -- Motions (jump to respective border line; if not present - body line)
+  --   -- goto_top = '[i',
+  --   -- goto_bottom = ']i',
+  --   'echasnovski/mini.indentscope',
+  --   version = false,
+  --   opts = function()
+  --     require("mini.indentscope").setup()
+  --   end,
+  -- },
 
   {
     -- forward = 'f',
@@ -593,16 +631,6 @@ lvim.plugins = {
           augend.constant.alias.alpha,
           augend.constant.alias.Alpha,
           augend.constant.new({
-            elements = { "and", "or" },
-            word = true,
-            cyclic = true,
-          }),
-          augend.constant.new({
-            elements = { "AND", "OR" },
-            word = true,
-            cyclic = true,
-          }),
-          augend.constant.new({
             elements = { "enable", "disable" },
             word = true,
             cyclic = true,
@@ -629,91 +657,6 @@ lvim.plugins = {
           }),
           augend.constant.new({
             elements = { "ON", "OFF" },
-            word = true,
-            cyclic = true,
-          }),
-          augend.constant.new({
-            elements = { "info", "warning", "error" },
-            word = true,
-            cyclic = true,
-          }),
-          augend.constant.new({
-            elements = { "INFO", "WARN", "ERROR" },
-            word = true,
-            cyclic = true,
-          }),
-          augend.constant.new({
-            elements = { "Info", "Warn", "Error" },
-            word = true,
-            cyclic = true,
-          }),
-          augend.constant.new({
-            elements = { "TODO", "FIXME" },
-            word = true,
-            cyclic = true,
-          }),
-          augend.constant.new({
-            elements = { "&&", "||" },
-            word = false,
-            cyclic = true,
-          }),
-          augend.constant.new({
-            elements = { "up", "down" },
-            word = true,
-            cyclic = true,
-          }),
-          augend.constant.new({
-            elements = { "Up", "Down" },
-            word = true,
-            cyclic = true,
-          }),
-          augend.constant.new({
-            elements = { "UP", "DOWN" },
-            word = true,
-            cyclic = true,
-          }),
-          augend.constant.new({
-            elements = { "top", "left", "right", "bottom" },
-            word = true,
-            cyclic = true,
-          }),
-          augend.constant.new({
-            elements = { "Top", "Left", "Right", "Bottom" },
-            word = true,
-            cyclic = true,
-          }),
-          augend.constant.new({
-            elements = { "TOP", "LEFT", "RIGHT", "BOTTOM" },
-            word = true,
-            cyclic = true,
-          }),
-          augend.constant.new({
-            elements = { "north", "east", "south", "west" },
-            word = true,
-            cyclic = true,
-          }),
-          augend.constant.new({
-            elements = { "North", "East", "South", "West" },
-            word = true,
-            cyclic = true,
-          }),
-          augend.constant.new({
-            elements = { "NORTH", "EAST", "SOUTH", "WEST" },
-            word = true,
-            cyclic = true,
-          }),
-          augend.constant.new({
-            elements = { "min", "max" },
-            word = true,
-            cyclic = true,
-          }),
-          augend.constant.new({
-            elements = { "Min", "Max" },
-            word = true,
-            cyclic = true,
-          }),
-          augend.constant.new({
-            elements = { "MIN", "MAX" },
             word = true,
             cyclic = true,
           }),
@@ -1001,6 +944,31 @@ lvim.plugins = {
   },
 }
 
+-- local highlight = {
+--     "RainbowRed",
+--     "RainbowYellow",
+--     "RainbowBlue",
+--     "RainbowOrange",
+--     "RainbowGreen",
+--     "RainbowViolet",
+--     "RainbowCyan",
+-- }
+
+-- local hooks = require "ibl.hooks"
+-- -- create the highlight groups in the highlight setup hook, so they are reset
+-- -- every time the colorscheme changes
+-- hooks.register(hooks.type.HIGHLIGHT_SETUP, function()
+--     vim.api.nvim_set_hl(0, "RainbowRed", { fg = "#E06C75" })
+--     vim.api.nvim_set_hl(0, "RainbowYellow", { fg = "#E5C07B" })
+--     vim.api.nvim_set_hl(0, "RainbowBlue", { fg = "#61AFEF" })
+--     vim.api.nvim_set_hl(0, "RainbowOrange", { fg = "#D19A66" })
+--     vim.api.nvim_set_hl(0, "RainbowGreen", { fg = "#98C379" })
+--     vim.api.nvim_set_hl(0, "RainbowViolet", { fg = "#C678DD" })
+--     vim.api.nvim_set_hl(0, "RainbowCyan", { fg = "#56B6C2" })
+-- end)
+
+-- require("ibl").setup { indent = { highlight = highlight } }
+
 local cmp = require("cmp")
 
 cmp.setup({
@@ -1096,7 +1064,7 @@ autocmd FileType c,cpp nnoremap <silent> ]f :call
 
 "set tags=./tags;,tags;../tags;
 set tags=./tags;$HOME
-map <C-\> :tab split<CR>:exec("tag ".expand("<cword>"))<CR>
+nnoremap <C-\> :tab split<CR>:exec("tag ".expand("<cword>"))<CR>
 set list
 " set lcs=tab:>-,trail:·,eol:$   " listchars
 set lcs=tab:>-,trail:·
@@ -1153,3 +1121,9 @@ lvim.builtin.lualine.sections.lualine_x = {
   components.spaces,
   components.filetype,
 }
+-- 命令行 移动
+vim.api.nvim_set_keymap('c', '<C-a>', '<Home>', {noremap = true})
+vim.api.nvim_set_keymap('c', '<M-b>', '<S-Left>', {noremap = true})
+vim.api.nvim_set_keymap('c', '<M-f>', '<S-Right>', {noremap = true})
+vim.api.nvim_set_keymap('c', '<C-f>', '<Right>', {noremap = true})
+

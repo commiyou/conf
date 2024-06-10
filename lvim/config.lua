@@ -156,7 +156,6 @@ lvim.builtin.which_key.mappings["f"] = {
   s = { "<cmd>lua require('fzf-lua').lsp_document_symbols({ resume = true })<cr>", "Buffer Symbol" },
   S = { "<cmd>ua require('fzf-lua').lsp_workspace_symbols({ resume = true })<cr>", "WorkSpace Symbol" },
   t = { "<cmd>TlistToggle<cr>", "taglist" },
-  T = { "<cmd>SymbolsOutline<cr>", "Symbols" },
   w = { "<cmd>lua require('fzf-lua').grep_cword({ resume = true })<cr>", "Grep Word" },
 }
 lvim.builtin.which_key.mappings["Ls"] = { "<cmd>Pmsg lua print(vim.inspect(lvim))<cr>", "Show Confs" }
@@ -172,15 +171,6 @@ lvim.builtin.which_key.mappings["o"] = {
 }
 lvim.builtin.which_key.mappings["[b"] = { "<cmd>BufMRUPrev<cr>", "BufMRUPrev" }
 lvim.builtin.which_key.mappings["]b"] = { "<cmd>BufMRUNext<cr>", "BufMRUNext" }
-lvim.builtin.which_key.mappings["t"] = {
-  name = "Diagnostics",
-  t = { "<cmd>TroubleToggle<cr>", "trouble" },
-  w = { "<cmd>TroubleToggle workspace_diagnostics<cr>", "workspace" },
-  d = { "<cmd>TroubleToggle document_diagnostics<cr>", "document" },
-  q = { "<cmd>TroubleToggle quickfix<cr>", "quickfix" },
-  l = { "<cmd>TroubleToggle loclist<cr>", "loclist" },
-  r = { "<cmd>TroubleToggle lsp_references<cr>", "references" },
-}
 lvim.builtin.which_key.mappings["l"]["f"] = {
   function()
     require("lvim.lsp.utils").format { timeout_ms = 2000 }
@@ -217,49 +207,13 @@ lvim.builtin.treesitter.highlight.enabled = true
 
 require("nvim-treesitter.install").prefer_git = true
 
-
--- https://github.com/neovim/nvim-lspconfig
--- pyright
--- https://github.com/microsoft/pyright/blob/main/docs/configuration.md
-
 -- generic LSP settings
---
+-- https://www.lunarvim.org/docs/configuration/language-features/language-servers
+-- https://github.com/tamago324/nlsp-settings.nvim/blob/main/schemas/_generated/pyright.json
+-- :LspSettings pyright
+-- :LspSettings update pyright
 
--- ---@usage disable automatic installation of servers
---lvim.lsp.automatic_servers_installation = false
 
--- ---configure a server manually. !!Requires `:LvimCacheReset` to take effect!!
--- ---see the full default list `:lua print(vim.inspect(lvim.lsp.automatic_configuration.skipped_servers))`
-vim.list_extend(lvim.lsp.automatic_configuration.skipped_servers, { "pyright", "bashls" })
---local pyright_opts = {
---  cmd = { "pyright-langserver", "--stdio" },
---  filetypes = { "python" },
---
---  single_file_support = true,
---  settings = {
---    pyright = {
---      disableLanguageServices = false,
---      disableOrganizeImports = false
---    },
---    python = {
---      analysis = {
---        autoImportCompletions = true,
---        autoSearchPaths = true,
---        --diagnosticMode = "workspace", -- openFilesOnly, workspace
---        diagnosticMode = "openFilesOnly", -- openFilesOnly, workspace
---        typeCheckingMode = "basic", -- off, basic, strict
---        useLibraryCodeForTypes = true,
---        diagnosticSeverityOverrides = {
---          reportUnusedImport = "none",
---          reportUnusedClass = "none",
---          reportUnusedFunction = "none",
---          reportUnusedVariable = "none",
---        }
---      }
---    }
---  },
---}
---require("lvim.lsp.manager").setup("pyright", pyright_opts)
 
 -- ---remove a server from the skipped list, e.g. eslint, or emmet_ls. !!Requires `:LvimCacheReset` to take effect!!
 -- ---`:LvimInfo` lists which server(s) are skiipped for the current filetype
@@ -281,73 +235,56 @@ vim.list_extend(lvim.lsp.automatic_configuration.skipped_servers, { "pyright", "
 --linters.setup { { command = "pyright", filetypes = { "python" } } }
 --
 require("null-ls").setup({
-   debug = true,
+  debug = true,
 })
 
 
 -- open log
 -- :NullLsLog  
 
-local linters = require "lvim.lsp.null-ls.linters"
--- pip install flake8 flake8-docstrings
-linters.setup { 
-  -- https://flake8.pycqa.org/en/2.5.5/warnings.html 
-  -- https://pep8.readthedocs.io/en/latest/intro.html#error-codes
-  --{ command = "flake8" , args = {"--max-line-length", "119", "--ignore", "F401", "--select", "E203"}, filetypes = { "python" } },
-  { command = "flake8" , args = {"--max-line-length", "119", "--ignore", "F401", }, filetypes = { "python" } },
-  -- https://www.pydocstyle.org/en/stable/error_codes.html
-  { command = "pydocstyle" ,  args= {"--ignore=D203,D204,D213,D400,D401,D402,D403,D415,D417"}, filetypes = { "python" } },
+-- local linters = require "lvim.lsp.null-ls.linters"
+-- -- pip install flake8 flake8-docstrings
+-- linters.setup { 
+--   -- https://flake8.pycqa.org/en/2.5.5/warnings.html 
+--   -- https://pep8.readthedocs.io/en/latest/intro.html#error-codes
+--   --{ command = "flake8" , args = {"--max-line-length", "119", "--ignore", "F401", "--select", "E203"}, filetypes = { "python" } },
+--   { command = "flake8" , args = {"--max-line-length", "119", "--ignore", "F401", }, filetypes = { "python" } },
+--   -- https://www.pydocstyle.org/en/stable/error_codes.html
+--   { command = "pydocstyle" ,  args= {"--ignore=D203,D204,D213,D400,D401,D402,D403,D415,D417"}, filetypes = { "python" } },
 
-}
-
--- -- set a formatter, this will override the language server formatting capabilities (if it exists)
-local formatters = require("lvim.lsp.null-ls.formatters")
-formatters.setup({
-  -- { command = "stylua", filetypes = { "lua" } }, -- cargo install stylua
-  --  pip3 install click==7.1.2 'black[python2]==21.4b0'
-  { command = "black", filetypes = { "python" } },
-  { command = "isort",       filetypes = { "python" } },
-  { command = "beautysh",       filetypes = { "sh" } },
-  -- { command = "clang-format", args = { "--style={BasedOnStyle: Google, DerivePointerAlignment: false}" } },
-  { command = "clang-format" },
-})
-
-lvim.lsp.automatic_configuration.skipped_servers = vim.tbl_filter(function(server)
-  return server ~= "sqlls"
-end, lvim.lsp.automatic_configuration.skipped_servers)
-
--- require("lvim.lsp.manager").setup("sqlls", {
---   cmd = {"sql-language-server", "up", "--method", "stdio"};
---   filetypes = {"sql", "mysql"};
---   root_dir = function() return vim.loop.cwd() end;
--- })
---   {
---     -- each formatter accepts a list of options identical to https://github.com/jose-elias-alvarez/null-ls.nvim/blob/main/doc/BUILTINS.md#Configuration
---     command = "prettier",
---     ---@usage arguments to pass to the formatter
---     -- these cannot contain whitespaces, options such as `--line-width 80` become either `{'--line-width', '80'}` or `{'--line-width=80'}`
---     extra_args = { "--print-with", "100" },
---     ---@usage specify which filetypes to enable. By default a providers will attach to all the filetypes it supports.
---     filetypes = { "typescript", "typescriptreact" },
---   },
 -- }
+
+-- -- -- set a formatter, this will override the language server formatting capabilities (if it exists)
+-- local formatters = require("lvim.lsp.null-ls.formatters")
+-- formatters.setup({
+--   -- { command = "stylua", filetypes = { "lua" } }, -- cargo install stylua
+--   --  pip3 install click==7.1.2 'black[python2]==21.4b0'
+--   --{ command = "black", filetypes = { "python" } },
+--   --{ command = "isort",       filetypes = { "python" } },
+--   { command = "beautysh",       filetypes = { "sh" } },
+--   -- { command = "clang-format", args = { "--style={BasedOnStyle: Google, DerivePointerAlignment: false}" } },
+--   { command = "clang-format" },
+-- })
+
+
 
 -- -- set additional linters
 -- local linters = require "lvim.lsp.null-ls.linters"
 -- linters.setup {
---   { command = "flake8", filetypes = { "python" } },
---   {
---     -- each linter accepts a list of options identical to https://github.com/jose-elias-alvarez/null-ls.nvim/blob/main/doc/BUILTINS.md#Configuration
---     command = "shellcheck",
---     ---@usage arguments to pass to the formatter
---     -- these cannot contain whitespaces, options such as `--line-width 80` become either `{'--line-width', '80'}` or `{'--line-width=80'}`
---     extra_args = { "--severity", "warning" },
---   },
---   {
---     command = "codespell",
---     ---@usage specify which filetypes to enable. By default a providers will attach to all the filetypes it supports.
---     filetypes = { "javascript", "python" },
---   },
+--   -- { command = "ruff", "-n", "-e", "--stdin-filename", "$FILENAME", "-" },
+--   -- { command = "flake8", filetypes = { "python" } },
+--   -- {
+--   --   -- each linter accepts a list of options identical to https://github.com/jose-elias-alvarez/null-ls.nvim/blob/main/doc/BUILTINS.md#Configuration
+--   --   command = "shellcheck",
+--   --   ---@usage arguments to pass to the formatter
+--   --   -- these cannot contain whitespaces, options such as `--line-width 80` become either `{'--line-width', '80'}` or `{'--line-width=80'}`
+--   --   extra_args = { "--severity", "warning" },
+--   -- },
+--   -- {
+--   --   command = "codespell",
+--   --   ---@usage specify which filetypes to enable. By default a providers will attach to all the filetypes it supports.
+--   --   filetypes = { "javascript", "python" },
+--   -- },
 -- }
 
 
@@ -357,10 +294,120 @@ local function echo(text, hl_group)
 end
 
 lvim.plugins = {
+  { "folke/neodev.nvim", opts = {} }, --  Neovim setup for init.lua and plugin development with full signature help, docs and completion for the nvim lua API.
+  { "tenxsoydev/tabs-vs-spaces.nvim", 
+    config = function()
+      require("tabs-vs-spaces").setup()
+      lvim.autocommands = {
+        {
+            "BufEnter", -- see `:h autocmd-events`
+            { -- this table is passed verbatim as `opts` to `nvim_create_autocmd`
+                pattern = { "*.py", "*.sh", "*.cpp" }, -- see `:h autocmd-events`
+                command = "TabsVsSpacesToggle",
+            }
+        },
+      }
+
+    end
+  },
+  {
+    'rmagatti/auto-session',
+    config = function()
+      require("auto-session").setup {
+        log_level = "error",
+        -- auto_session_suppress_dirs = { "~/", "~/Projects", "~/Downloads", "/"},
+      }
+    end
+  },
   {"AckslD/swenv.nvim"},
+  {'chentoast/marks.nvim',
+    config = function() 
+      require'marks'.setup {
+
+      }
+    end
+  },
+  {
+    "smjonas/inc-rename.nvim",
+    config = function()
+      require("inc_rename").setup ({
+        input_buffer_type = "dressing",
+      })
+      lvim.builtin.which_key.mappings["l"]["r"] = { ":IncRename ", "Rename" }
+      lvim.builtin.which_key.mappings["l"]["R"] = {
+        function()
+          return ":IncRename " .. vim.fn.expand "<cword>"
+        end,
+        "Rename keep",
+        expr = true,
+      }
+    end,
+  },
+  {
+    "dnlhc/glance.nvim",
+    config = function()
+      require('glance').setup({
+        -- your configuration
+      })
+      vim.keymap.set('n', 'gD', '<CMD>Glance definitions<CR>')
+      vim.keymap.set('n', 'gR', '<CMD>Glance references<CR>')
+      vim.keymap.set('n', 'gY', '<CMD>Glance type_definitions<CR>')
+      vim.keymap.set('n', 'gM', '<CMD>Glance implementations<CR>')
+    end,
+
+  },
+  {
+    'mrjones2014/legendary.nvim',
+    -- since legendary.nvim handles all your keymaps/commands,
+    -- its recommended to load legendary.nvim before other plugins
+    priority = 10000,
+    lazy = false,
+    -- sqlite is only needed if you want to use frecency sorting
+    -- dependencies = { 'kkharji/sqlite.lua' }
+    config=function() 
+      require('legendary').setup({ extensions = { lazy_nvim = true } })
+    end
+  },
+  {
+    "michaelb/sniprun",
+    branch = "master",
+
+    build = "sh install.sh",
+    -- do 'sh install.sh 1' if you want to force compile locally
+    -- (instead of fetching a binary from the github release). Requires Rust >= 1.65
+
+    config = function()
+      require("sniprun").setup({
+        -- your options
+      })
+    end,
+  },
+
+  {
+    url="https://git.sr.ht/~whynothugo/lsp_lines.nvim", 
+    config = function()
+      require("lsp_lines").setup()
+      -- Disable virtual_text since it's redundant due to lsp_lines.
+      vim.diagnostic.config({
+        virtual_text = false,
+      })
+      -- vim.keymap.set(
+      --   "",
+      --   "<Leader>lb",
+      --   require("lsp_lines").toggle,
+      --   { desc = "Toggle lsp_lines" }
+      -- )
+      lvim.builtin.which_key.mappings["lb"] = { "<cmd>lua require('lsp_lines').toggle()<cr>", "Toggle lsp_llines" }
+    end,
+  },
+  {
+    "kevinhwang91/nvim-bqf",
+    event = "WinEnter",
+    config = function()
+    end,
+  },
   { "andersevenrud/cmp-tmux", dependencies = "hrsh7th/nvim-cmp", event = "InsertEnter" },
 
-  -- { "andymass/vim-matchup" },
   {
     "christoomey/vim-tmux-navigator",
     config = function()
@@ -377,16 +424,11 @@ lvim.plugins = {
       vim.g.alternateNoFindBuffer = 1
     end,
   },
-  {
-    "AckslD/nvim-neoclip.lua",
-    dependencies = {
-      -- you'll need at least one of these
-      { 'nvim-telescope/telescope.nvim' },
-      -- {'ibhagwan/fzf-lua'},
-    },
-    config = function()
-      require('neoclip').setup()
-    end,
+  { 
+    "danymat/neogen", 
+    config = true,
+    -- Uncomment next line if you want to follow only stable versions
+    -- version = "*" 
   },
   { "ConradIrwin/vim-bracketed-paste" },
   { "dbeniamine/cheat.sh-vim" },
@@ -536,35 +578,61 @@ lvim.plugins = {
     end,
   },
   {
-    -- quick motion
-    -- s/S/gs<char><char>: search forward/backward/other window
-    -- s<space><space> to jump to an empty line.
-    -- s{char}<space> to jump to the end of a line
-    -- s<enter> to repeat the last search.
-    -- s<enter><enter>... or s{char}<enter><enter>... to traverse through the matches.
-    "ggandor/leap.nvim",
-    dependencies = "tpope/vim-repeat",
-    config = function()
-      -- require('leap').add_default_mappings()
-      vim.keymap.set({'n', 'x', 'o'}, 's',  '<Plug>(leap-forward-to)')
-      vim.keymap.set({'n', 'x', 'o'}, 'S',  '<Plug>(leap-backward-to)')
-      -- vim.keymap.set({'x', 'o'},      'x',  '<Plug>(leap-forward-till)')
-      -- vim.keymap.set({'x', 'o'},      'X',  '<Plug>(leap-backward-till)')
-      -- vim.keymap.set({'n', 'x', 'o'}, 'gs', '<Plug>(leap-from-window)')
+    'kevinhwang91/nvim-hlslens',
+    config = function() 
+      require('hlslens').setup()
+      local kopts = {noremap = true, silent = true}
+      vim.api.nvim_set_keymap('n', 'n',
+        [[<Cmd>execute('normal! ' . v:count1 . 'n')<CR><Cmd>lua require('hlslens').start()<CR>]],
+        kopts)
+      vim.api.nvim_set_keymap('n', 'N',
+        [[<Cmd>execute('normal! ' . v:count1 . 'N')<CR><Cmd>lua require('hlslens').start()<CR>]],
+        kopts)
+      vim.api.nvim_set_keymap('n', '*', [[*<Cmd>lua require('hlslens').start()<CR>]], kopts)
+      vim.api.nvim_set_keymap('n', '#', [[#<Cmd>lua require('hlslens').start()<CR>]], kopts)
+      vim.api.nvim_set_keymap('n', 'g*', [[g*<Cmd>lua require('hlslens').start()<CR>]], kopts)
+      vim.api.nvim_set_keymap('n', 'g#', [[g#<Cmd>lua require('hlslens').start()<CR>]], kopts)
+
     end
   },
   {
-    -- TODO
-    --Delete/fold/comment/etc. paragraphs without leaving your position (zfarp[leap]).
-    -- Clone text objects in the blink of an eye, even from another window, by turning on paste_on_remote_yank (yaRp[leap]).
-    -- Do the above stunt in Insert mode (...<C-o>yaRW[leap]...).
-    -- Fix a typo with a short, atomic command sequence (cimw[leap][correction]).
-    -- Operate on distant lines: drr[leap].
-    -- Use count: e.g. y3rr[leap] yanks 3 lines, just as 3yy would do.
-
-    "ggandor/leap-spooky.nvim",
-    dependencies = "ggandor/leap.nvim",
+    "mireq/large_file",
+    config = function()
+      require("large_file").setup()
+    end
   },
+  {
+    "folke/flash.nvim",
+    event = "VeryLazy",
+    ---@type Flash.Config
+    opts = {
+      modes = {
+        search = {
+          enabled = false,
+        },
+        char = {
+          jump_labels = true
+        },
+      },
+
+    },
+    -- stylua: ignore
+    keys = {
+      { "s", mode = { "n", "x", "o" }, function() require("flash").jump() end, desc = "Flash" },
+      { "S", mode = { "n", "x", "o" }, function() require("flash").treesitter() end, desc = "Flash Treesitter" },
+      { "r", mode = "o", function() require("flash").remote() end, desc = "Remote Flash" },
+      { "R", mode = { "o", "x" }, function() require("flash").treesitter_search() end, desc = "Treesitter Search" },
+      { "<c-s>", mode = { "c" }, function() require("flash").toggle() end, desc = "Toggle Flash Search" },
+    },
+  },
+  -- {
+  --   'stevearc/overseer.nvim',
+  --   opts = {},
+  --   config = function()
+  --     require("overseer").setup({})
+  --   end,
+  -- },
+  --{ "rcarriga/nvim-dap-ui", dependencies = {"mfussenegger/nvim-dap", "nvim-neotest/nvim-nio"} },
   {
     -- https://github.com/daipeihust/im-select install binary
     "keaising/im-select.nvim",
@@ -755,11 +823,11 @@ lvim.plugins = {
       vim.api.nvim_create_autocmd('TextYankPost', { callback = copy })
     end
   },
-  {
-    "ray-x/lsp_signature.nvim",
-    event = "BufRead",
-    config = function() require "lsp_signature".on_attach() end,
-  },
+  -- {
+  --   "ray-x/lsp_signature.nvim",
+  --   event = "VeryLazy",
+  --   config = function(_, opts) require'lsp_signature'.setup(opts) end
+  -- },
   {
     "romgrk/nvim-treesitter-context",
     config = function()
@@ -816,11 +884,28 @@ lvim.plugins = {
     end,
   },
   {
-    "simrat39/symbols-outline.nvim",
+    "hedyhli/outline.nvim",
+    lazy = true,
+    cmd = { "Outline", "OutlineOpen" },
     config = function()
-      require('symbols-outline').setup()
-    end
+      -- Example mapping to toggle outline
+      vim.keymap.set("n", "<leader>fT", "<cmd>Outline<CR>",
+        { desc = "Toggle Outline" })
+
+      require("outline").setup (
+        {
+
+          preview_window = {
+            auto_preview = true,
+          },
+          outline_items = {
+            show_symbol_lineno = true,
+          },
+        }
+      )
+    end,
   },
+
   {
     "sindrets/diffview.nvim",
     dependencies = "nvim-lua/plenary.nvim"
@@ -866,11 +951,6 @@ lvim.plugins = {
         desc = 'Create a selection for selected text or word under the cursor',
       },
     },
-  },
-  { "simrat39/symbols-outline.nvim" },
-  {
-    "sindrets/diffview.nvim",
-    dependencies = "nvim-lua/plenary.nvim"
   },
   { "szw/vim-maximizer" },
   {
@@ -924,7 +1004,18 @@ lvim.plugins = {
   { "stevearc/dressing.nvim" },  -- :%Subvert/facilit{y,ies}/building{,s}/g
   { "tpope/vim-abolish" },  -- :%Subvert/facilit{y,ies}/building{,s}/g
   { "tpope/vim-fugitive" },
-  { "tpope/vim-surround" }, --  https://github.com/tpope/vim-surround   cs{from_char}{to_char} / ds{char} / ys{motion}{char}
+  {
+  "roobert/surround-ui.nvim",
+  dependencies = {
+    "kylechui/nvim-surround",
+    "folke/which-key.nvim",
+  },
+  config = function()
+    require("surround-ui").setup({
+      root_key = "S"
+    })
+  end,
+},
   -- yssb - wrap the entire line in parentheses
   { "tpope/vim-repeat" },   -- ysiw<em>
   -- {
@@ -937,11 +1028,20 @@ lvim.plugins = {
   { "wellle/tmux-complete.vim" },
   { "yegappan/taglist" },
   {
-    -- hint when you type
     "ray-x/lsp_signature.nvim",
-    event = "BufRead",
-    config = function() require "lsp_signature".on_attach() end,
+    event = "VeryLazy",
+    opts = {},
+    config = function(_, opts) require'lsp_signature'.setup(opts) end
   },
+  {
+    "folke/todo-comments.nvim",
+    dependencies = { "nvim-lua/plenary.nvim" },
+    opts = {
+      -- your configuration comes here
+      -- or leave it empty to use the default settings
+      -- refer to the configuration section below
+    }
+  }
 }
 
 -- local highlight = {

@@ -1,29 +1,29 @@
 #!/usr/bin/env python3
 """python3 utils"""
+
 import collections
 import contextlib
 import dataclasses
+import datetime
 import io
 import itertools
 import json
 import locale
 import os
+import random
 import re
 import sys
-from collections.abc import Mapping, Sequence, Set
+from collections.abc import Mapping, Sequence
+from collections.abc import Set as AbstractSet
 from contextlib import ExitStack
 from functools import partial
 from operator import itemgetter
 from pathlib import Path
-from typing import (Any, BinaryIO, Callable, Hashable, Iterator, Text, TextIO,
-                    Union)
+from typing import IO, Any, Callable, Iterable, Iterator
 
-import boltons
 import funcy
-import more_itertools
-import toolz
 import tqdm as tqdm_
-from traceback_with_variables import activate_by_import
+from traceback_with_variables import activate_by_import  # noqa
 
 if locale.getencoding() != "UTF-8":
     print(f"system default locale {locale.getlocale()}", file=sys.stderr)
@@ -39,7 +39,7 @@ sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
 class MetaChar(type):
     """for type hint"""
 
-    def __instancecheck__(self, instance: str):
+    def __instancecheck__(cls, instance: str):
         """check is cahr"""
         return isinstance(instance, str) and len(instance) == 1
 
@@ -47,32 +47,38 @@ class MetaChar(type):
 class Char(str, metaclass=MetaChar):
     """for type hint"""
 
-    pass
+    __slots__ = ()
 
 
-def _make_bytes(value: object, encoding="utf8"):
+def _make_bytes(value: object, encoding: str = "utf8") -> bytes:
     r"""Set/Map/Sequence to json str, then to bytes.
 
-    >>> _make_bytes({1,2,3})
+    >>> _make_bytes({1, 2, 3})
     b'[1, 2, 3]'
-    >>> _make_bytes((1,2,3))
+    >>> _make_bytes((1, 2, 3))
     b'[1, 2, 3]'
     >>> _make_bytes("你好")
     b'\xe4\xbd\xa0\xe5\xa5\xbd'
     """
     if isinstance(value, str):
         value = value.encode(encoding)
-    elif isinstance(value, Set):
+    elif isinstance(value, AbstractSet):
         value = dump_json(sorted(value))
     elif isinstance(value, (Sequence, Mapping)):
         value = dump_json(value)
     if isinstance(value, bytes):
         return value
-    else:
-        return str(value).encode(encoding)
+    return str(value).encode(encoding)
 
 
-def xprint(*values, suffix="", sep="\t", flush=True, file=None, encoding="utf8") -> None:
+def xprint(
+    *values: object,
+    suffix: str = "",
+    sep: str = "\t",
+    flush: bool = True,
+    file: "IO|None" = None,
+    encoding: str = "utf8",
+) -> None:
     """print with default sep and suffix and encoding"""
     if file is None:
         file = sys.stdout
@@ -85,7 +91,7 @@ def xprint(*values, suffix="", sep="\t", flush=True, file=None, encoding="utf8")
         file.flush()
 
 
-def xerr(*values: object, suffix="", sep="\t", encoding="utf8") -> None:
+def xerr(*values: object, suffix: str = "", sep: str = "\t", encoding: str = "utf8") -> None:
     """print to stderr with default sep and suffix and encoding"""
     xprint(
         *values,
@@ -113,7 +119,7 @@ def is_chinese_or_alnum(uchar: Char) -> bool:
     return False
 
 
-def norm_term(term: str, strict=True, stop_chars: set[Char] = set()) -> str:
+def norm_term(term: str, *, strict: bool = True, stop_chars: set[Char] | None = None) -> str:
     """Convert the term to lowercase and remove whitespace characters
 
     strict: just keep chinese/alnum chars(no punctions/emojis)
@@ -133,19 +139,21 @@ def norm_term(term: str, strict=True, stop_chars: set[Char] = set()) -> str:
     return ret
 
 
-def split_str(s: str, sep: str = "\t", maxsplit: int = -1):
+def split_str(s: str, sep: str = "\t", maxsplit: int = -1) -> list[str]:
     """split Unicode string and return list"""
     return funcy.lmap(lambda x: x.strip(), s.rstrip("\n").split(sep, maxsplit))
 
 
 def read_file(
-    input_: Union[Text, Path, TextIO, BinaryIO, None] = sys.stdin.buffer,
+    input_: str | Path | IO | None = sys.stdin.buffer,
+    *,
     sep: str = "\t",
-    encoding="utf-8",
+    encoding: str = "utf-8",
     maxsplit: int = -1,
-    decode_error_tolerance_count=10,
-    skip_header=False,
+    decode_error_tolerance_count: int = 10,
+    skip_header: bool = False,
     tqdm: str | bool = False,
+    total: int | None = None,
 ) -> Iterator[list[str]]:
     """Read the file line by line with a specified encoding and return iterator of list after splitting by sep.
 
@@ -154,7 +162,7 @@ def read_file(
     if input_ is None:
         input_ = sys.stdin.buffer
     with ExitStack() as stack:
-        if isinstance(input_, Text):
+        if isinstance(input_, str):
             input_ = Path(input_)
 
         if isinstance(input_, Path):
@@ -164,7 +172,7 @@ def read_file(
             input_ = funcy.rest(input_)  # type:ignore
 
         for i, line in enumerate(
-            tqdm_.tqdm(input_, desc=tqdm if isinstance(tqdm, str) else None) if tqdm else input_
+            tqdm_.tqdm(input_, total=total, desc=tqdm if isinstance(tqdm, str) else None) if tqdm else input_
         ):  # type:ignore
             if not isinstance(line, str):
                 try:
@@ -183,7 +191,9 @@ def read_file(
             yield ll
 
 
-def make_key_func(f: int | slice | Sequence | Mapping | Set | Callable[..., Any]) -> Callable:
+def make_key_func(
+    f: int | slice | Sequence | Mapping | AbstractSet | Callable[..., Any],
+) -> Callable:
     """turn into key func
 
     >>> ll = list(range(10))
@@ -193,39 +203,39 @@ def make_key_func(f: int | slice | Sequence | Mapping | Set | Callable[..., Any]
     (0,)
     >>> make_key_func(1)(ll)
     1
-    >>> make_key_func([1,0,4])(ll)
+    >>> make_key_func([1, 0, 4])(ll)
     (1, 0, 4)
-    >>> make_key_func(1)({1:2, 3:4})
+    >>> make_key_func(1)({1: 2, 3: 4})
     2
     >>> make_key_func({1, 2})(1)
     True
-    >>> make_key_func(lambda x:x[1])(ll)
+    >>> make_key_func(lambda x: x[1])(ll)
     1
     """
     if callable(f):
         return f
-    elif isinstance(f, int):
+    if isinstance(f, int):
         return lambda x: itemgetter(f)(x)
-    elif isinstance(f, slice):
+    if isinstance(f, slice):
         return lambda x: tuple(itemgetter(f)(x))
-    elif isinstance(f, Sequence):
+    if isinstance(f, Sequence):
         return lambda x: tuple(x[i] for i in f)
-    elif isinstance(f, Mapping):
+    if isinstance(f, Mapping):
         return f.__getitem__
-    elif isinstance(f, Set):
+    if isinstance(f, AbstractSet):
         return f.__contains__
-    else:
-        raise TypeError("Can't make a func from %s" % f.__class__.__name__)
+    raise TypeError(f"Can't make a func from {f.__class__.__name__}")
 
 
 def group_file_by_key(
-    input_: Union[Text, Path, TextIO, BinaryIO, None] = sys.stdin.buffer,
-    key: Callable[..., Any] | Sequence[int] | Set | Mapping | slice | int = 0,
+    input_: str | Path | IO | None = sys.stdin.buffer,
+    *,
+    key: Callable[..., Any] | Sequence[int] | AbstractSet | Mapping | slice | int = 0,
     sep: str = "\t",
-    encoding="utf-8",
+    encoding: str = "utf-8",
     maxsplit: int = -1,
-    decode_error_tolerance_count=10,
-):
+    decode_error_tolerance_count: int = 10,
+) -> Iterator:
     """read file line by line and split by sep and group by key, return like itertools.groupby"""
     key_func = make_key_func(key)
     f = read_file(
@@ -273,8 +283,7 @@ def list_to_dict(
             decode_error_tolerance_count -= 1
             if decode_error_tolerance_count < 0:
                 raise
-            else:
-                continue
+            continue
         result[k].append(v)
 
     return funcy.walk_values(value_accumulate_func, result)
@@ -292,44 +301,43 @@ def load_files(*files, map_func=None, sep="\t", encoding="utf8"):
 class JsonCustomEncoder(json.JSONEncoder):
     """支持set、datacalss"""
 
-    def default(self, obj):
-        """api"""
-        if isinstance(obj, set):
-            return list(obj)
-        if dataclasses.is_dataclass(obj):
-            return dataclasses.asdict(obj)
-        return json.JSONEncoder.default(self, obj)
+    def default(self, o: object) -> object:
+        """encode set/dataclass"""
+        if isinstance(o, set):
+            return list(o)
+        if dataclasses.is_dataclass(o):
+            return dataclasses.asdict(o)
+        return json.JSONEncoder.default(self, o)
 
 
-def dump_json(obj: Any, indent=None) -> str:
+def dump_json(obj: object, indent: int | None = None) -> str:
     """dump json into str, 支持set、dataclass"""
     return json.dumps(obj, ensure_ascii=False, indent=indent, cls=JsonCustomEncoder)
 
 
-def safe_divide(p1: int | float, p2: int | float, digits=2, percentage=False) -> str:
+def safe_divide(p1: float, p2: float, *, digits: int = 2, percentage: bool = False) -> str:
     """return n/a if divide 0 else value with str type
 
-    >>> safe_divide(1,0)
+    >>> safe_divide(1, 0)
     'nan'
-    >>> safe_divide(10,3)
+    >>> safe_divide(10, 3)
     '3.33'
-    >>> safe_divide(1,3, percentage=True)
+    >>> safe_divide(1, 3, percentage=True)
     '33.33%'
     """
     if p2 == 0:
         return "nan"
     if percentage:
         return f"{{:.{digits}%}}".format(p1 / p2)
-    else:
-        return f"{{:.{digits}f}}".format(p1 / p2)
+    return f"{{:.{digits}f}}".format(p1 / p2)
 
 
-def safe_diff(p1: int | float | str, p2: int | float | str, digits=2, percentage=True) -> str:
+def safe_diff(p1: float | str, p2: float | str, *, digits: int = 2, percentage: bool = True) -> str | float:
     """return n/a if divide 0 else value with str type
 
-    >>> safe_diff(1,0)
+    >>> safe_diff(1, 0)
     'n/a'
-    >>> safe_diff(3,10)
+    >>> safe_diff(3, 10)
     '-70%'
     """
     p1 = to_number(p1)
@@ -338,24 +346,20 @@ def safe_diff(p1: int | float | str, p2: int | float | str, digits=2, percentage
         return float("nan")
     if percentage:
         return f"{{:.{digits}%}}".format(p1 / p2 - 1)
-    else:
-        return f"{{:.{digits}f}}".format(p1 / p2 - 1)
+    return f"{{:.{digits}f}}".format(p1 / p2 - 1)
 
 
-def to_number(s: str | float | int):
+def to_number(s: str | float) -> float:
     """str to float/int"""
     if isinstance(s, (float, int)):
         return s
 
-    if isinstance(s, str):
-        s = s.strip()
-        if s.endswith("%"):
-            s = float(s[:-1]) / 100
-            return s
-        else:
-            s = int(s) if s.isnumeric() else float(s)
-            return s
-    return float("nan")
+    s = s.strip()
+    if s.endswith("%"):
+        s = float(s[:-1]) / 100
+        return s
+    s = int(s) if s.isnumeric() else float(s)
+    return s
 
 
 def is_mr() -> str | None:
@@ -388,21 +392,21 @@ def get_set_bits(recall_src: str | int) -> set[int]:
     return {i for i, v in enumerate(list(bin(int(recall_src))[::-1])) if v == "1"}
 
 
-class redirect_stdout_to_file(contextlib.ContextDecorator):
+class RedirectStdoutToFile(contextlib.ContextDecorator):
     """redirect_stdout_to_file
 
     >>> with redirect_stdout_to_file("test", "w"):
     ...     print(123)
     """
 
-    def __init__(self, fname: str | Path, mode="w", tpl: str | None = None):
+    def __init__(self, fname: str | Path | None, mode: str = "w", tpl: str | None = None) -> None:
         """file name and write mode"""
         if tpl is None:
             tpl = "{}"
         self.fname = tpl.format(fname) if fname else None
         self.mode = mode
 
-    def __enter__(self):
+    def __enter__(self) -> None:
         """enter"""
         if self.fname is not None:
             self.file = open(self.fname, self.mode)
@@ -413,17 +417,20 @@ class redirect_stdout_to_file(contextlib.ContextDecorator):
         sys.stdout = self.file
         return self.file
 
-    def __exit__(self, *exc):
+    def __exit__(self, *exc: object):
         """exit"""
         sys.stdout = self.old_stdout
         self.file.close()
 
 
-class redirect_stderr_to_file(contextlib.ContextDecorator):
+redirect_stdout_to_file = RedirectStdoutToFile
+
+
+class RedirectStderrToFile(contextlib.ContextDecorator):
     """redirect_stderr_to_file
 
     >>> with redirect_stderr_to_file("test", "w"):
-    ...     print(123,file=sys.stderr)
+    ...     print(123, file=sys.stderr)
     """
 
     def __init__(self, fname: str | None, mode: str = "w", tpl: str | None = None):
@@ -444,35 +451,77 @@ class redirect_stderr_to_file(contextlib.ContextDecorator):
         sys.stderr = self.file
         return self.file
 
-    def __exit__(self, *exc):
+    def __exit__(self, *exc: object):
         """exit"""
         sys.stderr = self.old_stderr
         self.file.close()
 
 
-def sample(fname: str = None, n: int = 100, query_idx: int = 0, pv_idx: int = -1, skip_header=False):
+redirect_stderr_to_file = RedirectStderrToFile
+
+
+def sample(
+    fname: str | None = None,
+    n: int = 100,
+    *,
+    query_idx: int = 0,
+    pv_idx: int = 1,
+    skip_header: bool = False,
+) -> None:
     """weighted sample with replacement"""
-    import random
 
     population = []
     weights = []
+    bad_pv_cnt = 0
     for ll in read_file(fname, skip_header=skip_header):
         q = ll[query_idx]
         if len(ll) > 1:
             try:
                 pv = int(ll[pv_idx])
-            except:
+            except ValueError:
+                bad_pv_cnt += 1
                 continue
         else:
             pv = 1
         population.append(q)
         weights.append(pv)
+    xerr(f"skip bad line for pv, cnt: {bad_pv_cnt}")
 
     for q in random.choices(population=population, weights=weights, k=n):
         xprint(q)
 
 
-def doctest():
+def timestamp(fmt: str = "%Y%m%d%H%M%S") -> str:
+    """return current local timestamp"""
+
+    now = datetime.datetime.now(tz=datetime.UTC).astimezone()
+    ts = now.strftime(fmt)
+    return ts
+
+
+def parallel_process_items_threads(
+    inputs: str | Iterable,
+    proc_func: Callable,
+    *,
+    thread_cnt: int = 4,
+    tqdm: str | bool = True,
+    total: int | None = None,
+) -> Iterator:
+    """多线程跑函数proc_func"""
+    if isinstance(inputs, str):
+        _inputs = read_file(inputs, tqdm=tqdm)
+    else:
+        _inputs = tqdm_.tqdm(inputs, total=total) if tqdm else inputs
+
+    from multiprocessing.dummy import Pool
+
+    with Pool(thread_cnt) as pool:
+        imap_it = pool.imap(_inputs, proc_func)
+
+        yield from imap_it
+
+
+def doctest() -> None:
     """test"""
     os.system("pytest --doctest-modules")
 

@@ -16,7 +16,17 @@ lvim.format_on_save.timeout = 2000
 lvim.format_on_save.pattern = { "*.sh", "*.py", "*.lua" }
 
 --lvim.colorscheme = "onedarker"
-lvim.colorscheme = "sonokai"
+
+-- -- Important!!
+-- if vim.o.termguicolors then
+--   vim.o.termguicolors = true
+-- end
+
+-- -- The configuration options should be placed before `colorscheme sonokai`.
+-- --vim.g.sonokai_style = 'andromeda'
+-- vim.g.sonokai_better_performance = 1
+
+
 -- to disable icons and use a minimalist setup, uncomment the following
 lvim.use_icons = false
 
@@ -148,7 +158,7 @@ lvim.builtin.which_key.mappings["f"] = {
   g = { find_gitroot_files, "Find same prj" },
   h = { "<cmd>Telescope help_tags<cr>", "Help" },
   k = { "<cmd>Telescope keymaps<cr>", "keymappings" },
-  m = { "<cmd>lua require('fzf-lua').oldfiles()<cr>", "Open Recent File" },
+  m = { "<cmd>lua require('fzf-lua').oldfiles({ file_ignore_patterns = {'COMMIT_EDITMSG'} } )<cr>", "Open Recent File" },
   O = { "<cmd>Telescope vim_options<cr>", "Vim Options" },
   p = { "<cmd>lua require('fzf-lua').registers({ resume = true })<cr>", "Paste registers" },
   P = { "<cmd>Telescope projects<CR>", "Projects" },
@@ -295,30 +305,145 @@ end
 
 lvim.plugins = {
   { "folke/neodev.nvim", opts = {} }, --  Neovim setup for init.lua and plugin development with full signature help, docs and completion for the nvim lua API.
+  -- { "chrisgrieser/nvim-spider",   -- TODO:
+  --   lazy = true, -- w/e/b 
+  --   opts = {consistentOperatorPending=true},
+  --   --enabled=false,
+  --   keys = {
+  --     {
+  --       "e",
+  --       "<cmd>lua require('spider').motion('e')<CR>",
+  --       mode = { "n", "o", "x" },
+  --     },
+  --     {
+  --       "w",
+  --       "<cmd>lua require('spider').motion('w')<CR>",
+  --       mode = { "n", "o", "x" },
+  --     },
+  --     {
+  --       "cw",
+  --       "c<cmd>lua require('spider').motion('e')<CR>",
+  --       mode = { "n"},
+  --     },
+  --     {
+  --       "b",
+  --       "<cmd>lua require('spider').motion('b')<CR>",
+  --       mode = { "n", "o", "x" },
+  --     }
+  --   }
+
+  -- },
+  {
+    'abecodes/tabout.nvim',
+    lazy = false,
+    config = function()
+      require('tabout').setup {
+        tabkey = '<Tab>', -- key to trigger tabout, set to an empty string to disable
+        backwards_tabkey = '<S-Tab>', -- key to trigger backwards tabout, set to an empty string to disable
+        act_as_tab = true, -- shift content if tab out is not possible
+        act_as_shift_tab = false, -- reverse shift content if tab out is not possible (if your keyboard/terminal supports <S-Tab>)
+        default_tab = '<C-t>', -- shift default action (only at the beginning of a line, otherwise <TAB> is used)
+        default_shift_tab = '<C-d>', -- reverse shift default action,
+        enable_backwards = true, -- well ...
+        completion = false, -- if the tabkey is used in a completion pum
+        tabouts = {
+          { open = "'", close = "'" },
+          { open = '"', close = '"' },
+          { open = '`', close = '`' },
+          { open = '(', close = ')' },
+          { open = '[', close = ']' },
+          { open = '{', close = '}' }
+        },
+        ignore_beginning = true, --[[ if the cursor is at the beginning of a filled element it will rather tab out than shift the content ]]
+        exclude = {} -- tabout will ignore these filetypes
+      }
+    end,
+    dependencies = { -- These are optional
+      "nvim-treesitter/nvim-treesitter",
+      "L3MON4D3/LuaSnip",
+      "hrsh7th/nvim-cmp"
+    },
+    lazy= true,  -- Set this to true if the plugin is optional
+    event = 'InsertCharPre', -- Set the event to 'InsertCharPre' for better compatibility
+    priority = 1000,
+
+  },
+
+  {
+    'Mr-LLLLL/treesitter-outer', -- TODO, tab movement in insert mode
+    dependencies = "nvim-treesitter/nvim-treesitter",
+    -- only load this plug in follow filetypes
+    ft = {
+      "c",
+      "cpp",
+      "elixir",
+      "fennel",
+      "foam",
+      "go",
+      "javascript",
+      "julia",
+      "lua",
+      "nix",
+      "php",
+      "python",
+      "r",
+      "ruby",
+      "rust",
+      "scss",
+      "tsx",
+      "typescript",
+    },
+    -- default config
+    opts = {
+      filetypes = {
+        "c",
+        "cpp",
+        "elixir",
+        "fennel",
+        "foam",
+        "go",
+        "javascript",
+        "julia",
+        "lua",
+        "nix",
+        "php",
+        "python",
+        "r",
+        "ruby",
+        "rust",
+        "scss",
+        "tsx",
+        "typescript",
+      },
+      mode = { 'n', 'v' },
+      prev_outer_key = "[{",
+      next_outer_key = "]}",
+    },
+  },
   { "tenxsoydev/tabs-vs-spaces.nvim", 
     config = function()
       require("tabs-vs-spaces").setup()
       lvim.autocommands = {
         {
-            "BufEnter", -- see `:h autocmd-events`
-            { -- this table is passed verbatim as `opts` to `nvim_create_autocmd`
-                pattern = { "*.py", "*.sh", "*.cpp" }, -- see `:h autocmd-events`
-                command = "TabsVsSpacesToggle",
-            }
+          "BufEnter", -- see `:h autocmd-events`
+          { -- this table is passed verbatim as `opts` to `nvim_create_autocmd`
+            pattern = { "*.py", "*.sh", "*.cpp" }, -- see `:h autocmd-events`
+            command = "TabsVsSpacesToggle",
+          }
         },
       }
 
     end
   },
-  {
-    'rmagatti/auto-session',
-    config = function()
-      require("auto-session").setup {
-        log_level = "error",
-        -- auto_session_suppress_dirs = { "~/", "~/Projects", "~/Downloads", "/"},
-      }
-    end
-  },
+  -- {
+  --   'rmagatti/auto-session',
+  --   config = function()
+  --     require("auto-session").setup {
+  --       log_level = "error",
+  --       -- auto_session_suppress_dirs = { "~/", "~/Projects", "~/Downloads", "/"},
+  --     }
+  --   end
+  -- },
   {"AckslD/swenv.nvim"},
   {'chentoast/marks.nvim',
     config = function() 
@@ -383,23 +508,25 @@ lvim.plugins = {
     end,
   },
 
-  {
-    url="https://git.sr.ht/~whynothugo/lsp_lines.nvim", 
-    config = function()
-      require("lsp_lines").setup()
-      -- Disable virtual_text since it's redundant due to lsp_lines.
-      vim.diagnostic.config({
-        virtual_text = false,
-      })
-      -- vim.keymap.set(
-      --   "",
-      --   "<Leader>lb",
-      --   require("lsp_lines").toggle,
-      --   { desc = "Toggle lsp_lines" }
-      -- )
-      lvim.builtin.which_key.mappings["lb"] = { "<cmd>lua require('lsp_lines').toggle()<cr>", "Toggle lsp_llines" }
-    end,
-  },
+  -- {
+  --   url="https://git.sr.ht/~whynothugo/lsp_lines.nvim", 
+  --   config = function()
+  --     require("lsp_lines").setup()
+  --     -- Disable virtual_text since it's redundant due to lsp_lines.
+  --     vim.diagnostic.config({
+  --       virtual_text = true,
+  --       only_current_line=true,
+  --       highlight_whole_line=false,
+  --     })
+  --     -- vim.keymap.set(
+  --     --   "",
+  --     --   "<Leader>lb",
+  --     --   require("lsp_lines").toggle,
+  --     --   { desc = "Toggle lsp_lines" }
+  --     -- )
+  --     lvim.builtin.which_key.mappings["lb"] = { "<cmd>lua require('lsp_lines').toggle()<cr>", "Toggle lsp_llines" }
+  --   end,
+  -- },
   {
     "kevinhwang91/nvim-bqf",
     event = "WinEnter",
@@ -425,7 +552,7 @@ lvim.plugins = {
     end,
   },
   { 
-    "danymat/neogen", 
+    "danymat/neogen",  -- doc gene
     config = true,
     -- Uncomment next line if you want to follow only stable versions
     -- version = "*" 
@@ -459,8 +586,27 @@ lvim.plugins = {
       -- calling `setup` is optional for customization
       -- :edit $NVIM_LOG_FILE
       --  Vim:Failed to start server: no such file or directory
+    local _, actions = pcall(require, "telescope.actions")
+      local actions = require"fzf-lua".actions
       require("fzf-lua").setup({
         fzf_opts = { ['--cycle'] = true}, 
+        actions = {
+          files = {
+            ["default"]     = actions.file_edit_or_qf,
+            ["ctrl-x"] = actions.file_split,
+            ["ctrl-v"]      = actions.file_vsplit,
+            ["ctrl-t"]      = actions.file_tabedit,
+            ["alt-q"]       = actions.file_sel_to_qf,
+            ["alt-l"]       = actions.file_sel_to_ll,
+
+          },
+          buffers = {
+            ["ctrl-x"] = require'fzf-lua'.actions.buf_split,
+            ["default"]     = actions.buf_edit,
+          ["ctrl-v"]      = actions.buf_vsplit,
+          ["ctrl-t"]      = actions.buf_tabedit,
+          },
+        }
         --keymap={builtin={["ctrl-]"]  = "preview-page-down",["ctrl-["]    = "preview-page-up",}}
       })
       vim.api.nvim_set_keymap('i', '<C-x><C-f>', '<cmd>lua require("fzf-lua").complete_path()<CR>', {noremap = true})
@@ -602,7 +748,7 @@ lvim.plugins = {
     end
   },
   {
-    "folke/flash.nvim",
+    "folke/flash.nvim", -- navigate your code with search labels, enhanced character motions, and Treesitter integration.
     event = "VeryLazy",
     ---@type Flash.Config
     opts = {
@@ -828,6 +974,11 @@ lvim.plugins = {
   --   event = "VeryLazy",
   --   config = function(_, opts) require'lsp_signature'.setup(opts) end
   -- },
+ -- -- lazy.nvim
+-- { 
+-- "chrisgrieser/nvim-puppeteer", -- Automatically convert strings to f-strings or template strings and back
+-- lazy = false, 
+-- },
   {
     "romgrk/nvim-treesitter-context",
     config = function()
@@ -955,7 +1106,11 @@ lvim.plugins = {
   { "szw/vim-maximizer" },
   {
     "sainnhe/sonokai",
+    lazy = false,
+    priority = 1000,
     config = function()
+      require'lualine'.setup {options = {theme = 'sonokai'}}
+
       vim.cmd([[
         function! s:sonokai_custom() abort
         " Link a highlight group to a predefined highlight group.
@@ -985,37 +1140,49 @@ lvim.plugins = {
 
         endfunction
 
-        augroup SonokaiCustom
-        autocmd!
-        autocmd ColorScheme sonokai call s:sonokai_custom()
-        augroup END
+        " TODO:
+        " augroup SonokaiCustom
+        " autocmd!
+        " autocmd ColorScheme sonokai call s:sonokai_custom()
+        " augroup END
         ]])
 
-      vim.g.sonokai_style = 'default'
       vim.g.sonokai_transparent_background = 0
       vim.g.sonokai_diagnostic_text_highlight = 1
       vim.g.sonokai_diagnostic_line_highlight = 1
       vim.g.sonokai_better_performance = 1
       -- vim.g.sonokai_enable_italic = 1
       vim.g.sonokai_disable_italic_comment = 1
+      vim.g.sonokai_style = 'default'
+      lvim.colorscheme = "sonokai"
     end
+  },
+  {"sainnhe/gruvbox-material",
+    lazy = false,
+    priority = 1000,
+    config = function()
+      require'lualine'.setup {options = {theme = 'gruvbox-material'}}
+      vim.g.gruvbox_material_background = 'hard'
+      -- lvim.colorscheme = "gruvbox-material"
+    end
+
   },
 
   { "stevearc/dressing.nvim" },  -- :%Subvert/facilit{y,ies}/building{,s}/g
   { "tpope/vim-abolish" },  -- :%Subvert/facilit{y,ies}/building{,s}/g
   { "tpope/vim-fugitive" },
   {
-  "roobert/surround-ui.nvim",
-  dependencies = {
-    "kylechui/nvim-surround",
-    "folke/which-key.nvim",
+    "roobert/surround-ui.nvim",
+    dependencies = {
+      "kylechui/nvim-surround",
+      "folke/which-key.nvim",
+    },
+    config = function()
+      require("surround-ui").setup({
+        root_key = "S"
+      })
+    end,
   },
-  config = function()
-    require("surround-ui").setup({
-      root_key = "S"
-    })
-  end,
-},
   -- yssb - wrap the entire line in parentheses
   { "tpope/vim-repeat" },   -- ysiw<em>
   -- {
@@ -1181,15 +1348,11 @@ endif
 "   set termguicolors
 " endif
 
-if (has("termguicolors"))
-set termguicolors
-endif
-
-" Enable true color ?????ն?24λɫ
+" Enable true color 
 if exists('+termguicolors')
-let &t_8f = "\<Esc>[38;2;%lu;%lu;%lum"
-let &t_8b = "\<Esc>[48;2;%lu;%lu;%lum"
-set termguicolors
+  let &t_8f = "\<Esc>[38;2;%lu;%lu;%lum"
+  let &t_8b = "\<Esc>[48;2;%lu;%lu;%lum"
+  set termguicolors
 endif
 
 ]])

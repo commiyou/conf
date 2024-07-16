@@ -19,12 +19,18 @@ setopt NUMERIC_GLOB_SORT
 
 # History
 setopt appendhistory  # Append history, instead of replace, when a terminal session exits
+setopt HIST_EXPIRE_DUPS_FIRST    # Expire a duplicate event first when trimming history.
+setopt HIST_IGNORE_DUPS          # Do not record an event that was just recorded again.
+setopt HIST_FIND_NO_DUPS         # Do not display a previously found event.
+
 setopt hist_ignore_all_dups # Remove the old entry and append the new one
 setopt hist_ignore_space # Ignore commands with a space before
 setopt noHIST_NO_FUNCTIONS               # save function define
 setopt HIST_VERIFY  # perform history expansion and reload the line into the editing buffer
 setopt inc_append_history # Add commands as they are typed, don't wait until shell exit
 setopt share_history
+setopt HIST_NO_STORE             # Don't store history commands
+
 
 # Input/Output
 setopt NO_FLOW_CONTROL                 # Ignore ^S/^Q
@@ -37,3 +43,4 @@ setopt LONG_LIST_JOBS
 
 # compdef _git gco=git-checkout
 setopt complete_aliases
+setopt EXTENDED_HISTORY          # Write the history file in the ':start:elapsed;command' format.

@@ -1,0 +1,7 @@
+---
+syntax: sh
+tags: [ sh, xargs, parall  ]
+---
+
+# run 
+seq 1 10  |  xargs -i -P 0 bash -c 'sleep {} && echo done sleeping for {} seconds'

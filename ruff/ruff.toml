@@ -39,6 +39,7 @@ ignore = [
   "SIM112",
   "S112",
   "S311",
+  "COM812"
 
 ]
 fixable = ["ALL"]

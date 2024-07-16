@@ -240,3 +240,19 @@ m() {
   local _cmd="cht.sh $*; cheat -c $*; "
   ( eval $_cmd )| fzf --ansi 
 }
+
+
+# https://github.com/rothgar/mastering-zsh/blob/master/docs/config/history.md
+# search entire history for "foo" with
+# h foo
+function h() {
+    # check if we passed any parameters
+    if [ -z "$*" ]; then
+        # if no parameters were passed print entire history
+        history -i 1
+    else
+        # if words were passed use it as a search
+        history -i 1 | egrep --color=auto "$@"
+    fi
+}
+

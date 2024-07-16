@@ -1,5 +1,6 @@
 
 typeset -g HISTSIZE=290000 SAVEHIST=290000 HISTFILE=${XDG_CACHE_HOME:-$HOME/.cache}/zhistory-${(%):-%n}
+typeset -g HIST_STAMPS="yyyy-mm-dd"
 
 [[ "$OSTYPE" == "linux-musl" ]] && OSTYPE=linux
 #export OSTYPE=linux-gnu
@@ -12,3 +13,4 @@ umask 022
 export ARTISTIC_STYLE_OPTIONS=${XDG_CONFIG_HOME}/astylerc
 
 export RIPGREP_CONFIG_PATH=${XDG_CONFIG_HOME}/ripgreprc
+

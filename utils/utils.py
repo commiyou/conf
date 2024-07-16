@@ -102,6 +102,28 @@ def xerr(*values: object, suffix: str = "", sep: str = "\t", encoding: str = "ut
     )
 
 
+def is_chinese_char(uchar: Char) -> bool:
+    """char is chinese or alpha/number
+
+    >>> is_chinese_char("你")
+    True
+    >>> is_chinese_char("1")
+    False
+    >>> is_chinese_char("。")
+    False
+    """
+    if uchar.encode().isalnum():
+        return False
+    if uchar >= "\u4e00" and uchar <= "\u9fa5":
+        return True
+    return False
+
+
+def contain_chinese(s: str) -> bool:
+    """是否包含中文字符，标点符号不算"""
+    return any(is_chinese_char(ch) for ch in s)  # noqa: W291
+
+
 def is_chinese_or_alnum(uchar: Char) -> bool:
     """char is chinese or alpha/number
 
@@ -150,6 +172,7 @@ def read_file(
     sep: str = "\t",
     encoding: str = "utf-8",
     maxsplit: int = -1,
+    errors="strict",
     decode_error_tolerance_count: int = 10,
     skip_header: bool = False,
     tqdm: str | bool = False,
@@ -176,7 +199,7 @@ def read_file(
         ):  # type:ignore
             if not isinstance(line, str):
                 try:
-                    uline: str = line.decode(encoding)  # type:ignore
+                    uline: str = line.decode(encoding, errors=errors)  # type:ignore
                 except UnicodeDecodeError:
                     xerr(f"line decode failed! #{i}:[{line[:120] if line else None}]")
                     decode_error_tolerance_count -= 1
@@ -464,31 +487,41 @@ def sample(
     fname: str | None = None,
     n: int = 100,
     *,
-    query_idx: int = 0,
-    pv_idx: int = 1,
+    pv_idx: int | None = None,
     skip_header: bool = False,
+    max_pv: int | None = None,
+    max_pv_replace: int | None = None,
 ) -> None:
-    """weighted sample with replacement"""
+    """weighted sample with replacement
 
-    population = []
-    weights = []
+    max_pv_replace: 将max_pv替换为max_pv_replace, 默认丢弃
+    """
+
+    data: list[list[str]] = []
+    population: list[int] = []
+    weights: list[int] = []
     bad_pv_cnt = 0
     for ll in read_file(fname, skip_header=skip_header):
-        q = ll[query_idx]
-        if len(ll) > 1:
+        if pv_idx is not None and len(ll) > 1:
             try:
                 pv = int(ll[pv_idx])
             except ValueError:
                 bad_pv_cnt += 1
                 continue
+            if max_pv and pv > max_pv:
+                if max_pv_replace is None:
+                    continue
+                pv = max_pv_replace
         else:
             pv = 1
-        population.append(q)
+        population.append(len(data))
+        data.append(ll)
         weights.append(pv)
-    xerr(f"skip bad line for pv, cnt: {bad_pv_cnt}")
+    if bad_pv_cnt > 0:
+        xerr(f"skip bad line for pv, cnt: {bad_pv_cnt}")
 
-    for q in random.choices(population=population, weights=weights, k=n):
-        xprint(q)
+    for line_no in random.choices(population=population, weights=weights, k=n):
+        xprint(*data[line_no])
 
 
 def timestamp(fmt: str = "%Y%m%d%H%M%S") -> str:
@@ -497,6 +530,20 @@ def timestamp(fmt: str = "%Y%m%d%H%M%S") -> str:
     now = datetime.datetime.now(tz=datetime.UTC).astimezone()
     ts = now.strftime(fmt)
     return ts
+
+
+def parallel_process_items_processes(
+    inputs: Iterable,
+    proc_func: Callable,
+    *,
+    process_cnt: int | None = None,
+    tqdm: str | bool = True,
+    total: int | None = None,
+):
+    from multiprocessing import Pool
+
+    with Pool(processes=process_cnt) as pool:
+        yield from tqdm_.tqdm(pool.imap(proc_func, inputs), total=total, desc=tqdm if isinstance(tqdm, str) else None)
 
 
 def parallel_process_items_threads(
@@ -511,14 +558,17 @@ def parallel_process_items_threads(
     if isinstance(inputs, str):
         _inputs = read_file(inputs, tqdm=tqdm)
     else:
-        _inputs = tqdm_.tqdm(inputs, total=total) if tqdm else inputs
+        # _inputs = tqdm_.tqdm(inputs, total=total) if tqdm else inputs
+        _inputs = inputs
 
     from multiprocessing.dummy import Pool
 
-    with Pool(thread_cnt) as pool:
-        imap_it = pool.imap(_inputs, proc_func)
+    with Pool(thread_cnt) as pool, tqdm_.tqdm(total=total) as pbar:
+        imap_it = pool.imap(proc_func, _inputs)
 
-        yield from imap_it
+        for it in imap_it:
+            pbar.update(1)
+            yield it
 
 
 def doctest() -> None:

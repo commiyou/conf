@@ -51,6 +51,11 @@ zplug "junegunn/fzf-bin", \
   as:command, \
   rename-to:fzf
 
+zplug "antonmedv/fx", \
+  from:gh-r, \
+  as:command, \
+  rename-to:fx
+
 zplug 'commiyou/fzf', as:command, use:bin/fzf-tmux, hook-load:"source $ZPLUG_REPOS/commiyou/fzf/shell/key-bindings.zsh", on:"junegunn/fzf-bin"
 
 

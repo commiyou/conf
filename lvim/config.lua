@@ -148,10 +148,10 @@ lvim.builtin.which_key.mappings["b"] = { "<cmd>lua require('fzf-lua').buffers()<
 lvim.builtin.which_key.mappings["m"] = { "<cmd>lua require('fzf-lua').oldfiles()<cr>", "Open Recent File" }
 lvim.builtin.which_key.mappings["f"] = {
   name = "Find",
-  a = { "<cmd>Telescope builtin<cr>", "All builtins" },
+  a = { "<cmd>lua require('fzf-lua').builtin()<cr>", "All builtins" },
   b = { "<cmd>lua require('fzf-lua').buffers()<cr>", "Open Buffers" },
-  C = { "<cmd>Telescope commands_history<cr>", "Rerun Commands" },
-  c = { "<cmd>Telescope commands<cr>", "Run Commands" },
+  C = { "<cmd>lua require('fzf-lua').command_history()<cr>", "Rerun Commands" },
+  c = { "<cmd>lua require('fzf-lua').commands()<cr>", "Run Commands" },
   d = { find_cwd_files, "find same dir" },
   D = { "<cmd>DiffviewOpen<cr>", "DiffviewOpen" },
   f = { "<cmd>lua require('fzf-lua').files({ resume = true })<CR>", "Find File" },
@@ -163,6 +163,7 @@ lvim.builtin.which_key.mappings["f"] = {
   p = { "<cmd>lua require('fzf-lua').registers({ resume = true })<cr>", "Paste registers" },
   P = { "<cmd>Telescope projects<CR>", "Projects" },
   r = { "<cmd>lua require('fzf-lua').live_grep_resume()<cr>", "Live Grep" },
+  R = { '<cmd>lua require("spectre").open_visual({select_word=true})<cr>', "Search files & Replace" },
   s = { "<cmd>lua require('fzf-lua').lsp_document_symbols({ resume = true })<cr>", "Buffer Symbol" },
   S = { "<cmd>ua require('fzf-lua').lsp_workspace_symbols({ resume = true })<cr>", "WorkSpace Symbol" },
   t = { "<cmd>TlistToggle<cr>", "taglist" },
@@ -304,7 +305,86 @@ local function echo(text, hl_group)
 end
 
 lvim.plugins = {
-  { "folke/neodev.nvim", opts = {} }, --  Neovim setup for init.lua and plugin development with full signature help, docs and completion for the nvim lua API.
+  {
+  'Wansmer/sibling-swap.nvim',
+  dependencies = { 'nvim-treesitter' },
+  config = function()
+    require('sibling-swap').setup({--[[ your config ]]})
+  end,
+},
+  -- {"bfredl/nvim-miniyank"}, -- TODO:
+  {"cameron-wags/rainbow_csv.nvim",
+    config = true,
+    ft = {
+        'csv',
+        'tsv',
+        'csv_semicolon',
+        'csv_whitespace',
+        'csv_pipe',
+        'rfc_csv',
+        'rfc_semicolon'
+    },
+    cmd = {
+        'RainbowDelim',
+        'RainbowDelimSimple',
+        'RainbowDelimQuoted',
+        'RainbowMultiDelim'
+    }
+
+  },
+  {'mbbill/undotree'}, -- :UndotreeToggle
+  {"tommcdo/vim-exchange"}, -- cx{motion}, On the first use, define the first {motion} to exchange. On the second use, define the second {motion} and perform the exchange.
+  {"tpope/vim-unimpaired"}, 
+  {"Julian/vim-textobj-variable-segment",  --  iv / av for variable segments.(snake case/camel case)
+    dependencies={
+    "kana/vim-textobj-user",
+    }
+  },
+  -- {
+  --   'ZhiyuanLck/smart-pairs',
+  --   event = 'InsertEnter',
+  --   config = function()
+  --     require('pairs'):setup()
+  --   end,
+  -- },
+  {
+    'nvim-pack/nvim-spectre',
+    dependencies = {"nvim-lua/plenary.nvim"}
+  },
+  -- {
+  --   "willothy/flatten.nvim",
+  --   config = true,
+  --   -- or pass configuration with
+  --   -- opts = {  }
+  --   -- Ensure that it runs first to minimize delay when opening file from terminal
+  --   lazy = false,
+  --   priority = 1001,
+  -- }, -- TODO: not work
+    { 'echasnovski/mini.ai', version = false,
+    config = function() 
+      require('mini.ai').setup()
+    end
+  },
+    {
+        "SmiteshP/nvim-navbuddy",
+        dependencies={
+            "neovim/nvim-lspconfig",
+        "SmiteshP/nvim-navic",
+        "MunifTanjim/nui.nvim",
+        },
+        config = function()
+            require("nvim-navbuddy").setup {
+                lsp = {auto_attach = true}
+            }
+        end
+    },
+  {"whiteinge/diffconflicts"}, -- :DiffConflicts
+  {"AndrewRadev/splitjoin.vim"},  -- gS / gJ  split or join
+  {"vim-scripts/ReplaceWithRegister"},-- gr{motion}, replace with register # TODO: vim -V1 XXXX, conflicts with lsp gr
+  {
+    "folke/neodev.nvim",
+    opts = {},
+  }, --  Neovim setup for init.lua and plugin development with full signature help, docs and completion for the nvim lua API.
   -- { "chrisgrieser/nvim-spider",   -- TODO:
   --   lazy = true, -- w/e/b 
   --   opts = {consistentOperatorPending=true},
@@ -533,7 +613,11 @@ lvim.plugins = {
     config = function()
     end,
   },
-  { "andersevenrud/cmp-tmux", dependencies = "hrsh7th/nvim-cmp", event = "InsertEnter" },
+  {
+    "andersevenrud/cmp-tmux",
+    dependencies = "hrsh7th/nvim-cmp",
+    event = "InsertEnter",
+  },
 
   {
     "christoomey/vim-tmux-navigator",
@@ -551,6 +635,25 @@ lvim.plugins = {
       vim.g.alternateNoFindBuffer = 1
     end,
   },
+  -- {
+  --   "rgroli/other.nvim",
+  --   config = function()
+  --     require("other-nvim").setup({
+  --       mappings = {"c",
+  --                   {
+  --       -- context = "C header",
+  --       pattern = "(.*).cpp$",
+  --       target = "%1.h",
+  --   },
+  --   {
+  --       -- context = "C source file",
+  --       pattern = "(.*).h$",
+  --       target = "%1.cpp",
+  --   },
+  --               }
+  --     })
+  --   end
+  -- },
   { 
     "danymat/neogen",  -- doc gene
     config = true,
@@ -560,24 +663,24 @@ lvim.plugins = {
   { "ConradIrwin/vim-bracketed-paste" },
   { "dbeniamine/cheat.sh-vim" },
   { "elzr/vim-json" },
-  {
-    -- https://github.com/echasnovski/mini.align
-    -- ga/gA to enter split lua pattern
-    -- Press s to enter split Lua pattern.
-    -- Press j to choose justification side from available ones ("left", "center", "right", "none").
-    -- Press m to enter merge delimiter.
-    -- Press f to enter filter Lua expression to configure which parts will be affected (like "align only first column").
-    -- Press i to ignore some commonly unwanted split matches.
-    -- Press p to pair neighboring parts so they be aligned together.
-    -- Press t to trim whitespace from parts.
-    -- Press <BS> (backspace) to delete some last pre-step.
-    "echasnovski/mini.align",
-    version = "*",
-    keys = { "ga", "gA" },
-    opts = function()
-      require("mini.align").setup()
-    end,
-  },
+  -- {
+  --   -- https://github.com/echasnovski/mini.align
+  --   -- ga/gA to enter split lua pattern
+  --   -- Press s to enter split Lua pattern.
+  --   -- Press j to choose justification side from available ones ("left", "center", "right", "none").
+  --   -- Press m to enter merge delimiter.
+  --   -- Press f to enter filter Lua expression to configure which parts will be affected (like "align only first column").
+  --   -- Press i to ignore some commonly unwanted split matches.
+  --   -- Press p to pair neighboring parts so they be aligned together.
+  --   -- Press t to trim whitespace from parts.
+  --   -- Press <BS> (backspace) to delete some last pre-step.
+  --   "echasnovski/mini.align",
+  --   version = "*",
+  --   keys = { "ga", "gA" },
+  --   opts = function()
+  --     require("mini.align").setup()
+  --   end,
+  -- },
   {
     "ibhagwan/fzf-lua",
     -- optional for icon support
@@ -630,6 +733,7 @@ lvim.plugins = {
       }
     end,
   },
+  { 'echasnovski/mini.move', version = false },
   {
     -- https://github.com/echasnovski/mini.nvim/blob/main/readmes/mini-bracketed.md
     -- Buffer	[B [b ]b ]B	MiniBracketed.buffer()
@@ -679,6 +783,7 @@ lvim.plugins = {
       require("mini.jump").setup()
     end,
   },
+  --{"romainl/vim-cool"}, -- no hlserach
   {
     'echasnovski/mini.fuzzy',
     version = false,
@@ -726,7 +831,7 @@ lvim.plugins = {
   {
     'kevinhwang91/nvim-hlslens',
     config = function() 
-      require('hlslens').setup()
+      require('hlslens').setup({calm_down=true})
       local kopts = {noremap = true, silent = true}
       vim.api.nvim_set_keymap('n', 'n',
         [[<Cmd>execute('normal! ' . v:count1 . 'n')<CR><Cmd>lua require('hlslens').start()<CR>]],
@@ -1321,14 +1426,6 @@ nnoremap <silent><C-w>z :MaximizerToggle<CR>
 vnoremap <silent><C-w>z :MaximizerToggle<CR>gv
 "imap <expr> <Plug>(vimrc:copilot-dummy-map) copilot#Accept("\<Tab>")
 
-" jump to the previous function
-autocmd FileType c,cpp nnoremap <silent> [f :call
-\ search('\(\(if\\|for\\|while\\|switch\\|catch\)\_s*\)\@64<!(\_[^)]*)\_[^;{}()]*\zs{', "bw")<CR>
-" jump to the next function
-autocmd FileType c,cpp nnoremap <silent> ]f :call
-\ search('\(\(if\\|for\\|while\\|switch\\|catch\)\_s*\)\@64<!(\_[^)]*)\_[^;{}()]*\zs{', "w")<CR>
-" autocmd FileType c,cpp :FencAutoDetect
-
 "set tags=./tags;,tags;../tags;
 set tags=./tags;$HOME
 nnoremap <C-\> :tab split<CR>:exec("tag ".expand("<cword>"))<CR>
@@ -1389,4 +1486,4 @@ vim.api.nvim_set_keymap('c', '<C-a>', '<Home>', {noremap = true})
 vim.api.nvim_set_keymap('c', '<M-b>', '<S-Left>', {noremap = true})
 vim.api.nvim_set_keymap('c', '<M-f>', '<S-Right>', {noremap = true})
 vim.api.nvim_set_keymap('c', '<C-f>', '<Right>', {noremap = true})
-
+vim.api.nvim_set_keymap('v', '<Leader>y', '"+y', { noremap = true, silent = true }) -- TODO: not work

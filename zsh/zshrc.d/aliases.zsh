@@ -22,6 +22,7 @@ alias vn='vim *(.om[1]^D)'
 
 alias -g L=" | less"
 alias -g LC="| command less -R"  # less with colors support
+alias -g EG=" | LC_ALL=C command egrep -i --color=auto -a"
 alias -g G=" | LC_ALL=C command grep -i --color=auto -a"
 alias -g P=" | pprint | less"
 alias -g NE="2> /dev/null"
@@ -43,6 +44,7 @@ alias -g H1=" | head -1"
 alias -g T=" | tail "
 alias -g T1=" | tail -1"
 alias -g WL=" | wc -l"
+alias -g F="| fzf --tmux"
 
 alias -g E="luit -encoding gb18030"  # env gb18030 to utf
 if type wslview > /dev/null; then
@@ -50,3 +52,9 @@ if type wslview > /dev/null; then
 elif type xdg-open > /dev/null; then
   alias open=xdg-open
 fi
+
+# https://github.com/rothgar/mastering-zsh/blob/master/docs/config/history.md
+# global string replacement you can use string=replace syntax
+# echo foo bar baz foo
+# fc -e - foo=boo     # echo boo bar baz boo
+alias r='fc -e -'  

@@ -1,0 +1,11 @@
+thefuck
+pipetools
+pypyp
+sh
+requests
+pandas
+numpy
+fastapi
+fire
+typer
+funcy

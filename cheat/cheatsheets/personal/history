@@ -1,0 +1,32 @@
+---
+syntax: sh
+tags: [ sh, history ]
+---
+# Use last word from 3 commands ago
+!-3:$
+
+# Use all arguments from 2 commands ago
+!-2:*
+
+# Combine last two commands into a single line
+!-2; !-1
+
+# global substitutions need g
+echo foo foo
+!!:sg/foo/bzz   # bzz bzz
+
+systemctl status sshd
+# replace status with restart
+^status^restart     # systemctl restart sshd
+# use ^:G for global replace
+echo foo foo
+^foo^bzz^:G         # bzz bzz
+
+
+# edit last command in a visual editor and execute it
+fc
+
+
+# run without edit, global string replacement you can use string=replace syntax
+echo foo bar baz foo
+fc -e - foo=boo     # echo boo bar baz boo

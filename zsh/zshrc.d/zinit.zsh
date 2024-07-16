@@ -61,6 +61,9 @@ zt wait for \
   pick'autoenv.zsh' nocompletions \
   Tarrasch/zsh-autoenv 
 
+zinit ice wait="0" lucid from="gh-r" as="program" pick="zoxide-*/zoxide -> zoxide" cp="zoxide-*/completions/_zoxide -> _zoxide" atclone="./zoxide init zsh > init.zsh" atpull="%atclone" src="init.zsh"
+zinit light ajeetdsouza/zoxide
+
 zt wait for \
   OMZP::fancy-ctrl-z \
   OMZP::colored-man-pages \
@@ -82,7 +85,6 @@ zt wait for \
   has'tmux' atload$'!ZSH_TMUX_FIXTERM=false; \
     ZSH_TMUX_CONFIG=${XDG_CONFIG_HOME:-$HOME/.config}/tmux/tmux.conf; \
     compdef _zsh_tmux_plugin_run=tmux; ' \
-    atload$'unalias ts;' \
   OMZP::tmux 
 
 #if'[[ -z "$commands[tig]" ]]' @jonas/tig \
@@ -90,7 +92,12 @@ zt wait binary from"gh-r" lman lbin for \
   if'[[ -z "$commands[exa]" ]]' @ogham/exa \
   if'[[ -z "$commands[fd]" ]]' @sharkdp/fd  \
   if'[[ -z "$commands[gron]" ]]' @tomnomnom/gron  \
-  if'[[ -z "$commands[jless]" ]]' PaulJuliusMartinez/jless
+  if'[[ -z "$commands[jless]" ]]' PaulJuliusMartinez/jless \
+  if'[[ -z "$commands[bat]" ]]' @sharkdp/bat  \
+  if'[[ -z "$commands[mdcat]" ]]' @swsnr/mdcat \
+  if'[[ -z "$commands[xsv]" ]]' BurntSushi/xsv \
+  if'[[ -z "$commands[sad]" ]]' ms-jpq/sad
+
 
 
 zt wait binary from"gh-r" for \
@@ -101,6 +108,10 @@ zt wait binary from"gh-r" for \
   if'[[ -z "$commands[fzf]" ]]' junegunn/fzf \
   id-as'cheat-bin' lman lbin"**/cheat* -> cheat" \
   cheat/cheat 
+
+
+zinit ice depth=1
+zinit light jeffreytse/zsh-vi-mode
 
 #
 #zinit ice if'[[ -n "$commands[rg]" ]]' binary from"gh-r" lman lbin"**/rg -> rg" 
@@ -113,24 +124,24 @@ zt wait for \
   atinit"local zew_word_style=whitespace" \
   zdharma-continuum/zsh-editing-workbench \
   multisrc'shell/*.zsh' \
-  trackbinds bindmap='^T -> ^X^T; \ec -> ^Xc' \
+  trackbinds bindmap='^T -> ^X^T; \ec -> ^X^C' \
   junegunn/fzf 
 
-zt wait for \
-  atload'!export CHEAT_USE_FZF=true' pick'scripts/cheat.zsh' \
-  cheat/cheat \
-  id-as'cheat.sh' \
-  binary \
-  nocompile \
-  dl'https://cht.sh/:cht.sh -> cht.sh' \
-  atinit'chmod +x cht.sh' lbin'cht.sh' \
-  zdharma-continuum/null
+# zt wait for \
+#   atload'!export CHEAT_USE_FZF=true' pick'scripts/cheat.zsh' \
+#   cheat/cheat \
+#   id-as'cheat.sh' \
+#   binary \
+#   nocompile \
+#   dl'https://cht.sh/:cht.sh -> cht.sh' \
+#   atinit'chmod +x cht.sh' lbin'cht.sh' \
+#   zdharma-continuum/null
 
-zt wait has'lua' for \
-  atload'!export _ZL_DATA=$XDG_CACHE_HOME/.zlua;' \
-  skywind3000/z.lua \
-  atload'!function _z() { _zlua "$@"; }; alias z="nocorrect _fz"' \
-  commiyou/fz.sh
+# zt wait has'lua' for \
+#   atload'!export _ZL_DATA=$XDG_CACHE_HOME/.zlua;' \
+#   skywind3000/z.lua \
+#   atload'!function _z() { _zlua "$@"; }; alias z="nocorrect _fz"' \
+#   commiyou/fz.sh
 
 #zplugin ice wait'1' lucid
 #zplugin light laggardkernel/zsh-thefuck
@@ -182,13 +193,19 @@ zt wait for \
 #zinit ice $lightmode wait lucid pick'roszsh' id-as'roszsh'
 #zinit snippet https://raw.githubusercontent.com/ros/ros/melodic-devel/tools/rosbash/roszsh
 
+#FZF_TMUX_HEIGHT=100%
+zstyle ':fzf-tab:*' prefix ''
+zstyle ':fzf-tab:*' single-group prefix color header
+zinit id-as depth'1' wait lucid \
+  if'(($+commands[fzf]))' \
+  for Freed-Wu/fzf-tab-source
 
+  #atload"!zstyle ':fzf-tab:complete:(cd|z|ls|vim|rm|rmr):*' \
+  #fzf-preview 'exa -1 --color=always \$realpath';" \
 # fzf-tab must before Fast-syntax-highlighting & autosuggestions
 # and bellow LS_COLORS
 zt wait'0b' for \
   atinit"zicompinit; zicdreplay;" \
-  atload"!zstyle ':fzf-tab:complete:(cd|z):*' \
-  fzf-preview 'exa -1 --color=always \$realpath';" \
   Aloxaf/fzf-tab \
   zdharma-continuum/fast-syntax-highlighting \
   blockf atpull'zinit creinstall -q .' zsh-users/zsh-completions \

@@ -110,8 +110,11 @@ zt wait binary from"gh-r" for \
   cheat/cheat 
 
 
+# # Always starting with insert mode for each command line
 zinit ice depth=1
 zinit light jeffreytse/zsh-vi-mode
+#
+ZVM_LINE_INIT_MODE=$ZVM_MODE_INSERT
 
 #
 #zinit ice if'[[ -n "$commands[rg]" ]]' binary from"gh-r" lman lbin"**/rg -> rg" 
@@ -148,7 +151,6 @@ zt wait for \
 
 #as"program" pick'bin/fzf-tmux' src'shell/key-bindings.zsh'  trackbinds bindmap='^T -> ^X^T; \ec -> ^X\ec' commiyou/fzf \
 # $'string'  quote https://stackoverflow.com/questions/1250079/how-to-escape-single-quotes-within-single-quoted-strings/16605140#16605140
-# fzf-marks, at slot 0, for quick Ctrl-G accessibility
 #ptavares/zsh-direnv \
 zt wait for \
   hlissner/zsh-autopair \
@@ -159,8 +161,7 @@ zt wait for \
   atpull$'git config --global core.pager "diff-so-fancy | less --tabs=4 -RFX"; \
     git config --global interactive.diffFilter "diff-so-fancy --patch";' \
   z-shell/zsh-diff-so-fancy \
-  urbainvaes/fzf-marks \
-  atload$'!FORGIT_LOG_FZF_OPTS=\'--bind="ctrl-e:execute(echo {} |grep -Eo [a-f0-9]+ |head -1 |xargs command git show |vim -)"\'; \
+  atload$'!export FORGIT_LOG_FZF_OPTS=\'--bind="ctrl-e:execute(echo {} |grep -Eo [a-f0-9]+ |head -1 |xargs command git show |vim -)"\'; \
     alias gdca="forgit::diff --cached"; \
     alias gds="forgit::diff --cached"; \
     alias glog="forgit::log --oneline --decorate --graph"; \

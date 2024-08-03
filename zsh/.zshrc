@@ -24,4 +24,3 @@ unset config_file
 # To customize prompt, run `p10k configure` or edit ~/conf/zsh/.p10k.zsh.
 [[ ! -f ~/conf/zsh/.p10k.zsh ]] || source ~/conf/zsh/.p10k.zsh
 [[ ! -f ~/.self.sh ]] || source ~/.self.sh
-

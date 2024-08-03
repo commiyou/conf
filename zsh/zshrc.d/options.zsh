@@ -44,3 +44,19 @@ setopt LONG_LIST_JOBS
 # compdef _git gco=git-checkout
 setopt complete_aliases
 setopt EXTENDED_HISTORY          # Write the history file in the ':start:elapsed;command' format.
+
+setopt SHORT_LOOPS
+# for i ({1..5}) echo "Number: $i"
+# repeat 3 echo "Hello"
+# if (( $+commands[git] )) echo 'Git is installed'
+# fn() echo "This is a function"
+
+setopt MULTIOS
+# This will write 'Hello, World!' to both file1.txt and file2.txt
+# echo 'Hello, World!' >file1.txt >file2.txt
+#
+setopt PIPE_FAIL
+# This pipeline will fail because 'false' fails
+#echo 'Hello, World!' | false | cat
+# The return status will be 1, because 'false' failed
+#echo $?

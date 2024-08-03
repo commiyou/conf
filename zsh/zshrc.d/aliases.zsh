@@ -58,3 +58,4 @@ fi
 # echo foo bar baz foo
 # fc -e - foo=boo     # echo boo bar baz boo
 alias r='fc -e -'  
+alias vimdiff="vim -d"

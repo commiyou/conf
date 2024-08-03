@@ -34,26 +34,26 @@ gconfig() {
   fi
 
   echo git config user.name $name, user.email $email
-	git config user.email $email
-	git config user.name $name
-	git config http.postBuffer 524288000
-	git config  credential.helper "cache --timeout=3600"
-	git config  alias.a add
-	git config  alias.amend "commit --amend -C HEAD"
-	git config  alias.br branch
-	git config  alias.cb "checkout -b"
-	git config  alias.ci commit
-	git config  alias.cim "commit -m"
-	git config  alias.co checkouout
-	git config  alias.cp cherry-pick
-	git config  alias.df diff
-	git config  alias.dh "diff HEAD"
-	git config  alias.dc "diff --cached"
-	git config  alias.pl pull
-	git config  alias.rb rebase
-	git config  alias.rh reset HEAD
-	git config  alias.st status
-	git config  color.grep.filename magenta
+  git config user.email $email
+  git config user.name $name
+  git config http.postBuffer 524288000
+  git config  credential.helper "cache --timeout=3600"
+  git config  alias.a add
+  git config  alias.amend "commit --amend -C HEAD"
+  git config  alias.br branch
+  git config  alias.cb "checkout -b"
+  git config  alias.ci commit
+  git config  alias.cim "commit -m"
+  git config  alias.co checkouout
+  git config  alias.cp cherry-pick
+  git config  alias.df diff
+  git config  alias.dh "diff HEAD"
+  git config  alias.dc "diff --cached"
+  git config  alias.pl pull
+  git config  alias.rb rebase
+  git config  alias.rh reset HEAD
+  git config  alias.st status
+  git config  color.grep.filename magenta
   git config pull.rebase true
   git config rebase.autoStash true
 }
@@ -63,8 +63,8 @@ alias ginit="git init; gconfig"
 
 # edit git ignore with vim
 vignore() {
-	git status > /dev/null || return 1
-	vim $(git rev-parse --show-toplevel)/.gitignore
+  git status > /dev/null || return 1
+  vim $(git rev-parse --show-toplevel)/.gitignore
 }
 
 
@@ -121,18 +121,18 @@ restore_link() {
     dir=$(dirname "$link")
     reltarget=$(readlink "$link")
     case $reltarget in
-        /*) abstarget=$reltarget;;
-        *)  abstarget=$dir/$reltarget;;
+      /*) abstarget=$reltarget;;
+      *)  abstarget=$dir/$reltarget;;
     esac
 
     rm -fv "$link"
     cp -afv "$abstarget" "$link" || {
-        # on failure, restore the symlink
-        rm -rfv "$link"
-        ln -sfv "$reltarget" "$link"
-      }
-  done
-}
+      # on failure, restore the symlink
+          rm -rfv "$link"
+          ln -sfv "$reltarget" "$link"
+        }
+      done
+    }
 
 
 # zsh trap function when recive HUG signal
@@ -161,28 +161,28 @@ reload_zshrcs() {
 #   $1 -> src file path
 #   $2 -> dst file path
 swap() {
-    local TMPFILE=tmp.$$
-    mv "$1" $TMPFILE && mv "$2" "$1" && mv $TMPFILE $2
+  local TMPFILE=tmp.$$
+  mv "$1" $TMPFILE && mv "$2" "$1" && mv $TMPFILE $2
 }
 
 set_iterm_profile () {
-	local profile=${1:-gbk}
-	send-terminal-sequence "\033]50;SetProfile=$profile\a"
+  local profile=${1:-gbk}
+  send-terminal-sequence "\033]50;SetProfile=$profile\a"
 }
 
 send-terminal-sequence () {
-	local sequence="$1"
-	local is_tmux
-	if [[ -n $TMUX_PASSTHROUGH ]] || [[ -n $TMUX ]]
-	then
-		is_tmux=1
-	fi
-	if [[ -n $is_tmux ]]
-	then
-		sequence=${sequence//\\(e|x27|033|u001[bB]|U0000001[bB])/\\e\\e}
-		sequence="\ePtmux;$sequence\e\\"
-	fi
-	print -n "$sequence"
+local sequence="$1"
+local is_tmux
+if [[ -n $TMUX_PASSTHROUGH ]] || [[ -n $TMUX ]]
+then
+  is_tmux=1
+fi
+if [[ -n $is_tmux ]]
+then
+  sequence=${sequence//\\(e|x27|033|u001[bB]|U0000001[bB])/\\e\\e}
+  sequence="\ePtmux;$sequence\e\\"
+fi
+print -n "$sequence"
 }
 alias sip=set_iterm_profile
 
@@ -229,11 +229,11 @@ fi
 
 
 bash-set-title() {
-  if [[ -z "$ORIG" ]]; then
-    ORIG=$PS1
-  fi
-  TITLE="\[\e]2;$*\a\]"
-  PS1=${ORIG}${TITLE}
+if [[ -z "$ORIG" ]]; then
+  ORIG=$PS1
+fi
+TITLE="\[\e]2;$*\a\]"
+PS1=${ORIG}${TITLE}
 }
 
 m() {
@@ -246,13 +246,13 @@ m() {
 # search entire history for "foo" with
 # h foo
 function h() {
-    # check if we passed any parameters
-    if [ -z "$*" ]; then
-        # if no parameters were passed print entire history
-        history -i 1
-    else
-        # if words were passed use it as a search
-        history -i 1 | egrep --color=auto "$@"
-    fi
+  # check if we passed any parameters
+  if [ -z "$*" ]; then
+    # if no parameters were passed print entire history
+    history -i 1
+  else
+    # if words were passed use it as a search
+    history -i 1 | egrep --color=auto "$@"
+  fi
 }
 

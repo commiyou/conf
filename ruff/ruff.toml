@@ -4,42 +4,43 @@ select = ["ALL"]
 extend-select = ["I"]
 ignore = [
   # imported but unused
-  "F401",
+  "ANN101",
+  "ANN204",
+  "C408", #Unnecessary `dict` call (rewrite as a literal)
+  "COM812"
+  "D202", #No blank lines allowed after function docstring
   "D400", # First line should end with a period
-  "D417",  # Missing argument descriptions in the docstring
-  "D413", # Missing blank line after last section
-  "D407", # Missing dashed underline after section
   "D403", #First word of the first line should be capitalized
+  "D407", # Missing dashed underline after section
+  "D413", # Missing blank line after last section
   "D415", # First line should end with a period, question mark, or exclamation point
+  "D417",  # Missing argument descriptions in the docstring
+  "EM101",
   "ERA001",# Found commented-out code
+  "EXE",
+  "F401",
   "FA102", #Missing `from __future__ import annotations`, but uses PEP 585 collection
+  "N806",  #Variable `C` in function should be lowercase
+  "PGH003", # Use specific rule codes when ignoring type issues
+  "PGH004", #Use specific rule codes when using `noqa`
+  "PLR0913", #Too many arguments in function definition
+  "PLR2004", # Magic value used in comparison, consider replacing
+  "PLW1514",
+  "PTH",
+  "RET504",
   "RUF001",
   "RUF002",
   "RUF003",
-  "EXE",
-  "RET504",
-  "ANN101",
-  #"ANN201", # Missing return type annotation for public function
-  "ANN204",
-  "PTH",
   "S101",
-  "C408", #Unnecessary `dict` call (rewrite as a literal)
-  "TRY002", #Create your own exception
-  "TRY003", # Avoid specifying long messages outside the exception clas
-  "EM101",
-  "PGH004", #Use specific rule codes when using `noqa`
-  "PLR2004", # Magic value used in comparison, consider replacing
-  "TD002",
-  "TD003",
-  "D202", #No blank lines allowed after function docstring
-  "N806",  #Variable `C` in function should be lowercase
-  "T201",
-  "PGH003", # Use specific rule codes when ignoring type issues
-  "PLR0913", #Too many arguments in function definition
-  "SIM112",
   "S112",
   "S311",
-  "COM812"
+  "SIM112",
+  "T201",
+  "TD002",
+  "TD003",
+  "TRY002", #Create your own exception
+  "TRY003", # Avoid specifying long messages outside the exception clas
+  #"ANN201", # Missing return type annotation for public function
 
 ]
 fixable = ["ALL"]

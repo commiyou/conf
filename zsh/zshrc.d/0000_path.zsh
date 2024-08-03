@@ -3,7 +3,7 @@ typeset -U path
 
 [ -r ${ZDOTDIR:-$HOME}/.path ] && path=(${(f)"$(<${ZDOTDIR:-$HOME}/.path)"} $path)
 [ -r ${HOME}/.path ] && path=(${(f)"$(<${HOME}/.path)"} $path)
-path=("$HOME/bin" "$HOME/.local/bin" $path)
+path=("$HOME/bin" "$HOME/.local/bin" "$XDG_CONFIG_HOME/bin/" $path)
 
 typeset -aU ld_library_path
 ld_library_path=(${(s.:.)LD_LIBRARY_PATH})

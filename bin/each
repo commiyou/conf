@@ -1,0 +1,171 @@
+#!/bin/bash
+# https://github.com/sunaku/home/blob/master/bin/each
+#
+# NAME
+#       each - loop over file paths
+#
+# SYNOPSIS
+#       each [OPTION]... SCRIPT [PATH]...
+#       ls [PATH]... | each [OPTION]... [SCRIPT]
+#
+# DESCRIPTION
+#       Sets the following variables and evaluates the given SCRIPT
+#       once for each PATH, which can be either (1) specified as a
+#       command line argument or (2) listed one per line on stdin.
+#
+#       If SCRIPT is either `:`, blank, or not specified, then the
+#       following variables and their effective values will be
+#       printed to stderr, followed by a newline, for each PATH.
+#
+#       $i = sequence number, counting from 1, for PATH
+#       $p = PATH
+#       $f = PATH without directories (basename)
+#       $n = PATH without directories and file extension
+#       $d = PATH with only directories (dirname)
+#       $x = PATH with only file extension
+#       $X = PATH without file extension
+#
+#       These variable names come from Ruby's String#pathmap() method.
+#
+# OPTIONS
+#       -n  Dry run.
+#           Instead of executing the SCRIPT, print
+#           what would happen if it were executed.
+#           This overrides `-i` and `-v` options.
+#
+#       -i  Confirm.
+#           While executing the SCRIPT, ask if
+#           commands should really be executed.
+#           This overrides the `-v` option.
+#
+#       -v  Verbose.
+#           While executing the SCRIPT, print
+#           commands before they are executed.
+#
+#       -x  Trace.
+#           While executing the SCRIPT, print
+#           commands as they are being executed.
+#
+# AUTHOR
+#       Written by Suraj N. Kurapati in 2011 based on
+#       on his old "for each file" project from 2003:
+#       https://github.com/sunaku/ff-bash
+#
+
+#-----------------------------------------------------------------------------
+# command line options
+#-----------------------------------------------------------------------------
+
+# http://software.frodo.looijaard.name/getopt/docs/getopt-parse.bash
+if options=$(getopt -o nivx -n "$0" -- "$@"); then
+  eval set -- "$options"
+  while true; do
+    case "$1" in
+      -n) DRY_RUN=$1; shift ;;
+      -i) CONFIRM=$1; shift ;;
+      -v) VERBOSE=$1; shift ;;
+      -x) EXTRACE=$1; shift ;;
+      --) shift; break ;;       # end of options
+       *) exit 2 ;;             # internal error
+    esac
+  done
+else
+  # show file information header
+  sed -n '2,/^$/s/^# \?//p' "$0"
+  exit 1
+fi
+
+#-----------------------------------------------------------------------------
+# command line arguments
+#-----------------------------------------------------------------------------
+
+if [ $# -gt 0 ]; then
+  SCRIPT=$1
+  shift
+else
+  SCRIPT=
+fi
+
+# provide default script if none was specified:
+# dump variables and emit newline for each item
+if [ -z "$SCRIPT" -o "$SCRIPT" = ':' ]; then
+  EXTRACE=1
+  SCRIPT='echo >&2'
+fi
+
+#-----------------------------------------------------------------------------
+# head of the each loop
+#-----------------------------------------------------------------------------
+
+if [ -t 0 ]; then
+  # paths are on command line
+  each='for each'
+else
+  # paths are listed on stdin
+  exec 3<&0 0</dev/tty
+  each='while read each <&3'
+fi
+
+#-----------------------------------------------------------------------------
+# body of the each loop
+#-----------------------------------------------------------------------------
+
+echo="
+cat <<END_SCRIPT_PREVIEW
+$(echo "$SCRIPT")
+END_SCRIPT_PREVIEW
+"
+
+if [ -n "$DRY_RUN" ]; then
+  body=$echo
+elif [ -n "$CONFIRM" ]; then
+  body="
+$echo >/dev/tty
+echo -n 'Run command? [Y/n/q] ' >/dev/tty
+read CONFIRM </dev/tty &&
+case \"\$CONFIRM\" in
+  q|Q) break ;;
+  n|N) continue ;;
+  *)
+$SCRIPT
+  ;;
+esac
+"
+elif [ -n "$VERBOSE" ]; then
+  body="
+$echo
+$SCRIPT
+"
+else
+  body=$SCRIPT
+fi
+
+body="
+p=\$each
+f=\${p##*/}
+n=\${f%.*}
+d=\${p%/*}
+x=\${f##*.}
+X=\${p%.*}
+$body
+"
+
+test -n "$EXTRACE" && body="
+set -x
+$body
+set +x
+"
+
+#-----------------------------------------------------------------------------
+# the each loop itself
+#-----------------------------------------------------------------------------
+
+eval "
+i=0
+$each
+do
+i=\$(expr \$i + 1)
+$body
+done
+"
+

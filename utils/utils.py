@@ -91,7 +91,9 @@ def xprint(
         file.flush()
 
 
-def xerr(*values: object, suffix: str = "", sep: str = "\t", encoding: str = "utf8") -> None:
+def xerr(
+    *values: object, suffix: str = "", sep: str = "\t", encoding: str = "utf8"
+) -> None:
     """print to stderr with default sep and suffix and encoding"""
     xprint(
         *values,
@@ -141,7 +143,14 @@ def is_chinese_or_alnum(uchar: Char) -> bool:
     return False
 
 
-def norm_term(term: str, *, strict: bool = True, stop_chars: set[Char] | None = None) -> str:
+def norm_line(line: str) -> str:
+    """使用正则表达式替换多个空白符为单个空格"""
+    return re.sub(r"\s+", " ", line).strip()
+
+
+def norm_term(
+    term: str, *, strict: bool = True, stop_chars: set[Char] | None = None
+) -> str:
     """Convert the term to lowercase and remove whitespace characters
 
     strict: just keep chinese/alnum chars(no punctions/emojis)
@@ -177,11 +186,16 @@ def read_file(
     skip_header: bool = False,
     tqdm: str | bool = False,
     total: int | None = None,
+    skip_notexists: bool = False,
 ) -> Iterator[list[str]]:
     """Read the file line by line with a specified encoding and return iterator of list after splitting by sep.
 
     input_: file name/path or io
     """
+    if isinstance(input_, str) and skip_notexists:
+        if not os.path.exists(input_):
+            return iter([])
+
     if input_ is None:
         input_ = sys.stdin.buffer
     with ExitStack() as stack:
@@ -195,7 +209,11 @@ def read_file(
             input_ = funcy.rest(input_)  # type:ignore
 
         for i, line in enumerate(
-            tqdm_.tqdm(input_, total=total, desc=tqdm if isinstance(tqdm, str) else None) if tqdm else input_
+            tqdm_.tqdm(
+                input_, total=total, desc=tqdm if isinstance(tqdm, str) else None
+            )
+            if tqdm
+            else input_
         ):  # type:ignore
             if not isinstance(line, str):
                 try:
@@ -338,7 +356,14 @@ def dump_json(obj: object, indent: int | None = None) -> str:
     return json.dumps(obj, ensure_ascii=False, indent=indent, cls=JsonCustomEncoder)
 
 
-def safe_divide(p1: float, p2: float, *, digits: int = 2, percentage: bool = False) -> str:
+def xprint_json(obj: object) -> None:
+    """格式化json"""
+    xprint(json.dumps(obj, ensure_ascii=False, indent=4, cls=JsonCustomEncoder))
+
+
+def safe_divide(
+    p1: float, p2: float, *, digits: int = 2, percentage: bool = False
+) -> str:
     """return n/a if divide 0 else value with str type
 
     >>> safe_divide(1, 0)
@@ -355,7 +380,9 @@ def safe_divide(p1: float, p2: float, *, digits: int = 2, percentage: bool = Fal
     return f"{{:.{digits}f}}".format(p1 / p2)
 
 
-def safe_diff(p1: float | str, p2: float | str, *, digits: int = 2, percentage: bool = True) -> str | float:
+def safe_diff(
+    p1: float | str, p2: float | str, *, digits: int = 2, percentage: bool = True
+) -> str | float:
     """return n/a if divide 0 else value with str type
 
     >>> safe_diff(1, 0)
@@ -422,7 +449,9 @@ class RedirectStdoutToFile(contextlib.ContextDecorator):
     ...     print(123)
     """
 
-    def __init__(self, fname: str | Path | None, mode: str = "w", tpl: str | None = None) -> None:
+    def __init__(
+        self, fname: str | Path | None, mode: str = "w", tpl: str | None = None
+    ) -> None:
         """file name and write mode"""
         if tpl is None:
             tpl = "{}"
@@ -532,6 +561,16 @@ def timestamp(fmt: str = "%Y%m%d%H%M%S") -> str:
     return ts
 
 
+def date(ts: str | int, fmt: str = "%Y-%m-%d") -> str:
+    """return current local datetime from ts"""
+
+    ts = int(ts)
+    dt_object = datetime.datetime.fromtimestamp(ts)  # noqa: DTZ006
+    formatted_time = dt_object.strftime(fmt)
+
+    return formatted_time
+
+
 def parallel_process_items_processes(
     inputs: Iterable,
     proc_func: Callable,
@@ -543,7 +582,11 @@ def parallel_process_items_processes(
     from multiprocessing import Pool
 
     with Pool(processes=process_cnt) as pool:
-        yield from tqdm_.tqdm(pool.imap(proc_func, inputs), total=total, desc=tqdm if isinstance(tqdm, str) else None)
+        yield from tqdm_.tqdm(
+            pool.imap(proc_func, inputs),
+            total=total,
+            desc=tqdm if isinstance(tqdm, str) else None,
+        )
 
 
 def parallel_process_items_threads(
@@ -555,11 +598,14 @@ def parallel_process_items_threads(
     total: int | None = None,
 ) -> Iterator:
     """多线程跑函数proc_func"""
-    if isinstance(inputs, str):
+    if isinstance(inputs, str):  # noqa: SIM108
         _inputs = read_file(inputs, tqdm=tqdm)
     else:
         # _inputs = tqdm_.tqdm(inputs, total=total) if tqdm else inputs
         _inputs = inputs
+
+    if isinstance(_inputs, (list, tuple)):
+        total = len(_inputs)
 
     from multiprocessing.dummy import Pool
 
@@ -569,6 +615,18 @@ def parallel_process_items_threads(
         for it in imap_it:
             pbar.update(1)
             yield it
+
+
+def parallel_run_helper(func, ll: list, *args, **kws):
+    ret = func(*args, **kws)
+    return ll, ret
+
+
+def remove_file_suffix(fname: str):
+    if fname.endswith((".tsv", ".xlsx", ".txt", ".dat", ".data")):
+        return Path(f"{fname}").stem
+    else:
+        return fname
 
 
 def doctest() -> None:

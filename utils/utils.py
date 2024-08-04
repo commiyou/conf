@@ -386,9 +386,9 @@ def safe_diff(
     """return n/a if divide 0 else value with str type
 
     >>> safe_diff(1, 0)
-    'n/a'
+    nan
     >>> safe_diff(3, 10)
-    '-70%'
+    '-70.00%'
     """
     p1 = to_number(p1)
     p2 = to_number(p2)
@@ -631,7 +631,9 @@ def remove_file_suffix(fname: str):
 
 def doctest() -> None:
     """test"""
-    os.system("pytest --doctest-modules")
+    import doctest
+
+    doctest.testmod()
 
 
 if __name__ == "__main__":

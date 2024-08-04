@@ -270,7 +270,6 @@ lvim.plugins = {
     dependencies = { 'nvim-treesitter' },
     opts = { { highlight_node_at_cursor = true } },
   },
-  -- {"bfredl/nvim-miniyank"}, -- TODO:
   {
     "cameron-wags/rainbow_csv.nvim",
     config = true,
@@ -316,9 +315,6 @@ lvim.plugins = {
   {
     "AndrewRadev/splitjoin.vim",
   }, -- gS / gJ  split or join
-  -- {
-  --   "vim-scripts/ReplaceWithRegister",
-  -- }, -- gr{motion}, replace with register # TODO: vim -V1 XXXX, conflicts with lsp gr
   {
     'echasnovski/mini.operators',
     version = false,
@@ -1088,12 +1084,92 @@ lvim.plugins = {
   --     table.insert(lvim.builtin.cmp.sources, {
   --       name = "codeium"
   --     })
+  --     require('cmp').setup {
+  --       mapping = require("cmp").mapping.preset.insert({
+  --         ["<c-x><c-y>"] = require('codieium').make_cmp_map()
+  --       }),
+  --     }
+  --   end
+  -- },
+  -- {
+  --   'milanglacier/minuet-ai.nvim',
+  --   dependencies = { 'nvim-lua/plenary.nvim', 'hrsh7th/nvim-cmp' },
+  --   config = function()
+  --     require('minuet').setup {
+  --       -- Your configuration options here
+  --       provider = "gemini",
+  --     }
+
+  --     require('cmp').setup {
+  --       mapping = require("cmp").mapping.preset.insert({
+  --         ["<c-x><c-y>"] = require('minuet').make_cmp_map()
+  --       }),
+  --     }
   --   end
   -- },
   {
     'ZSaberLv0/ZFVimIM', -- ;; 开启或关闭输入法, ;: 切换词库, - 和 = 翻页,[ 和 ] 快速从词组选字,
     dependencies = { 'ZSaberLv0/ZFVimJob', 'ZSaberLv0/ZFVimIM_openapi', 'ZSaberLv0/ZFVimIM_english_base', 'ZSaberLv0/ZFVimIM_pinyin' },
   },
+  {
+    "nvim-treesitter/nvim-treesitter-textobjects",
+    dependencies = { "nvim-treesitter/nvim-treesitter" },
+    config = function()
+      require 'nvim-treesitter.configs'.setup {
+        textobjects = {
+          select = {
+            enable = true,
+
+            -- Automatically jump forward to textobj, similar to targets.vim
+            --lookahead = true,
+
+            keymaps = {
+              -- You can use the capture groups defined in textobjects.scm
+              ["af"] = "@function.outer",
+              ["if"] = "@function.inner",
+              ["ac"] = "@class.outer",
+              -- You can optionally set descriptions to the mappings (used in the desc parameter of
+              -- nvim_buf_set_keymap) which plugins like which-key display
+              ["ic"] = { query = "@class.inner", desc = "Select inner part of a class region" },
+              -- You can also use captures from other query groups like `locals.scm`
+              ["as"] = { query = "@scope", query_group = "locals", desc = "Select language scope" },
+            },
+            -- You can choose the select mode (default is charwise 'v')
+            --
+            -- Can also be a function which gets passed a table with the keys
+            -- * query_string: eg '@function.inner'
+            -- * method: eg 'v' or 'o'
+            -- and should return the mode ('v', 'V', or '<c-v>') or a table
+            -- mapping query_strings to modes.
+            selection_modes = {
+              ['@parameter.outer'] = 'v', -- charwise
+              ['@function.outer'] = 'V',  -- linewise
+              ['@class.outer'] = '<c-v>', -- blockwise
+            },
+            -- If you set this to `true` (default is `false`) then any textobject is
+            -- extended to include preceding or succeeding whitespace. Succeeding
+            -- whitespace has priority in order to act similarly to eg the built-in
+            -- `ap`.
+            --
+            -- Can also be a function which gets passed a table with the keys
+            -- * query_string: eg '@function.inner'
+            -- * selection_mode: eg 'v'
+            -- and should return true or false
+            include_surrounding_whitespace = false,
+          },
+        },
+      }
+    end
+
+  },
+  -- {
+  --   "tris203/hawtkeys.nvim",
+  --   dependencies = {
+  --     "nvim-lua/plenary.nvim",
+  --     "nvim-treesitter/nvim-treesitter",
+  --   },
+  --   config = {}
+  -- }
 
   -- @@@@@@end
 

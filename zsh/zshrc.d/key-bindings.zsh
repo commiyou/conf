@@ -18,9 +18,10 @@ bindkey '^e' end-of-line
 bindkey '^a' beginning-of-line
 bindkey '^p' up-line-or-history
 bindkey '^n' down-line-or-history
-bindkey '^u' kill-whole-line 
+bindkey -M viins '^u' vi-kill-line 
 bindkey '^x^n' infer-next-history # Search in the history list for a line matching the current one and fetch the event following it.
 bindkey '^y' yank
+bindkey -M viins '^y' vi-yank
 bindkey "^['" quote-line
 bindkey '^t' transpose-chars
 bindkey '^o' accept-and-infer-next-history

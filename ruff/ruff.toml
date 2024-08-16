@@ -40,6 +40,7 @@ ignore = [
   "TD003",
   "TRY002", #Create your own exception
   "TRY003", # Avoid specifying long messages outside the exception clas
+  "E722", # python exception
   #"ANN201", # Missing return type annotation for public function
 
 ]

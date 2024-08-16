@@ -116,6 +116,9 @@ zinit light jeffreytse/zsh-vi-mode
 #
 ZVM_LINE_INIT_MODE=$ZVM_MODE_INSERT
 
+
+zinit ice as"program" pick"$ZPFX/bin/git-*" src"etc/git-extras-completion.zsh" make"PREFIX=$ZPFX"
+zinit light tj/git-extras
 #
 #zinit ice if'[[ -n "$commands[rg]" ]]' binary from"gh-r" lman lbin"**/rg -> rg" 
 #zinit load @BurntSushi/ripgrep

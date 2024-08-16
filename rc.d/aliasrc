@@ -55,6 +55,8 @@ alias ack="ack --color"
 alias fdd='find . -type d -name'
 alias fdf='find . -type f -name'
 
+alias fd="fd -I"
+
 
 # fix sort bug
 alias sort="LC_ALL=C sort"  

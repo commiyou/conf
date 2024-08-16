@@ -27,6 +27,7 @@ nnoremap <expr> N  'nN'[v:searchforward]
 
 lvim.builtin.telescope.defaults.layout_config.width = 0.7
 lvim.builtin.telescope.defaults.layout_config.preview_cutoff = 75
+lvim.builtin.cmp.experimental.ghost_text = true
 
 
 -- Change Telescope navigation to use j and k for navigation and n and p for history in both input and normal mode.
@@ -124,7 +125,7 @@ lvim.builtin.which_key.mappings["f"] = {
   r = { "<cmd>lua require('fzf-lua').live_grep_resume()<cr>", "Live Grep" },
   R = { '<cmd>lua require("spectre").open_visual({select_word=true})<cr>', "Search files & Replace" },
   s = { "<cmd>lua require('fzf-lua').lsp_document_symbols({ resume = true })<cr>", "Buffer Symbol" },
-  S = { "<cmd>ua require('fzf-lua').lsp_workspace_symbols({ resume = true })<cr>", "WorkSpace Symbol" },
+  S = { "<cmd>lua require('fzf-lua').lsp_workspace_symbols({ resume = true })<cr>", "WorkSpace Symbol" },
   t = { "<cmd>TlistToggle<cr>", "taglist" }, -- yegappan/taglist
   w = { "<cmd>lua require('fzf-lua').grep_cword({ resume = true })<cr>", "Grep Word" },
 }
@@ -323,34 +324,34 @@ lvim.plugins = {
   {
     "folke/neodev.nvim",
     opts = {},
-  },                            --  Neovim setup for init.lua and plugin development with full signature help, docs and completion for the nvim lua API.
-  {
-    "chrisgrieser/nvim-spider", -- w/e/b
-    lazy = true,
-    opts = { consistentOperatorPending = false },
-    keys = {
-      {
-        "e",
-        "<cmd>lua require('spider').motion('e')<CR>",
-        mode = { "n", "x" },
-      },
-      {
-        "w",
-        "<cmd>lua require('spider').motion('w')<CR>",
-        mode = { "n", "x" },
-      },
-      -- {
-      --   "cw",
-      --   "c<cmd>lua require('spider').motion('e')<CR>",
-      --   mode = { "n" },
-      -- },
-      {
-        "b",
-        "<cmd>lua require('spider').motion('b')<CR>",
-        mode = { "n", "x" },
-      }
-    }
-  },
+  }, --  Neovim setup for init.lua and plugin development with full signature help, docs and completion for the nvim lua API.
+  -- { # TODO
+  --   "chrisgrieser/nvim-spider", -- w/e/b
+  --   lazy = true,
+  --   opts = { consistentOperatorPending = false },
+  --   keys = {
+  --     {
+  --       "e",
+  --       "<cmd>lua require('spider').motion('e')<CR>",
+  --       mode = { "n", "x" },
+  --     },
+  --     {
+  --       "w",
+  --       "<cmd>lua require('spider').motion('w')<CR>",
+  --       mode = { "n", "x" },
+  --     },
+  --     -- {
+  --     --   "cw",
+  --     --   "c<cmd>lua require('spider').motion('e')<CR>",
+  --     --   mode = { "n" },
+  --     -- },
+  --     {
+  --       "b",
+  --       "<cmd>lua require('spider').motion('b')<CR>",
+  --       mode = { "n", "x" },
+  --     }
+  --   }
+  -- },
   -- {
   --   'abecodes/tabout.nvim',
   --   lazy = false,
@@ -1022,7 +1023,7 @@ lvim.plugins = {
   { "tpope/vim-abolish" }, -- :%Subvert/facilit{y,ies}/building{,s}/g
   { "tpope/vim-fugitive" },
   {
-    -- ys{motion}{char}
+    -- ys{motion}{char} / dst / dss
     "kylechui/nvim-surround",
     version = "*", -- Use for stability; omit to use `main` branch for the latest features
     event = "VeryLazy",
@@ -1046,6 +1047,22 @@ lvim.plugins = {
       end, { silent = true, noremap = true, desc = 'toggle signature' })
     end
   },
+  -- { -- TODO:
+
+  --   'ray-x/navigator.lua',
+  --   dependencies = {
+  --     { 'ray-x/guihua.lua',     build = 'cd lua/fzy && make' },
+  --     { 'neovim/nvim-lspconfig' },
+  --   },
+  --   config = function()
+  --     require 'navigator'.setup({
+  --       default_mapping = false,
+  --       lsp = {
+  --         disable_lsp = { 'pylsd', 'sqlls', "pylsp", "pyright" },
+  --       }
+  --     })
+  --   end
+  -- },
   {
     "folke/todo-comments.nvim",
     dependencies = { "nvim-lua/plenary.nvim" },
@@ -1091,22 +1108,22 @@ lvim.plugins = {
   --     }
   --   end
   -- },
-  -- {
-  --   'milanglacier/minuet-ai.nvim',
-  --   dependencies = { 'nvim-lua/plenary.nvim', 'hrsh7th/nvim-cmp' },
-  --   config = function()
-  --     require('minuet').setup {
-  --       -- Your configuration options here
-  --       provider = "gemini",
-  --     }
+  {
+    'milanglacier/minuet-ai.nvim',
+    dependencies = { 'nvim-lua/plenary.nvim', 'hrsh7th/nvim-cmp' },
+    config = function()
+      require('minuet').setup {
+        -- Your configuration options here
+        provider = "gemini",
+      }
 
-  --     require('cmp').setup {
-  --       mapping = require("cmp").mapping.preset.insert({
-  --         ["<c-x><c-y>"] = require('minuet').make_cmp_map()
-  --       }),
-  --     }
-  --   end
-  -- },
+      require('cmp').setup {
+        mapping = require("cmp").mapping.preset.insert({
+          ["<c-x><c-y>"] = require('minuet').make_cmp_map()
+        }),
+      }
+    end
+  },
   {
     'ZSaberLv0/ZFVimIM', -- ;; 开启或关闭输入法, ;: 切换词库, - 和 = 翻页,[ 和 ] 快速从词组选字,
     dependencies = { 'ZSaberLv0/ZFVimJob', 'ZSaberLv0/ZFVimIM_openapi', 'ZSaberLv0/ZFVimIM_english_base', 'ZSaberLv0/ZFVimIM_pinyin' },
@@ -1121,7 +1138,7 @@ lvim.plugins = {
             enable = true,
 
             -- Automatically jump forward to textobj, similar to targets.vim
-            --lookahead = true,
+            --lNvimTreeookahead = true,
 
             keymaps = {
               -- You can use the capture groups defined in textobjects.scm
@@ -1162,6 +1179,96 @@ lvim.plugins = {
     end
 
   },
+  {
+    "kiyoon/treesitter-indent-object.nvim",
+    keys = {
+      {
+        "ai",
+        function() require 'treesitter_indent_object.textobj'.select_indent_outer() end,
+        mode = { "x", "o" },
+        desc = "Select context-aware indent (outer)",
+      },
+      {
+        "aI",
+        function() require 'treesitter_indent_object.textobj'.select_indent_outer(true) end,
+        mode = { "x", "o" },
+        desc = "Select context-aware indent (outer, line-wise)",
+      },
+      {
+        "ii",
+        function() require 'treesitter_indent_object.textobj'.select_indent_inner() end,
+        mode = { "x", "o" },
+        desc = "Select context-aware indent (inner, partial range)",
+      },
+      {
+        "iI",
+        function() require 'treesitter_indent_object.textobj'.select_indent_inner(true, 'V') end,
+        mode = { "x", "o" },
+        desc = "Select context-aware indent (inner, entire range) in line-wise visual mode",
+      },
+    },
+  },
+  {
+    "lukas-reineke/indent-blankline.nvim",
+    tag = "v2.20.8", -- Use v2
+    event = "BufReadPost",
+    config = function()
+      vim.opt.list = true
+      require("indent_blankline").setup {
+        space_char_blankline = " ",
+        show_current_context = true,
+        show_current_context_start = true,
+      }
+    end,
+  },
+  -- {
+  --   "yioneko/nvim-yati", -- indent
+  --   version = "*",
+  --   dependencies = { "nvim-treesitter/nvim-treesitter" },
+  --   config = function()
+  --     require("nvim-treesitter.configs").setup {
+  --       yati = {
+  --         enable = true,
+  --         -- Disable by languages, see `Supported languages`
+  --         --disable = { "python" },
+
+  --         -- Whether to enable lazy mode (recommend to enable this if bad indent happens frequently)
+  --         default_lazy = true,
+
+  --         -- Determine the fallback method used when we cannot calculate indent by tree-sitter
+  --         --   "auto": fallback to vim auto indent
+  --         --   "asis": use current indent as-is
+  --         --   "cindent": see `:h cindent()`
+  --         -- Or a custom function return the final indent result.
+  --         default_fallback = "auto"
+  --       },
+  --       indent = {
+  --         enable = false -- disable builtin indent module
+  --       }
+  --     }
+  --   end
+  -- },
+  {
+    "voldikss/vim-skylight",
+    keys = {
+      { "gp", "<cmd>Skylight!<cr>", mode = { "n", "x" } },
+    },
+  },
+  {
+    "unblevable/quick-scope",
+    config = function()
+      vim.cmd([[
+      " Trigger a highlight in the appropriate direction when pressing these keys:
+      let g:qs_highlight_on_keys = ['f', 'F', 't', 'T']
+      ]])
+    end
+  },
+  {
+    "simrat39/symbols-outline.nvim",
+    opts = { show_relative_numbers = true, show_symbol_details = false, autofold_depth = 1 },
+
+  },
+
   -- {
   --   "tris203/hawtkeys.nvim",
   --   dependencies = {
@@ -1174,6 +1281,32 @@ lvim.plugins = {
   -- @@@@@@end
 
 }
+
+
+local highlight = {
+  "RainbowRed",
+  "RainbowYellow",
+  "RainbowBlue",
+  "RainbowOrange",
+  "RainbowGreen",
+  "RainbowViolet",
+  "RainbowCyan",
+}
+
+-- local hooks = require "indent_blankline.hooks"
+-- -- create the highlight groups in the highlight setup hook, so they are reset
+-- -- every time the colorscheme changes
+-- hooks.register(hooks.type.HIGHLIGHT_SETUP, function()
+--   vim.api.nvim_set_hl(0, "RainbowRed", { fg = "#E06C75" })
+--   vim.api.nvim_set_hl(0, "RainbowYellow", { fg = "#E5C07B" })
+--   vim.api.nvim_set_hl(0, "RainbowBlue", { fg = "#61AFEF" })
+--   vim.api.nvim_set_hl(0, "RainbowOrange", { fg = "#D19A66" })
+--   vim.api.nvim_set_hl(0, "RainbowGreen", { fg = "#98C379" })
+--   vim.api.nvim_set_hl(0, "RainbowViolet", { fg = "#C678DD" })
+--   vim.api.nvim_set_hl(0, "RainbowCyan", { fg = "#56B6C2" })
+-- end)
+
+-- require("indent_blankline").setup { indent = { highlight = highlight } }
 
 
 vim.o.rnu = true
@@ -1247,6 +1380,82 @@ if exists('+termguicolors')
   set termguicolors
 endif
 
+
+" copy from http://howivim.com/2016/damian-conway/
+
+" Make BS/DEL work as expected in visual modes (i.e. delete the selected text)...
+xmap <BS> x
+" Make vaa select the entire file...
+xmap aa VGo1G
+
+" Make q extend to the surrounding string...
+xmap  q   "_y:call ExtendVisualString()<CR>
+
+let s:closematch = [ '', '', '}', ']', ')', '>', '/', "'", '"', '`' ]
+let s:ldelim = '\< \%(q [qwrx]\= \| [smy] \| tr \) \s*
+\               \%(
+\                   \({\) \| \(\[\) \| \((\) \| \(<\) \| \(/\)
+\               \)
+\               \|
+\                   \(''\) \| \("\) \| \(`\)
+\'
+let s:ldelim = substitute(s:ldelim, '\s\+', '', 'g')
+
+function! ExtendVisualString ()
+    let [lline, lcol, lmatch] = searchpos(s:ldelim, 'bWp')
+    if lline == 0
+        return
+    endif
+    let rdelim = s:closematch[lmatch]
+    normal `>
+    let rmatch = searchpos(rdelim, 'W')
+    normal! v
+    call cursor(lline, lcol)
+endfunction
+
+
+" Make v<motions>Y act like an incremental v<motion>y
+vnoremap <silent>       Y  <ESC>:silent let @y = @"<CR>gv"Yy:silent let @" = @y<CR>
+
+" Make Y<motion> act like an incremental y<motion>
+nnoremap <silent><expr> Y  Incremental_Y()
+
+function! Incremental_Y ()
+    " After the Y operator, read in the associated motion
+    let motion = nr2char(getchar())
+
+    " If it's a (slowly typed) YY, do the optimized version instead (see below)
+    if motion == 'Y'
+        call Incremental_YY()
+        return
+
+    " If it's a text object, read in the associated motion
+    elseif motion =~ '[ia]'
+        let motion .= nr2char(getchar())
+    endif
+
+    " If it's a search, read in the associated pattern
+    elseif motion =~ '[/?]'
+        let motion .= input(motion) . "\<CR>"
+    endif
+
+    " Copy the current contents of the default register into the 'y register
+    let @y = @"
+
+    " Return a command sequence that yanks into the 'Y register,
+    " then assigns that cumulative yank back to the default register
+    return '"Yy' . motion . ':let @" = @y' . "\<CR>"
+endfunction
+
+
+" Make YY act like an incremental yy
+nnoremap <silent>  YY  :call Incremental_YY()<CR>
+
+function! Incremental_YY () range
+    " Grab all specified lines and append them to the default register
+    let @" .= join(getline(a:firstline, a:lastline), "\n") . "\n"
+endfunction
+
 ]])
 
 local function curr_clipboard()
@@ -1289,3 +1498,18 @@ vim.api.nvim_set_keymap('c', '<M-b>', '<S-Left>', { noremap = true })
 vim.api.nvim_set_keymap('c', '<M-f>', '<S-Right>', { noremap = true })
 vim.api.nvim_set_keymap('c', '<C-f>', '<Right>', { noremap = true })
 vim.api.nvim_set_keymap('v', '<Leader>y', '"+y', { noremap = true, silent = true }) -- TODO: not work
+
+
+-- vi(gq
+vim.api.nvim_set_keymap('x', 'gq', ':s/\\v(\\w+)/"\\1"/<cr>', { noremap = true, silent = true })
+-- vim.api.nvim_set_keymap('n', 'gq', ':set opfunc=v:lua.format_operator<cr>g@', { noremap = true, silent = true })
+
+-- function _G.format_operator(type)
+--   local start_row, start_col, end_row, end_col = unpack(vim.fn.getpos("'<"))
+--   local lines = vim.api.nvim_buf_get_lines(0, start_row - 1, end_row, false)
+--   for i, line in ipairs(lines) do
+--     line = string.gsub(line, '(\\w+)', '"%1"')
+--     lines[i] = line
+--   end
+--   vim.api.nvim_buf_set_lines(0, start_row - 1, end_row, false, lines)
+-- end

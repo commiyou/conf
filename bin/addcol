@@ -1,0 +1,29 @@
+#!/usr/bin/env python3
+import argparse
+import sys
+
+def process_line(line, delim, value, max_colcnt, cnt):
+    cols = line.rstrip('\n').split(delim)
+    if max_colcnt is not None:
+        while len(cols) < max_colcnt:
+            cols.append(value)
+    else:
+        for _ in range(cnt):
+            cols.append(value)
+    return delim.join(cols)
+
+def main():
+    parser = argparse.ArgumentParser(description='Add columns to each line of a file')
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument('-m', '--max-colcnt', type=int, help='maximum column count')
+    group.add_argument('-n', '--cnt', type=int, default=1, help='number of columns to add')
+    parser.add_argument('-v', '--value', default='', help='value for the new columns')
+    parser.add_argument('-d', '--delim', default='\t', help='column delimiter')
+    parser.add_argument('infile', nargs='?', type=argparse.FileType('r'), default=sys.stdin)
+    args = parser.parse_args()
+
+    for line in args.infile:
+        print(process_line(line, args.delim, args.value, args.max_colcnt, args.cnt))
+
+if __name__ == "__main__":
+    main()

@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 from pipetools import *
 
 
@@ -27,3 +28,4 @@ f = x.split()
 ll = split(x)
 d = defaultdict(list)
 c = Counter()
+desc = pd.read_csv(stdin, sep="\t").describe()

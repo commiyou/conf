@@ -1,0 +1,58 @@
+#!/usr/bin/env python3
+import argparse
+import csv
+import sys
+from collections import defaultdict
+
+csv.field_size_limit(sys.maxsize)
+
+
+def dedup(args):
+    if args.file:
+        input_data = open(args.file, 'r')
+    else:
+        input_data = sys.stdin
+
+    reader = csv.reader(input_data, delimiter=args.delim)
+    key_count = defaultdict(int)
+
+    if args.keys:
+        key_indices = []
+        if "-" in args.keys:
+            start, end = args.keys.split("-")
+            start = int(start) if start else 0
+            end = int(end) if end else -1
+            key_indices = list(range(start, end+1))
+        else:
+            key_indices = [int(x) for x in args.keys.split(",")]
+
+    else:
+        key_indices = None
+
+    output_data = sys.stdout if args.file is None else open(args.file, 'w', newline='')
+    writer = csv.writer(output_data, delimiter=args.delim)
+
+    for row in reader:
+        if key_indices is None:
+            key = tuple(row)
+        else:
+            key = tuple(row[i] for i in key_indices)
+
+        if key_count[key] < args.num:
+            writer.writerow(row)
+            key_count[key] += 1
+
+    input_data.close()
+    output_data.close()
+
+def main():
+    parser = argparse.ArgumentParser(description='Remove duplicates from a csv file.')
+    parser.add_argument('-k', '--keys', help='The columns to use for duplicate detection. Default is None, meaning the entire row is used for duplicate detection.')
+    parser.add_argument('-n', '--num', type=int, default=1, help='The maximum number of duplicates to keep. Default is 1.')
+    parser.add_argument('-d', '--delim', default='\t', help='The delimiter. Default is tab.')
+    parser.add_argument('file', nargs='?', help='The csv file to modify. If not specified, input is read from stdin.')
+    args = parser.parse_args()
+
+    dedup(args)
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,47 @@
+#!/usr/bin/env python3
+import argparse
+import openpyxl
+
+def list_sheets(file_path):
+    workbook = openpyxl.load_workbook(file_path, read_only=True)
+    print(f"Total Sheets: {len(workbook.sheetnames)}")
+    for i, sheet_name in enumerate(workbook.sheetnames):
+        sheet = workbook[sheet_name]
+        print(f"Sheet {i}: {sheet_name}")
+        for row in sheet.iter_rows(min_row=1, max_row=min(3, sheet.max_row), values_only=True):
+            print(row)
+        print()
+
+def select_sheet(file_path, sheet_index, delim, max_rows):
+    workbook = openpyxl.load_workbook(file_path, read_only=True)
+    sheet_name = workbook.sheetnames[sheet_index]
+    sheet = workbook[sheet_name]
+    for row in sheet.iter_rows(min_row=1, max_row=min(max_rows, sheet.max_row) if max_rows is not None else sheet.max_row, values_only=True):
+        print(delim.join(str(cell) for cell in row))
+
+def main():
+    parser = argparse.ArgumentParser(description='Tool for manipulating excel files.')
+    parser.add_argument('file', help='Path to the excel file.')
+    parser.add_argument('-n', type=int, default=None, help='Maximum number of rows to output.')
+
+    subparsers = parser.add_subparsers()
+
+    list_parser = subparsers.add_parser('--list-sheet', aliases=['-l'], help='List all sheets in the excel file.')
+    list_parser.set_defaults(func=list_sheets)
+
+    select_parser = subparsers.add_parser('--select-sheet', aliases=['-s'], help='Select a sheet by its index.')
+    select_parser.add_argument('index', type=int, help='Index of the sheet to select.')
+    select_parser.add_argument('--delim', '-d', default='\t', help='Delimeter for the output.')
+    select_parser.set_defaults(func=select_sheet)
+
+    args = parser.parse_args()
+    if 'func' in args:
+        if args.func == select_sheet:
+            args.func(args.file, args.index, args.delim, args.n)
+        else:
+            args.func(args.file)
+    else:
+        parser.print_help()
+
+if __name__ == "__main__":
+    main()

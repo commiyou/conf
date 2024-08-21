@@ -178,8 +178,16 @@ def is_chinese_or_alnum(uchar: Char) -> bool:
 
 
 def norm_line(line: str) -> str:
-    """使用正则表达式替换多个空白符为单个空格"""
+    """使用正则表达式替换多个空白符为单个空格, 去前后空白符
+
+    >>> norm_line("1  2\\n")
+    '1 2'
+    """
     return re.sub(r"\s+", " ", line).strip()
+
+
+trim_term = norm_line
+trim_line = norm_line
 
 
 def nterm(
@@ -194,7 +202,6 @@ def nterm(
 ) -> str:
     """
     新版本norm_term， 默认小写、去空白符、去标点
-
 
     >>> nterm("手电筒‘ 0")
     '手电筒0'
@@ -225,9 +232,6 @@ def norm_term(
     *,
     strict: bool = True,
     stop_chars: set[Char] | None = None,
-    trim_whitespace: bool | None = None,
-    remove_whitespace: bool | None = None,
-    remove_punctions: bool | None = None,
 ) -> str:
     """Convert the term to lowercase and remove whitespace characters
 
@@ -239,33 +243,12 @@ def norm_term(
     >>> norm_term("手电筒‘ 0", stop_chars={"0"})
     '手电筒'
     """
-    if (
-        trim_whitespace is not None
-        or remove_punctions is not None
-        or remove_whitespace is not None
-    ):
-        strict = False
 
     ret = term.lower()
-    if trim_whitespace is not None:
-        if trim_whitespace:
-            ret = norm_line(ret)
-    if remove_whitespace is not None:
-        if remove_whitespace:
-            ret = "".join(ret.split())
-
-    if remove_punctions is not None:
-        if remove_punctions:
-            ret = ret.translate(
-                str.maketrans("", "", string.punctuation + CH_PUNCTIONS)
-            )
+    ret = "".join(ret.split())
 
     if strict:
         ret = "".join(filter(is_chinese_or_alnum, ret))  # type:ignore
-    else:
-        # strict为false，且其他未设置时，去空白符
-        if remove_whitespace is None and trim_whitespace is None:
-            ret = "".join(ret.split())
 
     if stop_chars:
         ret = "".join(ch for ch in ret if ch not in stop_chars)
@@ -274,10 +257,10 @@ def norm_term(
 
 def split_str(s: str, sep: str = "\t", maxsplit: int = -1) -> list[str]:
     """split Unicode string and return list"""
-    return funcy.lmap(lambda x: x.strip(), s.rstrip("\n").split(sep, maxsplit))
+    return funcy.lmap(str.strip, s.split(sep, maxsplit))
 
 
-def is_large_file(file_path, size_limit=1024 * 1024 * 300):
+def is_large_file(file_path, size_limit=1024 * 1024 * 400):
     # 默认大小限制为300MB
     file_size = os.path.getsize(file_path)
     return file_size > size_limit
@@ -292,53 +275,52 @@ def read_file(
     errors="strict",
     decode_error_tolerance_count: int = 10,
     skip_header: bool = False,
-    tqdm: str | bool = False,
+    tqdm: str | bool | None = None,
     total: int | None = None,
     skip_notexists: bool = False,
+    filter_func: Callable[[list[str]], bool] | None = None,
 ) -> Iterator[list[str]]:
     """Read the file line by line with a specified encoding and return iterator of list after splitting by sep.
 
     input_: file name/path or io; excel时，返回的每一列都是str
     """
-    if isinstance(input_, str) and skip_notexists:
+    if isinstance(input_, (str, Path)) and skip_notexists:
         if not os.path.exists(input_):
             return iter([])
 
     if isinstance(input_, str) and input_.endswith(".xlsx"):
         df = pd.read_excel(input_, dtype=str)
-        ret = []
-        # tmp = [row.values.tolist() for _, row in df.iterrows()]
-        # xerr(len(tmp), input_)
-        # xerr([x[0] for x in tmp])
-        # return iter(row for row in df.itertuples(index=False))
         yield from (row for row in df.itertuples(index=False))
-        # xerr(len(ret), ret[0][:-1])
         return
 
-    if isinstance(input_, str):
+    if isinstance(input_, (str, Path)):
         if not is_large_file(input_):
             with open(input_, "r") as fd:
-                total = sum(1 for line in fd)
+                total = sum(1 for _ in fd)
 
     if input_ is None:
         input_ = sys.stdin.buffer
-    with ExitStack() as stack:
-        if isinstance(input_, str):
-            input_ = Path(input_)
 
-        if isinstance(input_, Path):
-            input_ = stack.enter_context(input_.open("rb"))
+    if tqdm is None and sys.stderr.isatty():
+        if isinstance(input_, (str, Path)):
+            tqdm = str(f"proc file {input_}")
+        else:
+            tqdm = True
 
+    if isinstance(input_, (str, Path)):
+        cm = open(input_, "rb")
+    else:
+        cm = contextlib.nullcontext(input_)
+
+    with cm as input_:
         if skip_header:
             input_ = funcy.rest(input_)  # type:ignore
-
-        for i, line in enumerate(
-            tqdm_.tqdm(
+        if tqdm:
+            input_ = tqdm_.tqdm(
                 input_, total=total, desc=tqdm if isinstance(tqdm, str) else None
             )
-            if tqdm
-            else input_
-        ):  # type:ignore
+
+        for i, line in enumerate(input_):  # type:ignore
             if not isinstance(line, str):
                 try:
                     uline: str = line.decode(encoding, errors=errors)  # type:ignore
@@ -353,25 +335,9 @@ def read_file(
                 uline = line
 
             ll = split_str(uline, sep=sep, maxsplit=maxsplit)
+            if filter_func is not None and not filter_func(ll):
+                continue
             yield ll
-
-
-def read_and_filter_file(
-    input_: str | Path | IO | None = sys.stdin.buffer,
-    *,
-    ofname: str | None = None,
-    sep: str = "\t",
-    encoding: str = "utf-8",
-    maxsplit: int = -1,
-    errors="strict",
-    decode_error_tolerance_count: int = 10,
-    skip_header: bool = False,
-    tqdm: str | bool = False,
-    total: int | None = None,
-    skip_notexists: bool = False,
-) -> Iterator[list[str]]:
-    """读取input, 写入到outputs中"""
-    pass
 
 
 def make_key_func(
@@ -439,7 +405,6 @@ def list_to_dict(
     value=lambda ll: ll[1],
     value_accumulate=lambda value_list: value_list[0],
     filter=None,
-    skip_header=False,
     decode_error_tolerance_count=3,
 ):
     """Convert a list to a dictionary with specified key and value.
@@ -470,15 +435,6 @@ def list_to_dict(
         result[k].append(v)
 
     return funcy.walk_values(value_accumulate_func, result)
-
-
-def load_files(*files, map_func=None, sep="\t", encoding="utf8"):
-    """load files"""
-    if map_func is None:
-        map_func = partial(split_str, sep=sep)
-    for fname in files:
-        for line in open(fname, encoding=encoding):
-            yield map_func(line)
 
 
 class JsonCustomEncoder(json.JSONEncoder):
@@ -730,6 +686,9 @@ def parallel_process_items_processes(
         yield from iter(proc_func(ll) for ll in tqdm_.tqdm(inputs))
         return
 
+    if not total and isinstance(inputs, (list, tuple, set, dict)):
+        total = len(inputs)
+
     from multiprocessing import Pool
 
     with Pool(processes=process_cnt) as pool:
@@ -784,7 +743,23 @@ def remove_file_suffix(fname: str):
         return fname
 
 
-def new_filename(fname: str | None, prefix: str = "", suffix: str = ""):
+def join_with_delim(s1: str, s2: str, delim: str = ".") -> str:
+    """以delim拼接s1和s2
+
+    >>> join_with_delim("1","2",".")
+    '1.2'
+    >>> join_with_delim("1",".tsv",".")
+    '1.tsv'
+    """
+    s1 = s1.removesuffix(delim)
+    s2 = s2.removeprefix(delim)
+    if s1 and s2:
+        return f"{s1}{delim}{s2}"
+    else:
+        return f"{s1}{s2}"
+
+
+def new_filename(fpath: str | None, prefix: str = "", suffix: str = ""):
     """新文件名
     >>> new_filename("1.tsv", "2", "3" )
     '2.1.3.tsv'
@@ -792,28 +767,32 @@ def new_filename(fname: str | None, prefix: str = "", suffix: str = ""):
     '2.1.3.xlsx'
     >>> new_filename("1", "2", "3" )
     '2.1.3'
-
     >>> new_filename("1", "", "3" )
     '1.3'
-
     >>> new_filename("1", "2" )
     '2.1'
+    >>> new_filename("./data1", suffix="2.tsv" )
+    './data1.2.tsv'
     """
-    if fname is None:
+    if fpath is None:
         return None
-    if fname.endswith((".tsv", ".xlsx", ".txt", ".dat", ".data", ".json")):
-        curr_suffix = Path(fname).suffix
+    if fpath.endswith((".tsv", ".xlsx", ".txt", ".dat", ".data", ".json")):
+        curr_suffix = Path(fpath).suffix
     else:
         curr_suffix = ""
 
     if suffix.endswith((".tsv", ".xlsx", ".txt", ".dat", ".data", ".json")):
         curr_suffix = ""
-    if prefix:
-        prefix += "."
-    if suffix:
-        suffix = "." + suffix
 
-    return f"{prefix}{remove_file_suffix(fname)}{suffix}{curr_suffix}"
+    fname = os.path.basename(fpath)
+    dname = os.path.dirname(fpath)
+
+    ret = join_with_delim(prefix, remove_file_suffix(fname), ".")
+    ret = join_with_delim(ret, suffix, ".")
+    ret = join_with_delim(ret, curr_suffix, ".")
+    ret = os.path.join(dname, ret)
+    # return f"{prefix}{remove_file_suffix(fname)}{suffix}{curr_suffix}"
+    return ret
 
 
 def doctest() -> None:

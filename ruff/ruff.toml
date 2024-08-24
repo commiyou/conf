@@ -7,7 +7,8 @@ ignore = [
   "ANN101",
   "ANN204",
   "C408", #Unnecessary `dict` call (rewrite as a literal)
-  "COM812"
+  "COM812",
+  "CPY001",
   "D202", #No blank lines allowed after function docstring
   "D400", # First line should end with a period
   "D403", #First word of the first line should be capitalized
@@ -15,6 +16,7 @@ ignore = [
   "D413", # Missing blank line after last section
   "D415", # First line should end with a period, question mark, or exclamation point
   "D417",  # Missing argument descriptions in the docstring
+  "E722", # python exception
   "EM101",
   "ERA001",# Found commented-out code
   "EXE",
@@ -24,6 +26,10 @@ ignore = [
   "PGH003", # Use specific rule codes when ignoring type issues
   "PGH004", #Use specific rule codes when using `noqa`
   "PLR0913", #Too many arguments in function definition
+  "FBT002",
+  "PLC0415",
+  "D401",
+  "FBT001",
   "PLR2004", # Magic value used in comparison, consider replacing
   "PLW1514",
   "PTH",
@@ -40,7 +46,6 @@ ignore = [
   "TD003",
   "TRY002", #Create your own exception
   "TRY003", # Avoid specifying long messages outside the exception clas
-  "E722", # python exception
   #"ANN201", # Missing return type annotation for public function
 
 ]

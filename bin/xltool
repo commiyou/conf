@@ -26,10 +26,10 @@ def main():
 
     subparsers = parser.add_subparsers()
 
-    list_parser = subparsers.add_parser('--list-sheet', aliases=['-l'], help='List all sheets in the excel file.')
+    list_parser = subparsers.add_parser('list', aliases=['l'], help='List all sheets in the excel file.')
     list_parser.set_defaults(func=list_sheets)
 
-    select_parser = subparsers.add_parser('--select-sheet', aliases=['-s'], help='Select a sheet by its index.')
+    select_parser = subparsers.add_parser('select', aliases=['s'], help='Select a sheet by its index.')
     select_parser.add_argument('index', type=int, help='Index of the sheet to select.')
     select_parser.add_argument('--delim', '-d', default='\t', help='Delimeter for the output.')
     select_parser.set_defaults(func=select_sheet)

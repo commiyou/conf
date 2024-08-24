@@ -131,7 +131,8 @@ zt wait for \
   zdharma-continuum/zsh-editing-workbench \
   multisrc'shell/*.zsh' \
   trackbinds bindmap='^T -> ^X^T; \ec -> ^X^C' \
-  junegunn/fzf 
+  junegunn/fzf  \
+  bckim92/zsh-autoswitch-conda
 
 # zt wait for \
 #   atload'!export CHEAT_USE_FZF=true' pick'scripts/cheat.zsh' \

@@ -1,0 +1,97 @@
+#!/usr/bin/env python3
+import random
+import sys
+import click
+import subprocess
+try:
+    import cutil
+except:
+    pass
+
+
+def try_decode_str(line, encodings=("utf8", "gb18030"), errors="strict"):
+    if isinstance(line, str):
+        return line
+    if isinstance(encodings, str):
+        encodings = [encodings]
+
+    for encoding in encodings:
+        try:
+            line = line.decode(encoding, errors=errors)
+        except:
+            continue
+        return line
+    raise UnicodeError("line[%s] decode error, coding list %s" % (line, ", ".join(encodings)))
+
+
+def get_encoding(encoding=None):
+    import locale
+    encoding = encoding \
+        or locale.getpreferredencoding() or sys.stdin.encoding or sys.getdefaultencoding()
+    if encoding.lower().replace("-", "") == "iso88591":
+        encoding = "gb18030"
+    return encoding
+
+
+@click.command()
+@click.option('-d', '--delim', help='delimeter, default tab', default="\t")
+@click.option('-f', '--from-encoding', help='from encoding', default=None)
+@click.option('-t', '--to-encoding', help='to encoding', default=None)
+@click.option('-l', '--lineno', help='the line number to print, default 0', default=0)
+@click.option('-r/ ', '--random-line/--norandom-line', help='randome select line to print(0-10000)', default=False)
+@click.argument('files', nargs=-1, type=click.File())
+def main(delim, from_encoding, to_encoding, lineno, random_line, files):
+    """
+    pretty print the fields no of one line in file
+    """
+    if not files:
+        files = [sys.stdin]
+
+    for fd in files:
+        if fd is not sys.stdin:
+            print("== %s" % subprocess.getoutput("file %s" % fd.name), file=sys.stderr)
+        selected_line = None
+        selected_idx = None
+        if not random_line:
+            for idx, line in enumerate(fd):
+                if selected_line is None:
+                    selected_line = line
+                    selected_idx = idx
+                if idx == lineno:
+                    selected_line = line
+                    break
+        else:
+            max_tries = 10000
+            selected_line = next(fd)
+            selected_idx = 0
+            for idx, line in enumerate(fd, 2):
+                if random.randrange(idx):
+                    continue
+                selected_line = line
+                selected_idx = idx
+
+                if idx == max_tries:
+                    break
+
+        line = selected_line.rstrip("\n")
+        if from_encoding:
+            line = line.decode(from_encoding, errors="ignore")
+        else:
+            line = try_decode_str(line)
+        delim = try_decode_str(delim)
+        print("== line no: %s" % selected_idx, file=sys.stderr)
+
+        #to_encoding = get_encoding(to_encoding)
+        #line = line.encode(to_encoding)
+        #delim = delim.encode(to_encoding)
+
+        ll = line.split(delim)
+        for i, e in enumerate(ll):
+            print('%5d : %s' % (i, e))
+
+
+
+
+
+if __name__ == "__main__":
+    main()

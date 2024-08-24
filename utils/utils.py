@@ -1,12 +1,9 @@
 #!/usr/bin/env python3
 """python3 utils"""
 
-import string
 import collections
 import contextlib
 import dataclasses
-import time
-import pandas as pd
 import datetime
 import io
 import itertools
@@ -15,18 +12,22 @@ import locale
 import os
 import random
 import re
+import string
 import sys
+import time
+import traceback
 from collections.abc import Mapping, Sequence
 from collections.abc import Set as AbstractSet
 from contextlib import ExitStack
 from functools import partial
 from operator import itemgetter
 from pathlib import Path
-from typing import IO, Any, Callable, Iterable, Iterator
+from typing import IO, Any, Callable, Iterable, Iterator, Optional
 
 import funcy
+import pandas as pd
 import tqdm as tqdm_
-from traceback_with_variables import activate_by_import  # noqa
+from traceback_with_variables import activate_by_import
 
 if locale.getencoding() != "UTF-8":
     print(f"system default locale {locale.getlocale()}", file=sys.stderr)
@@ -38,7 +39,10 @@ if locale.getencoding() != "UTF-8":
 sys.stdin = io.TextIOWrapper(sys.stdin.buffer, encoding="utf-8")
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
 
-CH_PUNCTIONS = "•·°！？｡。＂＃＄％＆＇（）＊＋，－／：；＜＝＞＠［＼］＾＿｀｛｜｝～｟｠｢｣､、〃》「」『』【】〔〕〖〗〘〙〚〛〜〝〞〟〰〾〿–—‘’‛“”„‟…‧﹏."
+CH_PUNCTIONS = (
+    "•·°！？｡。＂＃＄％＆＇（）＊＋，－／：；＜＝＞＠［＼］＾＿｀｛｜｝～｟｠｢｣"
+    "､、〃》「」『』【】〔〕〖〗〘〙〚〛〜〝〞〟〰〾〿–—‘’‛“”„‟…‧﹏."
+)
 
 
 class MetaChar(type):
@@ -101,7 +105,7 @@ def xerr(
     suffix: str = "",
     sep: str = "\t",
     encoding: str = "utf8",
-    debug=True,
+    debug: bool = True,
 ) -> None:
     """print to stderr with default sep and suffix and encoding"""
     if not debug:
@@ -115,11 +119,10 @@ def xerr(
     )
 
 
-def in_debug():
+def in_debug() -> bool:
+    """是否处于debug"""
     v = os.environ.get("DEBUG")
-    if v is None or v == "0":
-        return False
-    return True
+    return not (v is None or v == "0")
 
 
 def xdebug(
@@ -128,6 +131,7 @@ def xdebug(
     sep: str = "\t",
     encoding: str = "utf8",
 ) -> None:
+    """处于debug模式时，输出"""
     if not in_debug():
         return
     xerr(
@@ -150,14 +154,14 @@ def is_chinese_char(uchar: Char) -> bool:
     """
     if uchar.encode().isalnum():
         return False
-    if uchar >= "\u4e00" and uchar <= "\u9fa5":
+    if uchar >= "\u4e00" and uchar <= "\u9fa5":  # noqa: SIM103
         return True
     return False
 
 
 def contain_chinese(s: str) -> bool:
     """是否包含中文字符，标点符号不算"""
-    return any(is_chinese_char(ch) for ch in s)  # noqa: W291
+    return any(is_chinese_char(ch) for ch in s)
 
 
 def is_chinese_or_alnum(uchar: Char) -> bool:
@@ -172,15 +176,15 @@ def is_chinese_or_alnum(uchar: Char) -> bool:
     """
     if uchar.encode().isalnum():
         return True
-    if uchar >= "\u4e00" and uchar <= "\u9fa5":
+    if uchar >= "\u4e00" and uchar <= "\u9fa5":  # noqa: SIM103
         return True
     return False
 
 
 def norm_line(line: str) -> str:
-    """使用正则表达式替换多个空白符为单个空格, 去前后空白符
+    r"""使用正则表达式替换多个空白符为单个空格, 去前后空白符
 
-    >>> norm_line("1  2\\n")
+    >>> norm_line("1  2\n")
     '1 2'
     """
     return re.sub(r"\s+", " ", line).strip()
@@ -200,8 +204,7 @@ def nterm(
     strict: bool = False,
     stop_chars: set[Char] | None = None,
 ) -> str:
-    """
-    新版本norm_term， 默认小写、去空白符、去标点
+    """新版本norm_term， 默认小写、去空白符、去标点
 
     >>> nterm("手电筒‘ 0")
     '手电筒0'
@@ -260,19 +263,19 @@ def split_str(s: str, sep: str = "\t", maxsplit: int = -1) -> list[str]:
     return funcy.lmap(str.strip, s.split(sep, maxsplit))
 
 
-def is_large_file(file_path, size_limit=1024 * 1024 * 400):
-    # 默认大小限制为300MB
+def is_large_file(file_path: str | Path, size_limit: int = 1024 * 1024 * 400) -> bool:
+    """默认大小限制为300MB"""
     file_size = os.path.getsize(file_path)
     return file_size > size_limit
 
 
-def read_file(
+def read_file(  # noqa: C901, PLR0912
     input_: str | Path | IO | None = sys.stdin.buffer,
     *,
     sep: str = "\t",
     encoding: str = "utf-8",
     maxsplit: int = -1,
-    errors="strict",
+    errors: str = "strict",
     decode_error_tolerance_count: int = 10,
     skip_header: bool = False,
     tqdm: str | bool | None = None,
@@ -284,41 +287,31 @@ def read_file(
 
     input_: file name/path or io; excel时，返回的每一列都是str
     """
-    if isinstance(input_, (str, Path)) and skip_notexists:
-        if not os.path.exists(input_):
-            return iter([])
+    if isinstance(input_, (str, Path)) and skip_notexists and not os.path.exists(input_):
+        return iter([])  # noqa: B901
 
     if isinstance(input_, str) and input_.endswith(".xlsx"):
-        df = pd.read_excel(input_, dtype=str)
+        df = pd.read_excel(input_, dtype=str)  # noqa: PD901
         yield from (row for row in df.itertuples(index=False))
         return
 
-    if isinstance(input_, (str, Path)):
-        if not is_large_file(input_):
-            with open(input_, "r") as fd:
-                total = sum(1 for _ in fd)
+    if isinstance(input_, (str, Path)) and not is_large_file(input_):
+        with open(input_) as fd:
+            total = sum(1 for _ in fd)
 
     if input_ is None:
         input_ = sys.stdin.buffer
 
     if tqdm is None and sys.stderr.isatty():
-        if isinstance(input_, (str, Path)):
-            tqdm = str(f"proc file {input_}")
-        else:
-            tqdm = True
+        tqdm = str(f"proc file {input_}") if isinstance(input_, (str, Path)) else True
 
-    if isinstance(input_, (str, Path)):
-        cm = open(input_, "rb")
-    else:
-        cm = contextlib.nullcontext(input_)
+    cm = open(input_, "rb") if isinstance(input_, (str, Path)) else contextlib.nullcontext(input_)  # noqa: SIM115
 
     with cm as input_:
         if skip_header:
-            input_ = funcy.rest(input_)  # type:ignore
+            input_ = funcy.rest(input_)  # type:ignore  # noqa: PLW2901
         if tqdm:
-            input_ = tqdm_.tqdm(
-                input_, total=total, desc=tqdm if isinstance(tqdm, str) else None
-            )
+            input_ = tqdm_.tqdm(input_, total=total, desc=tqdm if isinstance(tqdm, str) else None)  # noqa: PLW2901
 
         for i, line in enumerate(input_):  # type:ignore
             if not isinstance(line, str):
@@ -364,7 +357,7 @@ def make_key_func(
     if callable(f):
         return f
     if isinstance(f, int):
-        return lambda x: itemgetter(f)(x)
+        return itemgetter(f)
     if isinstance(f, slice):
         return lambda x: tuple(itemgetter(f)(x))
     if isinstance(f, Sequence):
@@ -373,7 +366,8 @@ def make_key_func(
         return f.__getitem__
     if isinstance(f, AbstractSet):
         return f.__contains__
-    raise TypeError(f"Can't make a func from {f.__class__.__name__}")
+    msg = f"Can't make a func from {f.__class__.__name__}"
+    raise TypeError(msg)  # noqa: DOC501
 
 
 def group_file_by_key(
@@ -395,17 +389,17 @@ def group_file_by_key(
         decode_error_tolerance_count=decode_error_tolerance_count,
     )
 
-    for key, lls in itertools.groupby(f, key=key_func):
-        yield key, lls
+    yield from itertools.groupby(f, key=key_func)
 
 
 def list_to_dict(
-    lls,
-    key=lambda ll: ll[0],
-    value=lambda ll: ll[1],
-    value_accumulate=lambda value_list: value_list[0],
-    filter=None,
-    decode_error_tolerance_count=3,
+    lls: list,
+    key: Callable[..., Any] | Sequence[int] | AbstractSet | Mapping | slice | int = 0,
+    value: Callable[..., Any] | Sequence[int] | AbstractSet | Mapping | slice | int = 1,
+    value_accumulate: Callable[..., Any] | Sequence[int] | AbstractSet | Mapping | slice | int = 0,
+    filter: Callable | None = None,  # noqa: A002
+    skip_header: bool = False,
+    decode_error_tolerance_count: int = 3,
 ):
     """Convert a list to a dictionary with specified key and value.
 
@@ -459,9 +453,7 @@ def xprint_json(obj: object) -> None:
     xprint(json.dumps(obj, ensure_ascii=False, indent=4, cls=JsonCustomEncoder))
 
 
-def safe_divide(
-    p1: float, p2: float, *, digits: int = 2, percentage: bool = False
-) -> str:
+def safe_divide(p1: float, p2: float, *, digits: int = 2, percentage: bool = False) -> str:
     """return n/a if divide 0 else value with str type
 
     >>> safe_divide(1, 0)
@@ -478,9 +470,7 @@ def safe_divide(
     return f"{{:.{digits}f}}".format(p1 / p2)
 
 
-def safe_diff(
-    p1: float | str, p2: float | str, *, digits: int = 2, percentage: bool = True
-) -> str | float:
+def safe_diff(p1: float | str, p2: float | str, *, digits: int = 2, percentage: bool = True) -> str | float:
     """return n/a if divide 0 else value with str type
 
     >>> safe_diff(1, 0)
@@ -547,9 +537,7 @@ class RedirectStdoutToFile(contextlib.ContextDecorator):
     ...     print(123)
     """
 
-    def __init__(
-        self, fname: str | Path | None, mode: str = "w", tpl: str | None = None
-    ) -> None:
+    def __init__(self, fname: str | Path | None, mode: str = "w", tpl: str | None = None) -> None:
         """file name and write mode"""
         if tpl is None:
             tpl = "{}"
@@ -567,7 +555,7 @@ class RedirectStdoutToFile(contextlib.ContextDecorator):
         sys.stdout = self.file
         return self.file
 
-    def __exit__(self, *exc: object):
+    def __exit__(self, *_: object):
         """exit"""
         sys.stdout = self.old_stdout
         self.file.close()
@@ -601,7 +589,7 @@ class RedirectStderrToFile(contextlib.ContextDecorator):
         sys.stderr = self.file
         return self.file
 
-    def __exit__(self, *exc: object):
+    def __exit__(self, *_: object):
         """exit"""
         sys.stderr = self.old_stderr
         self.file.close()
@@ -662,10 +650,7 @@ def timestamp(fmt: str = "%Y%m%d%H%M%S") -> str:
 def date(ts: str | int | None = None, fmt: str = "%Y-%m-%d") -> str:
     """return current local datetime from ts"""
 
-    if ts is None or ts == 0:
-        ts = time.time()
-    else:
-        ts = int(ts)
+    ts = time.time() if ts is None or ts == 0 else int(ts)
     dt_object = datetime.datetime.fromtimestamp(ts)  # noqa: DTZ006
     formatted_time = dt_object.strftime(fmt)
 
@@ -679,9 +664,9 @@ def parallel_process_items_processes(
     process_cnt: int | None = None,
     tqdm: str | bool = True,
     total: int | None = None,
-):
+) -> None:
     """返回的是proc_func的输出"""
-    xerr(process_cnt)
+    xerr(f"pcnt {process_cnt}")
     if process_cnt == 1:
         yield from iter(proc_func(ll) for ll in tqdm_.tqdm(inputs))
         return
@@ -708,11 +693,11 @@ def parallel_process_items_threads(
     total: int | None = None,
 ) -> Iterator:
     """多线程跑函数proc_func"""
-    if isinstance(inputs, str):  # noqa: SIM108
+    if isinstance(inputs, str):
         _inputs = read_file(inputs, tqdm=tqdm)
         if not is_large_file(inputs):
-            with open(inputs, "r") as fd:
-                total = sum(1 for line in fd)
+            with open(inputs) as fd:
+                total = sum(1 for _ in fd)
 
     else:
         # _inputs = tqdm_.tqdm(inputs, total=total) if tqdm else inputs
@@ -731,55 +716,53 @@ def parallel_process_items_threads(
             yield it
 
 
-def parallel_run_helper(func, ll: list, *args, **kws):
+def parallel_run_helper(func, ll: list, *args, **kws):  # noqa: ANN001, ANN002, ANN003, ANN201
+    """helper"""
     ret = func(*args, **kws)
     return ll, ret
 
 
-def remove_file_suffix(fname: str):
+def remove_file_suffix(fname: str) -> str:
+    """去除文件特定后缀"""
     if fname.endswith((".tsv", ".xlsx", ".txt", ".dat", ".data", ".json")):
         return Path(f"{fname}").stem
-    else:
-        return fname
+    return fname
 
 
 def join_with_delim(s1: str, s2: str, delim: str = ".") -> str:
     """以delim拼接s1和s2
 
-    >>> join_with_delim("1","2",".")
+    >>> join_with_delim("1", "2", ".")
     '1.2'
-    >>> join_with_delim("1",".tsv",".")
+    >>> join_with_delim("1", ".tsv", ".")
     '1.tsv'
     """
     s1 = s1.removesuffix(delim)
     s2 = s2.removeprefix(delim)
     if s1 and s2:
         return f"{s1}{delim}{s2}"
-    else:
-        return f"{s1}{s2}"
+    return f"{s1}{s2}"
 
 
-def new_filename(fpath: str | None, prefix: str = "", suffix: str = ""):
+def new_filename(fpath: str | None, prefix: str = "", suffix: str = "") -> None:
     """新文件名
-    >>> new_filename("1.tsv", "2", "3" )
+
+    >>> new_filename("1.tsv", "2", "3")
     '2.1.3.tsv'
-    >>> new_filename("1.tsv", "2", "3.xlsx" )
+    >>> new_filename("1.tsv", "2", "3.xlsx")
     '2.1.3.xlsx'
-    >>> new_filename("1", "2", "3" )
+    >>> new_filename("1", "2", "3")
     '2.1.3'
-    >>> new_filename("1", "", "3" )
+    >>> new_filename("1", "", "3")
     '1.3'
-    >>> new_filename("1", "2" )
+    >>> new_filename("1", "2")
     '2.1'
-    >>> new_filename("./data1", suffix="2.tsv" )
+    >>> new_filename("./data1", suffix="2.tsv")
     './data1.2.tsv'
     """
     if fpath is None:
         return None
-    if fpath.endswith((".tsv", ".xlsx", ".txt", ".dat", ".data", ".json")):
-        curr_suffix = Path(fpath).suffix
-    else:
-        curr_suffix = ""
+    curr_suffix = Path(fpath).suffix if fpath.endswith((".tsv", ".xlsx", ".txt", ".dat", ".data", ".json")) else ""
 
     if suffix.endswith((".tsv", ".xlsx", ".txt", ".dat", ".data", ".json")):
         curr_suffix = ""
@@ -793,6 +776,42 @@ def new_filename(fpath: str | None, prefix: str = "", suffix: str = ""):
     ret = os.path.join(dname, ret)
     # return f"{prefix}{remove_file_suffix(fname)}{suffix}{curr_suffix}"
     return ret
+
+
+class TermMatcher:
+    """从q中查询包含哪些term"""
+
+    def __init__(
+        self,
+        terms: Iterable[str],
+        *,
+        ignore_case: bool = True,
+        remove_punctions: bool = True,
+        remove_whitespace: bool = True,
+    ):
+        """term list"""
+        from ahocorasick import Automaton
+
+        self.automaton = Automaton()
+
+        # 添加模式串
+        for term in terms:
+            # 第二个是value
+            k = nterm(term, lower=ignore_case, remove_punctions=remove_punctions, remove_whitespace=remove_whitespace)
+            if not k:
+                xerr(f"term[{term}] empy after norm, skip")
+                continue
+            # add_word(key, [value]) => bool
+            self.automaton.add_word(k, (k, term))
+
+        self.automaton.make_automaton()
+
+    def match(self, q: str) -> Iterator[tuple[str, tuple[int, int, str]]]:
+        """返回查到的term: original_term, (start_index, end_index, matched_term)"""
+        # iter(string, [start, [end]]),  Return an iterator of tuples (end_index, value)  for keys found in string.
+        for end_index, (matched_term, original_term) in self.automaton.iter(q):
+            start_index = end_index - len(matched_term) + 1
+            yield original_term, (start_index, end_index, matched_term)
 
 
 def doctest() -> None:

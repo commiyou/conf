@@ -5,6 +5,7 @@ import collections
 import contextlib
 import dataclasses
 import datetime
+import functools
 import io
 import itertools
 import json
@@ -22,7 +23,7 @@ from contextlib import ExitStack
 from functools import partial
 from operator import itemgetter
 from pathlib import Path
-from typing import IO, Any, Callable, Iterable, Iterator, Optional
+from typing import IO, Any, Callable, Iterable, Iterator, Optional, TypeAlias
 
 import funcy
 import pandas as pd
@@ -87,8 +88,11 @@ def xprint(
     flush: bool = True,
     file: "IO|None" = None,
     encoding: str = "utf8",
+    output_flag: bool = True,
 ) -> None:
     """print with default sep and suffix and encoding"""
+    if not output_flag:
+        return
     if file is None:
         file = sys.stdout
     end = suffix + "\n"
@@ -106,9 +110,12 @@ def xerr(
     sep: str = "\t",
     encoding: str = "utf8",
     debug: bool = True,
+    output_flag: bool = True,
 ) -> None:
     """print to stderr with default sep and suffix and encoding"""
     if not debug:
+        return
+    if not output_flag:
         return
     xprint(
         *values,
@@ -333,8 +340,11 @@ def read_file(  # noqa: C901, PLR0912
             yield ll
 
 
+KeyType: TypeAlias = int | slice | Sequence | Mapping | AbstractSet | Callable[..., Any]
+
+
 def make_key_func(
-    f: int | slice | Sequence | Mapping | AbstractSet | Callable[..., Any],
+    f: KeyType,
 ) -> Callable:
     """turn into key func
 
@@ -373,7 +383,7 @@ def make_key_func(
 def group_file_by_key(
     input_: str | Path | IO | None = sys.stdin.buffer,
     *,
-    key: Callable[..., Any] | Sequence[int] | AbstractSet | Mapping | slice | int = 0,
+    key: KeyType = 0,
     sep: str = "\t",
     encoding: str = "utf-8",
     maxsplit: int = -1,
@@ -394,9 +404,9 @@ def group_file_by_key(
 
 def list_to_dict(
     lls: list,
-    key: Callable[..., Any] | Sequence[int] | AbstractSet | Mapping | slice | int = 0,
-    value: Callable[..., Any] | Sequence[int] | AbstractSet | Mapping | slice | int = 1,
-    value_accumulate: Callable[..., Any] | Sequence[int] | AbstractSet | Mapping | slice | int = 0,
+    key: KeyType = 0,
+    value: KeyType = 1,
+    value_accumulate: KeyType = 0,
     filter: Callable | None = None,  # noqa: A002
     skip_header: bool = False,
     decode_error_tolerance_count: int = 3,
@@ -799,8 +809,12 @@ class TermMatcher:
             # 第二个是value
             k = nterm(term, lower=ignore_case, remove_punctions=remove_punctions, remove_whitespace=remove_whitespace)
             if not k:
-                xerr(f"term[{term}] empy after norm, skip")
+                xerr(f"term[{term}] empty after norm, skip")
                 continue
+            if k in self.automaton:
+                xerr(f"term[{term}] nterm[{k}] dup, skip")
+                continue
+
             # add_word(key, [value]) => bool
             self.automaton.add_word(k, (k, term))
 
@@ -812,6 +826,74 @@ class TermMatcher:
         for end_index, (matched_term, original_term) in self.automaton.iter(q):
             start_index = end_index - len(matched_term) + 1
             yield original_term, (start_index, end_index, matched_term)
+
+
+AnyType: TypeAlias = Any
+
+
+def jpath(js: dict, path: str, default: AnyType = None) -> list | AnyType:
+    """从json中抽取value, 如 $.Result[*].DisplayData"""
+    from jsonpath_ng import jsonpath, parse
+
+    # "$.Result[0].DisplayData.resultData.tplData.tplSubData[0].result.goodsCompare.shopList[*].goodsList[*].shop_name"
+    jsonpath_expr = parse(path)
+    ret = [match.value for match in jsonpath_expr.find(js)]
+    if not ret and default:
+        return default
+    return ret
+
+
+__IGNORE_CNT = collections.defaultdict(int)
+
+
+def ignore(
+    errors: Exception | tuple[Exception, ...] = Exception,
+    default: object = None,
+    max_error_cnt: int = 3,
+) -> Callable:
+    """specify errors to catch and default to return in case of error caught
+
+    errors can either be exception class or a tuple of them.
+    """
+
+    # global __IGNORE_CNT
+
+    def decorator(func):  # noqa: ANN001, ANN202
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):  # noqa: ANN002, ANN003, ANN202
+            try:
+                return func(*args, **kwargs)
+            except errors:
+                __IGNORE_CNT[func] += 1
+                if __IGNORE_CNT[func] >= max_error_cnt:
+                    raise
+                return default
+
+        return wrapper
+
+    return decorator
+
+
+@funcy.decorator
+def with_ofname(
+    call,
+    *,
+    ofname: str | None = None,
+    prefix: str = "",
+    suffix: str = "",
+    mode: str = "w+",
+):
+    """为call function增加"""
+    # print(call._func.__name__, "@@", call._args, "@@", call._kwargs)
+    fname = call.fname if hasattr(call, "fname") else None
+
+    if not ofname:
+        ofname = fname
+
+    if ofname:
+        ofname = new_filename(ofname, prefix=prefix, suffix=suffix)
+        return redirect_stdout_to_file(ofname, mode=mode)(call)()
+    return call()
 
 
 def doctest() -> None:

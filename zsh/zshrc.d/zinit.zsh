@@ -132,6 +132,7 @@ zt wait for \
   multisrc'shell/*.zsh' \
   trackbinds bindmap='^T -> ^X^T; \ec -> ^X^C' \
   junegunn/fzf  \
+  atload'!export AUTOSWITCH_DEFAULT_CONDAENV="base"' \
   bckim92/zsh-autoswitch-conda
 
 # zt wait for \

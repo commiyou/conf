@@ -78,7 +78,7 @@ for _i, _data in ipairs(lvim.builtin.cmp.sources) do
           local byte_size = vim.api.nvim_buf_get_offset(buf, vim.api.nvim_buf_line_count(buf))
           print(vim.api.nvim_buf_line_count(buf))
           -- io.open("/home/bin.you/debug.txt", "w+"):write
-          if byte_size > 1024 * 1024 then           -- 1 Megabyte max
+          if byte_size > 1024 * 1024 then -- 1 Megabyte max
             return {}
           end
           return { buf }
@@ -93,10 +93,14 @@ local function find_cwd_files(prompt_bufnr)
     cwd = vim.fn.expand("%:p:h"),
 
   }
-  -- require('fzf-lua').files(opt)
+  require('fzf-lua').files(opt)
   -- https://github.com/ibhagwan/fzf-lua/wiki/Advanced#fzf-exec-acts
-  require 'fzf-lua'.fzf_exec("fd --no-ignore --color=never --type f --hidden --follow --exclude .git",
-    { actions = require 'fzf-lua'.defaults.actions.files, cwd = vim.fn.expand("%:p:h") })
+  -- require 'fzf-lua'.fzf_exec("fd --no-ignore --color=never --type f --hidden --follow --exclude .git",
+  --   {
+  --     actions = require 'fzf-lua'.defaults.actions.files,
+  --     cwd = vim.fn.expand("%:p:h"),
+
+  --   })
 end
 
 local function find_gitroot_files(prompt_bufnr)
@@ -130,13 +134,13 @@ lvim.builtin.which_key.mappings["f"] = {
   R = { '<cmd>lua require("spectre").open_visual({select_word=true})<cr>', "Search files & Replace" },
   s = { "<cmd>lua require('fzf-lua').lsp_document_symbols({ resume = true })<cr>", "Buffer Symbol" },
   S = { "<cmd>lua require('fzf-lua').lsp_workspace_symbols({ resume = true })<cr>", "WorkSpace Symbol" },
-  t = { "<cmd>TlistToggle<cr>", "taglist" },   -- yegappan/taglist
+  t = { "<cmd>TlistToggle<cr>", "taglist" }, -- yegappan/taglist
   w = { "<cmd>lua require('fzf-lua').grep_cword({ resume = true })<cr>", "Grep Word" },
 }
 lvim.builtin.which_key.mappings["Ls"] = { "<cmd>Pmsg lua print(vim.inspect(lvim))<cr>", "Show Confs" }
 lvim.builtin.which_key.mappings["o"] = {
   -- toggle options
-  C = { "<cmd>lua require('swenv.api').pick_venv()<cr>", "Choose Python Env" },   -- AckslD/swenv.nvim
+  C = { "<cmd>lua require('swenv.api').pick_venv()<cr>", "Choose Python Env" }, -- AckslD/swenv.nvim
   p = { "<cmd>setlocal paste!<cr>", "paste" },
   g = { "<cmd>e ++enc=gbk<cr>", "fenc gbk" },
   u = { "<cmd>e ++enc=utf8<cr>", "fenc utf8" },
@@ -211,8 +215,12 @@ require("nvim-treesitter.install").prefer_git = true
 --linters.setup { { command = "pyright", filetypes = { "python" } } }
 --
 require("null-ls").setup({
-  debug = true,
+  debug = false,
 })
+
+-- :LvimCacheReset
+-- vim.list_extend(lvim.lsp.automatic_configuration.skipped_servers, { "pyright" })
+
 
 
 -- open log
@@ -295,20 +303,20 @@ lvim.plugins = {
     }
 
   },
-  { 'mbbill/undotree' },   -- :UndotreeToggle
+  { 'mbbill/undotree' }, -- :UndotreeToggle
   { "tpope/vim-unimpaired" },
   {
-    "Julian/vim-textobj-variable-segment",     --  iv / av for variable segments.(snake case/camel case)
+    "Julian/vim-textobj-variable-segment", --  iv / av for variable segments.(snake case/camel case)
     dependencies = {
       "kana/vim-textobj-user",
     }
   },
   {
-    'nvim-pack/nvim-spectre',     -- :Spectre, search and replace
+    'nvim-pack/nvim-spectre', -- :Spectre, search and replace
     dependencies = { "nvim-lua/plenary.nvim" }
   },
   {
-    'echasnovski/mini.ai',     -- text obj,
+    'echasnovski/mini.ai', -- text obj,
     version = false,
     config = function()
       require('mini.ai').setup()
@@ -316,10 +324,10 @@ lvim.plugins = {
   },
   {
     "whiteinge/diffconflicts",
-  },   -- :DiffConflicts
+  }, -- :DiffConflicts
   {
     "AndrewRadev/splitjoin.vim",
-  },   -- gS / gJ  split or join
+  }, -- gS / gJ  split or join
   {
     'echasnovski/mini.operators',
     version = false,
@@ -328,7 +336,7 @@ lvim.plugins = {
   {
     "folke/neodev.nvim",
     opts = {},
-  },   --  Neovim setup for init.lua and plugin development with full signature help, docs and completion for the nvim lua API.
+  }, --  Neovim setup for init.lua and plugin development with full signature help, docs and completion for the nvim lua API.
   -- { # TODO
   --   "chrisgrieser/nvim-spider", -- w/e/b
   --   lazy = true,
@@ -397,9 +405,9 @@ lvim.plugins = {
       require("tabs-vs-spaces").setup()
       lvim.autocommands = {
         {
-          "BufEnter",                                                   -- see `:h autocmd-events`
-          {                                                             -- this table is passed verbatim as `opts` to `nvim_create_autocmd`
-            pattern = { "*.py", "*.sh", "*.cpp", "*.lua" },             -- see `:h autocmd-events`
+          "BufEnter",                                       -- see `:h autocmd-events`
+          {                                                 -- this table is passed verbatim as `opts` to `nvim_create_autocmd`
+            pattern = { "*.py", "*.sh", "*.cpp", "*.lua" }, -- see `:h autocmd-events`
             command = "TabsVsSpacesToggle",
           }
         },
@@ -414,8 +422,8 @@ lvim.plugins = {
     end
   },
   {
-    'chentoast/marks.nvim',     -- mx Set mark x, m] Move to next mark; dm<space> Delete all marks in the current buffer
-    opts = {}                   -- m0, global marker, MarksListBuf, MarksListAll
+    'chentoast/marks.nvim', -- mx Set mark x, m] Move to next mark; dm<space> Delete all marks in the current buffer
+    opts = {}               -- m0, global marker, MarksListBuf, MarksListAll
   },
   {
     "smjonas/inc-rename.nvim",
@@ -445,7 +453,7 @@ lvim.plugins = {
 
   },
   {
-    'mrjones2014/legendary.nvim',     -- TODO:
+    'mrjones2014/legendary.nvim', -- TODO:
     priority = 10000,
     lazy = false,
     -- sqlite is only needed if you want to use frecency sorting
@@ -497,7 +505,7 @@ lvim.plugins = {
         {
           name = "tmux",
           option = {
-            all_panes = false,             -- 防止太卡
+            all_panes = false, -- 防止太卡
             capture_history = true
           }
         },
@@ -542,7 +550,7 @@ lvim.plugins = {
     end,
   },
   {
-    "danymat/neogen",     -- doc gene
+    "danymat/neogen", -- doc gene
     config = function()
       require('neogen').setup({
         snippet_engine = "luasnip",
@@ -556,11 +564,11 @@ lvim.plugins = {
       })
     end
   },
-  { "ConradIrwin/vim-bracketed-paste" },   -- automatic `:set paste`
-  { "dbeniamine/cheat.sh-vim" },           -- <leader>KB for current line, :Cheat + question
+  { "ConradIrwin/vim-bracketed-paste" }, -- automatic `:set paste`
+  { "dbeniamine/cheat.sh-vim" },         -- <leader>KB for current line, :Cheat + question
   { "elzr/vim-json" },
   {
-    "ibhagwan/fzf-lua",     -- TODO:
+    "ibhagwan/fzf-lua", -- TODO:
     -- optional for icon support
     dependencies = { "nvim-tree/nvim-web-devicons" },
     config = function()
@@ -582,11 +590,17 @@ lvim.plugins = {
 
           },
           buffers = {
-            ["ctrl-x"]  = require 'fzf-lua'.actions.buf_split,
-            ["default"] = actions.buf_edit,
-            ["ctrl-v"]  = actions.buf_vsplit,
-            ["ctrl-t"]  = actions.buf_tabedit,
           },
+        },
+        files = {
+          fd_opts = [[--no-ignore --color=never --type f --hidden --follow --exclude .git]],
+          gd_opts = [[--no-ignore --color=never --files --hidden --follow -g "!.git"]],
+        },
+        buffers = {
+          actions = {
+            ["ctrl-x"] = require 'fzf-lua'.actions.buf_split,
+            --["ctrl-i"] = { fn = actions.buf_del, reload = true },
+          }
         }
         --keymap={builtin={["ctrl-]"]  = "preview-page-down",["ctrl-["]    = "preview-page-up",}}
       })
@@ -595,7 +609,7 @@ lvim.plugins = {
     end
   },
   {
-    'echasnovski/mini.hipatterns',     -- TODO:
+    'echasnovski/mini.hipatterns', -- TODO:
     event = { "BufReadPost", "BufNewFile", "BufWritePre" },
     opts = function()
       local hi = require("mini.hipatterns")
@@ -616,7 +630,7 @@ lvim.plugins = {
 
   --{"romainl/vim-cool"}, -- no hlserach
   {
-    'echasnovski/mini.fuzzy',     -- fuzzy for telescope
+    'echasnovski/mini.fuzzy', -- fuzzy for telescope
     version = false,
     opts = function()
       require("mini.fuzzy").setup()
@@ -651,7 +665,7 @@ lvim.plugins = {
                 local byte_size = vim.api.nvim_buf_get_offset(buf, vim.api.nvim_buf_line_count(buf))
                 -- print(vim.api.nvim_buf_line_count(buf))
                 -- io.open("/home/bin.you/debug.txt", "w+"):write
-                if byte_size > 1024 * 1024 then                 -- 1 Megabyte max
+                if byte_size > 1024 * 1024 then -- 1 Megabyte max
                   return {}
                 end
                 return { buf }
@@ -703,7 +717,7 @@ lvim.plugins = {
     end
   },
   {
-    "folke/flash.nvim",     -- navigate your code with search labels, enhanced character motions, and Treesitter integration.
+    "folke/flash.nvim", -- navigate your code with search labels, enhanced character motions, and Treesitter integration.
     event = "VeryLazy",
     ---@type Flash.Config
     opts = {
@@ -849,11 +863,11 @@ lvim.plugins = {
     "romgrk/nvim-treesitter-context",
     config = function()
       require("treesitter-context").setup {
-        enable = true,           -- Enable this plugin (Can be enabled/disabled later via commands)
-        throttle = true,         -- Throttles plugin updates (may improve performance)
-        max_lines = 5,           -- How many lines the window should span. Values <= 0 mean no limit.
+        enable = true,   -- Enable this plugin (Can be enabled/disabled later via commands)
+        throttle = true, -- Throttles plugin updates (may improve performance)
+        max_lines = 5,   -- How many lines the window should span. Values <= 0 mean no limit.
         min_window_height = 15,
-        patterns = {             -- Match patterns for TS nodes. These get wrapped to match at word boundaries.
+        patterns = {     -- Match patterns for TS nodes. These get wrapped to match at word boundaries.
           -- For all filetypes
           -- Note that setting an entry here replaces all other patterns for this entry.
           -- By setting the 'default' entry below, you can control which nodes you want to
@@ -874,12 +888,12 @@ lvim.plugins = {
     "rmagatti/goto-preview",
     config = function()
       require('goto-preview').setup {
-        width = 120,                      -- Width of the floating window
-        height = 25,                      -- Height of the floating window
-        default_mappings = false,         -- Bind default mappings
-        debug = false,                    -- Print debug information
-        opacity = nil,                    -- 0-100 opacity level of the floating window where 100 is fully transparent.
-        post_open_hook = nil              -- A function taking two arguments, a buffer and a window to be ran as a hook.
+        width = 120,              -- Width of the floating window
+        height = 25,              -- Height of the floating window
+        default_mappings = false, -- Bind default mappings
+        debug = false,            -- Print debug information
+        opacity = nil,            -- 0-100 opacity level of the floating window where 100 is fully transparent.
+        post_open_hook = nil      -- A function taking two arguments, a buffer and a window to be ran as a hook.
         -- You can use "default_mappings = true" setup option
         -- Or explicitly set keybindings
         -- vim.cmd("nnoremap gpd <cmd>lua require('goto-preview').goto_preview_definition()<CR>")
@@ -889,7 +903,7 @@ lvim.plugins = {
     end
   },
   {
-    "RRethy/vim-hexokinase",     -- show color
+    "RRethy/vim-hexokinase", -- show color
     build = "make hexokinase",
     config = function()
       vim.g.Hexokinase_highlighters = { "backgroundfull" }
@@ -899,7 +913,7 @@ lvim.plugins = {
     "hedyhli/outline.nvim",
     lazy = true,
     cmd = { "Outline", "OutlineOpen" },
-    keys = {     -- Example mapping to toggle outline
+    keys = { -- Example mapping to toggle outline
       { "<leader>ot", "<cmd>Outline<CR>", desc = "Toggle outline" },
     },
     config = function()
@@ -1026,12 +1040,12 @@ lvim.plugins = {
     end
   },
   { "stevearc/dressing.nvim" },
-  { "tpope/vim-abolish" },   -- :%Subvert/facilit{y,ies}/building{,s}/g
+  { "tpope/vim-abolish" }, -- :%Subvert/facilit{y,ies}/building{,s}/g
   { "tpope/vim-fugitive" },
   {
     -- ys{motion}{char} / dst / dss
     "kylechui/nvim-surround",
-    version = "*",     -- Use for stability; omit to use `main` branch for the latest features
+    version = "*", -- Use for stability; omit to use `main` branch for the latest features
     event = "VeryLazy",
     config = function()
       require("nvim-surround").setup({
@@ -1039,7 +1053,7 @@ lvim.plugins = {
       })
     end
   },
-  { "tpope/vim-repeat" },   -- ysiw<em>
+  { "tpope/vim-repeat" }, -- ysiw<em>
   --{ "wellle/tmux-complete.vim" },
   { "yegappan/taglist" },
   {
@@ -1131,7 +1145,7 @@ lvim.plugins = {
     end
   },
   {
-    'ZSaberLv0/ZFVimIM',     -- ;; 开启或关闭输入法, ;: 切换词库, - 和 = 翻页,[ 和 ] 快速从词组选字,
+    'ZSaberLv0/ZFVimIM', -- ;; 开启或关闭输入法, ;: 切换词库, - 和 = 翻页,[ 和 ] 快速从词组选字,
     dependencies = { 'ZSaberLv0/ZFVimJob', 'ZSaberLv0/ZFVimIM_openapi', 'ZSaberLv0/ZFVimIM_english_base', 'ZSaberLv0/ZFVimIM_pinyin' },
   },
   {
@@ -1165,9 +1179,9 @@ lvim.plugins = {
             -- and should return the mode ('v', 'V', or '<c-v>') or a table
             -- mapping query_strings to modes.
             selection_modes = {
-              ['@parameter.outer'] = 'v',               -- charwise
-              ['@function.outer'] = 'V',                -- linewise
-              ['@class.outer'] = '<c-v>',               -- blockwise
+              ['@parameter.outer'] = 'v', -- charwise
+              ['@function.outer'] = 'V',  -- linewise
+              ['@class.outer'] = '<c-v>', -- blockwise
             },
             -- If you set this to `true` (default is `false`) then any textobject is
             -- extended to include preceding or succeeding whitespace. Succeeding
@@ -1216,7 +1230,7 @@ lvim.plugins = {
   },
   {
     "lukas-reineke/indent-blankline.nvim",
-    tag = "v2.20.8",     -- Use v2
+    tag = "v2.20.8", -- Use v2
     event = "BufReadPost",
     config = function()
       vim.opt.list = true

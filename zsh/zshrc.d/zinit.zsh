@@ -167,7 +167,7 @@ __forgit_atload() {
     alias gds="forgit::diff --cached"
     alias glog="forgit::log --oneline --decorate --graph"
 }
-__forgit_atload
+#__forgit_atload
 
 zt wait for \
   hlissner/zsh-autopair \
@@ -178,7 +178,7 @@ zt wait for \
   atpull$'git config --global core.pager "diff-so-fancy | less --tabs=4 -RFX"; \
     git config --global interactive.diffFilter "diff-so-fancy --patch";' \
   z-shell/zsh-diff-so-fancy \
-  atload$'compdef _git gco=git-checkout;' wfxr/forgit \
+  atload$'!__forgit_atload;compdef _git gco=git-checkout;' wfxr/forgit \
   as"program" atload'export SSHHOME=$XDG_CONFIG_HOME' pick'sshrc' IngoMeyer441/sshrc \
   atinit"local zew_word_style=whitespace" \
   zdharma-continuum/zsh-editing-workbench 

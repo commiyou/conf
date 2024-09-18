@@ -12,12 +12,16 @@ def list_sheets(file_path):
             print(row)
         print()
 
+def norm_cell(cell:str):
+    return " ".join(str(cell).split()).strip()
+
+
 def select_sheet(file_path, sheet_index, delim, max_rows):
     workbook = openpyxl.load_workbook(file_path, read_only=True)
     sheet_name = workbook.sheetnames[sheet_index]
     sheet = workbook[sheet_name]
     for row in sheet.iter_rows(min_row=1, max_row=min(max_rows, sheet.max_row) if max_rows is not None else sheet.max_row, values_only=True):
-        print(delim.join(str(cell) for cell in row))
+        print(delim.join(norm_cell(cell) for cell in row))
 
 def main():
     parser = argparse.ArgumentParser(description='Tool for manipulating excel files.')

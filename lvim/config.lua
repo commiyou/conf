@@ -1128,20 +1128,142 @@ lvim.plugins = {
   --     }
   --   end
   -- },
-  {
-    'milanglacier/minuet-ai.nvim',
-    dependencies = { 'nvim-lua/plenary.nvim', 'hrsh7th/nvim-cmp' },
-    config = function()
-      require('minuet').setup {
-        -- Your configuration options here
-        provider = "gemini",
-      }
+  -- {
+  --   'milanglacier/minuet-ai.nvim',
+  --   dependencies = { 'nvim-lua/plenary.nvim', 'hrsh7th/nvim-cmp' },
+  --   config = function()
+  --     require('minuet').setup {
+  --       -- Your configuration options here
+  --       provider = "gemini",
+  --     }
 
-      require('cmp').setup {
-        mapping = require("cmp").mapping.preset.insert({
-          ["<c-x><c-y>"] = require('minuet').make_cmp_map()
-        }),
-      }
+  --     require('cmp').setup {
+  --       mapping = require("cmp").mapping.preset.insert({
+  --         ["<c-x><c-y>"] = require('minuet').make_cmp_map()
+  --       }),
+  --     }
+  --   end
+  -- },
+  -- {
+  --   "jackMort/ChatGPT.nvim",
+  --   event = "VeryLazy",
+  --   config = function()
+  --     require("chatgpt").setup({ model = "gpt-4o" })
+  --   end,
+  --   dependencies = {
+  --     "MunifTanjim/nui.nvim",
+  --     "nvim-lua/plenary.nvim",
+  --     "folke/trouble.nvim",
+  --     "nvim-telescope/telescope.nvim"
+  --   }
+  -- },
+  -- {
+  --   "yetone/avante.nvim",
+  --   event = "VeryLazy",
+  --   lazy = false,
+  --   opts = {
+  --     -- add any opts here
+  --     provider = "openai",
+  --     endpoint = "http://10.12.215.17:8000/v1/chat/completions",
+  --     parse_curl_args = function(opts, code_opts)
+  --       return {
+  --         url = opts.endpoint,
+  --         headers = {
+  --           ["Accept"] = "application/json",
+  --           ["Content-Type"] = "application/json",
+  --           ["Authorization"] = "Bearer " .. os.getenv(opts.api_key_name),
+  --         },
+  --         body = {
+  --           model = opts.model,
+  --           messages = { -- you can make your own message, but this is very advanced
+  --             { role = "system", content = code_opts.system_prompt },
+  --             { role = "user",   content = require("avante.providers.openai").get_user_message(code_opts) },
+  --           },
+  --           temperature = 0,
+  --           max_tokens = 4096,
+  --           stream = true, -- this will be set by default.
+  --         },
+  --       }
+  --     end,
+  --     parse_response_data = function(data_stream, event_state, opts)
+  --       require("avante.providers").openai.parse_response(data_stream, event_state, opts)
+  --     end,
+  --     --api_key_name = "OPENAI_API_KEY"
+  --   },
+  --   build = ":AvanteBuild", -- This is optional, recommended tho. Also note that this will block the startup for a bit since we are compiling bindings in Rust.
+  --   dependencies = {
+  --     "stevearc/dressing.nvim",
+  --     "nvim-lua/plenary.nvim",
+  --     "MunifTanjim/nui.nvim",
+  --     --- The below dependencies are optional,
+  --     "nvim-tree/nvim-web-devicons", -- or echasnovski/mini.icons
+  --     --"zbirenbaum/copilot.lua",    -- for providers='copilot'
+  --     {
+  --       -- support for image pasting
+  --       "HakonHarnes/img-clip.nvim",
+  --       event = "VeryLazy",
+  --       opts = {
+  --         -- recommended settings
+  --         default = {
+  --           embed_image_as_base64 = false,
+  --           prompt_for_file_name = false,
+  --           drag_and_drop = {
+  --             insert_mode = true,
+  --           },
+  --           -- required for Windows users
+  --           use_absolute_path = true,
+  --         },
+  --       },
+  --     },
+  --     {
+  --       -- Make sure to setup it properly if you have lazy=true
+  --       'MeanderingProgrammer/render-markdown.nvim',
+  --       opts = {
+  --         file_types = { "markdown", "Avante" },
+  --       },
+  --       ft = { "markdown", "Avante" },
+  --     },
+  --   },
+  -- },
+  {
+    "olimorris/codecompanion.nvim",
+    dependencies = {
+      "nvim-lua/plenary.nvim",
+      "nvim-treesitter/nvim-treesitter",
+      "nvim-telescope/telescope.nvim", -- Optional
+      {
+        "stevearc/dressing.nvim",      -- Optional: Improves the default Neovim UI
+        opts = {},
+      },
+    },
+    opts = {
+      --log_level = "DEBUG"
+    },
+    config = function()
+      require("codecompanion").setup({
+        -- log_level = "DEBUG", -- or "TRACE"
+        adapters = {
+          openai = function()
+            return require("codecompanion.adapters").extend("openai", {
+              env = {
+                url = "http://10.12.215.17:8000/v1/chat/completions",
+                --api_key =
+                --sk-
+                --2r3aBJdY1C83D1AyQuK0T3BlbkFJgC8twJCaURWvTwFSyuOS
+              },
+            })
+          end,
+        },
+      })
+
+      --vim.api.nvim_set_keymap("n", "<C-a>", "<cmd>CodeCompanionActions<cr>", { noremap = true, silent = true })
+      --vim.api.nvim_set_keymap("v", "<C-a>", "<cmd>CodeCompanionActions<cr>", { noremap = true, silent = true })
+      vim.api.nvim_set_keymap("n", "<LocalLeader>a", "<cmd>CodeCompanionToggle<cr>", { noremap = true, silent = true })
+      vim.api.nvim_set_keymap("v", "<LocalLeader>a", "<cmd>CodeCompanionToggle<cr>", { noremap = true, silent = true })
+      vim.api.nvim_set_keymap("v", "ga", "<cmd>CodeCompanionAdd<cr>", { noremap = true, silent = true })
+
+      -- Expand 'cc' into 'CodeCompanion' in the command line
+      vim.cmd([[cab cc CodeCompanionToggle]])
     end
   },
   {

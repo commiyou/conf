@@ -73,6 +73,8 @@ def main(delim, from_encoding, to_encoding, lineno, random_line, files):
                 if idx == max_tries:
                     break
 
+        if selected_line is None:
+            return
         line = selected_line.rstrip("\n")
         if from_encoding:
             line = line.decode(from_encoding, errors="ignore")

@@ -6,6 +6,8 @@ import contextlib
 import dataclasses
 import datetime
 import functools
+import hashlib
+import inspect
 import io
 import itertools
 import json
@@ -24,10 +26,13 @@ from functools import partial
 from operator import itemgetter
 from pathlib import Path
 from typing import IO, Any, Callable, Iterable, Iterator, Optional, TypeAlias
+from urllib.parse import urlencode
 
 import funcy
 import pandas as pd
+import requests
 import tqdm as tqdm_
+from bs4 import BeautifulSoup
 from traceback_with_variables import activate_by_import
 
 if locale.getencoding() != "UTF-8":
@@ -37,8 +42,11 @@ if locale.getencoding() != "UTF-8":
     locale.setlocale(locale.LC_ALL, "en_US.utf-8")
     print(f"system locale changed to {locale.getlocale()}", file=sys.stderr)
 
-sys.stdin = io.TextIOWrapper(sys.stdin.buffer, encoding="utf-8")
-sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
+try:
+    sys.stdin = io.TextIOWrapper(sys.stdin.buffer, encoding="utf-8")
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
+except:  # noqa: S110
+    pass
 
 CH_PUNCTIONS = (
     "•·°！？｡。＂＃＄％＆＇（）＊＋，－／：；＜＝＞＠［＼］＾＿｀｛｜｝～｟｠｢｣"
@@ -289,6 +297,7 @@ def read_file(  # noqa: C901, PLR0912
     total: int | None = None,
     skip_notexists: bool = False,
     filter_func: Callable[[list[str]], bool] | None = None,
+    norm: bool = True,  # 是否替换掉bad char， 如chr(160) 不间断空格
 ) -> Iterator[list[str]]:
     """Read the file line by line with a specified encoding and return iterator of list after splitting by sep.
 
@@ -334,9 +343,12 @@ def read_file(  # noqa: C901, PLR0912
             else:
                 uline = line
 
+            if norm:
+                uline = uline.replace(chr(160), " ")
             ll = split_str(uline, sep=sep, maxsplit=maxsplit)
             if filter_func is not None and not filter_func(ll):
                 continue
+
             yield ll
 
 
@@ -732,9 +744,18 @@ def parallel_run_helper(func, ll: list, *args, **kws):  # noqa: ANN001, ANN002, 
     return ll, ret
 
 
+def starmap_func(func, ll: list, *args, **kws):  # noqa: ANN001, ANN002, ANN003, ANN201
+    """helper"""
+    ret = func(*args, **kws)
+    return ll, ret
+
+
+VALID_FILE_SUFFIX = (".tsv", ".xlsx", ".txt", ".dat", ".data", ".json", ".jpg", ".png", ".jpeg")
+
+
 def remove_file_suffix(fname: str) -> str:
     """去除文件特定后缀"""
-    if fname.endswith((".tsv", ".xlsx", ".txt", ".dat", ".data", ".json")):
+    if fname.endswith(VALID_FILE_SUFFIX):
         return Path(f"{fname}").stem
     return fname
 
@@ -772,9 +793,9 @@ def new_filename(fpath: str | None, prefix: str = "", suffix: str = "") -> None:
     """
     if fpath is None:
         return None
-    curr_suffix = Path(fpath).suffix if fpath.endswith((".tsv", ".xlsx", ".txt", ".dat", ".data", ".json")) else ""
+    curr_suffix = Path(fpath).suffix if fpath.endswith(VALID_FILE_SUFFIX) else ""
 
-    if suffix.endswith((".tsv", ".xlsx", ".txt", ".dat", ".data", ".json")):
+    if suffix.endswith(VALID_FILE_SUFFIX):
         curr_suffix = ""
 
     fname = os.path.basename(fpath)
@@ -875,8 +896,8 @@ def ignore(
 
 
 @funcy.decorator
-def with_ofname(
-    call,
+def with_ofname(  # noqa: ANN201
+    call,  # noqa: ANN001
     *,
     ofname: str | None = None,
     prefix: str = "",
@@ -892,8 +913,54 @@ def with_ofname(
 
     if ofname:
         ofname = new_filename(ofname, prefix=prefix, suffix=suffix)
-        return redirect_stdout_to_file(ofname, mode=mode)(call)()
+        if hasattr(call, "ofname"):
+            return redirect_stdout_to_file(ofname, mode=mode)(call)(ofname=ofname)
+        else:
+            return redirect_stdout_to_file(ofname, mode=mode)(call)()
     return call()
+
+
+def unpack_list_args(func):  # noqa: ANN001
+    """将输入的list自动解包成函数的参数
+
+    def func(a, b): pass
+    unpack_list_args(func)([1, 2])
+    """
+    args_count = len(inspect.signature(func).parameters)
+
+    # @functools.wraps(func)
+    def wrapper(ll: list):  # noqa: ANN202
+        return func(*ll[:args_count])
+
+    return wrapper
+
+
+def crawl_parse(url: str, **css_selectors: str) -> dict[str, str | dict[str, Any]]:
+    """抓取页面，并解析出css_selectors
+
+    Return:
+        title, text, html, css_selectors.XX
+
+    >>> crawl_parse("https://www.maigoo.com/brand/1640591.html", website="div.navcont > div.logobox > a")[
+    ...     "css_selectors"
+    ... ]["website"][0].get("href")
+    '/ajaxstream/link/?url=https://www.toptoyglobal.com/'
+    """
+    response = requests.get(url, timeout=300)
+    soup = BeautifulSoup(response.text, "html.parser")
+
+    results = {}
+    results["title"] = soup.title.string if soup.title else None
+    results["text"] = soup.get_text()
+    results["html"] = soup.prettify()
+    if css_selectors:
+        results["css_selectors"] = {}
+
+    for name, selector in css_selectors.items():
+        # results[name] = [element.text for element in elements]
+        results["css_selectors"][name] = soup.select(selector)
+
+    return results
 
 
 def doctest() -> None:
@@ -901,6 +968,18 @@ def doctest() -> None:
     import doctest
 
     doctest.testmod(verbose=True)
+
+
+def urlencode_params(**params: dict[str, any]) -> str:
+    """返回 URLencode后的参数"""
+    return urlencode(params)
+
+
+def md5(input_string: str) -> str:
+    """md5"""
+    md5 = hashlib.md5()  # noqa: S324
+    md5.update(input_string.encode("utf-8"))
+    return md5.hexdigest()
 
 
 if __name__ == "__main__":

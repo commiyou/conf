@@ -165,3 +165,5 @@ alias gtdr="_gtdr(){git push origin :refs/tags/$1}; _gtdr"
 
 alias gupa='git pull --rebase --autostash'
 alias gup='git pull --rebase'
+
+alias gdmsg='git diff --staged | sgpt "Generate git commit message, for my changes"'

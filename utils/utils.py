@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """python3 utils"""
 
+import base64
 import collections
 import contextlib
 import dataclasses
@@ -22,10 +23,10 @@ import traceback
 from collections.abc import Mapping, Sequence
 from collections.abc import Set as AbstractSet
 from contextlib import ExitStack
-from functools import partial
+from functools import partial, wraps
 from operator import itemgetter
 from pathlib import Path
-from typing import IO, Any, Callable, Iterable, Iterator, Optional, TypeAlias
+from typing import IO, Any, Callable, Iterable, Iterator, Literal, Optional, TypeAlias
 from urllib.parse import urlencode
 
 import funcy
@@ -33,7 +34,18 @@ import pandas as pd
 import requests
 import tqdm as tqdm_
 from bs4 import BeautifulSoup
-from traceback_with_variables import activate_by_import
+from termcolor import colored
+
+# try:
+#     from rich.traceback import install as _tr_install
+
+#     _tr_install(show_locals=True, width=121)
+# except:
+#     with contextlib.suppress(Exception):
+#         from traceback_with_variables import activate_by_import
+
+with contextlib.suppress(Exception):
+    from traceback_with_variables import activate_by_import
 
 if locale.getencoding() != "UTF-8":
     print(f"system default locale {locale.getlocale()}", file=sys.stderr)
@@ -68,25 +80,24 @@ class Char(str, metaclass=MetaChar):
     __slots__ = ()
 
 
-def _make_bytes(value: object, encoding: str = "utf8") -> bytes:
-    r"""Set/Map/Sequence to json str, then to bytes.
+def make_str(value: object, encoding: str = "utf8") -> bytes:
+    r"""Set/Map/Sequence to json str
 
-    >>> _make_bytes({1, 2, 3})
-    b'[1, 2, 3]'
-    >>> _make_bytes((1, 2, 3))
-    b'[1, 2, 3]'
-    >>> _make_bytes("你好")
-    b'\xe4\xbd\xa0\xe5\xa5\xbd'
+    >>> make_str({1, 2, 3})
+    '[1, 2, 3]'
+    >>> make_str((1, 2, 3))
+    '[1, 2, 3]'
+    >>> make_str("你好")
     """
+    if isinstance(value, bytes):
+        return value.decode()
     if isinstance(value, str):
-        value = value.encode(encoding)
-    elif isinstance(value, AbstractSet):
+        return value
+    if isinstance(value, AbstractSet):
         value = dump_json(sorted(value))
     elif isinstance(value, (Sequence, Mapping)):
         value = dump_json(value)
-    if isinstance(value, bytes):
-        return value
-    return str(value).encode(encoding)
+    return str(value)
 
 
 def xprint(
@@ -97,6 +108,7 @@ def xprint(
     file: "IO|None" = None,
     encoding: str = "utf8",
     output_flag: bool = True,
+    color: Literal["red", "blue", "green"] | None = None,
 ) -> None:
     """print with default sep and suffix and encoding"""
     if not output_flag:
@@ -104,10 +116,11 @@ def xprint(
     if file is None:
         file = sys.stdout
     end = suffix + "\n"
-    values = [_make_bytes(value, encoding) for value in values]
-    sep_bytes = sep.encode(encoding)
-    end_bytes = end.encode(encoding)
-    file.buffer.write(sep_bytes.join(values) + end_bytes)
+    values = [make_str(value) for value in values]
+    out = sep.join(values) + end
+    if color:
+        out = colored(out, color)
+    file.buffer.write(out.encode(encoding))
     if flush:
         file.flush()
 
@@ -119,6 +132,7 @@ def xerr(
     encoding: str = "utf8",
     debug: bool = True,
     output_flag: bool = True,
+    color: Literal["red", "blue", "green"] | None = None,
 ) -> None:
     """print to stderr with default sep and suffix and encoding"""
     if not debug:
@@ -130,6 +144,7 @@ def xerr(
         suffix=suffix,
         sep=sep,
         file=sys.stderr,  # type:ignore
+        color=color,
         encoding="unicode_escape" if is_mr() else encoding,
     )
 
@@ -145,6 +160,7 @@ def xdebug(
     suffix: str = "",
     sep: str = "\t",
     encoding: str = "utf8",
+    color: Literal["red", "blue", "green"] | None = "green",
 ) -> None:
     """处于debug模式时，输出"""
     if not in_debug():
@@ -153,6 +169,7 @@ def xdebug(
         *values,
         suffix=suffix,
         sep=sep,
+        color=color,
         encoding="unicode_escape" if is_mr() else encoding,
     )
 
@@ -307,7 +324,7 @@ def read_file(  # noqa: C901, PLR0912
         return iter([])  # noqa: B901
 
     if isinstance(input_, str) and input_.endswith(".xlsx"):
-        df = pd.read_excel(input_, dtype=str)  # noqa: PD901
+        df = pd.read_excel(input_, dtype=str)
         yield from (row for row in df.itertuples(index=False))
         return
 
@@ -389,7 +406,7 @@ def make_key_func(
     if isinstance(f, AbstractSet):
         return f.__contains__
     msg = f"Can't make a func from {f.__class__.__name__}"
-    raise TypeError(msg)  # noqa: DOC501
+    raise TypeError(msg)
 
 
 def group_file_by_key(
@@ -453,6 +470,13 @@ def list_to_dict(
     return funcy.walk_values(value_accumulate_func, result)
 
 
+_has_pydantic = False
+with contextlib.suppress(Exception):
+    import pydantic
+
+    _has_pydantic = True
+
+
 class JsonCustomEncoder(json.JSONEncoder):
     """支持set、datacalss"""
 
@@ -460,8 +484,13 @@ class JsonCustomEncoder(json.JSONEncoder):
         """encode set/dataclass"""
         if isinstance(o, set):
             return list(o)
+        if isinstance(o, Exception):
+            return str(o)
         if dataclasses.is_dataclass(o):
             return dataclasses.asdict(o)
+        if _has_pydantic:
+            with contextlib.suppress(Exception):
+                return o.model_dump()
         return json.JSONEncoder.default(self, o)
 
 
@@ -470,9 +499,9 @@ def dump_json(obj: object, indent: int | None = None) -> str:
     return json.dumps(obj, ensure_ascii=False, indent=indent, cls=JsonCustomEncoder)
 
 
-def xprint_json(obj: object) -> None:
+def xprint_json(obj: object, indent: int = 4) -> None:
     """格式化json"""
-    xprint(json.dumps(obj, ensure_ascii=False, indent=4, cls=JsonCustomEncoder))
+    xprint(json.dumps(obj, ensure_ascii=False, indent=indent, cls=JsonCustomEncoder))
 
 
 def safe_divide(p1: float, p2: float, *, digits: int = 2, percentage: bool = False) -> str:
@@ -618,6 +647,43 @@ class RedirectStderrToFile(contextlib.ContextDecorator):
 
 
 redirect_stderr_to_file = RedirectStderrToFile
+
+
+class RedirectStdoutStderrToFile(contextlib.ContextDecorator):
+    """redirect_stdout_stderr_to_file
+
+    >>> with redirect_stdout_stderr_to_file("test", "w"):
+    ...     print(123, file=sys.stderr)
+    """
+
+    def __init__(self, fname: str | None, mode: str = "w", tpl: str | None = None):
+        """file name and write mode"""
+        if tpl is None:
+            tpl = "{}"
+        self.fname = tpl.format(fname) if fname else None
+        self.mode = mode
+
+    def __enter__(self):
+        """enter"""
+        self.old_stderr = sys.stderr
+        self.old_stdout = sys.stdout
+        if self.fname is not None:
+            self.file = open(self.fname, self.mode)
+            sys.stderr = self.file
+            sys.stdout = self.file
+        else:
+            self.file = None
+        return self.file
+
+    def __exit__(self, *_: object):
+        """exit"""
+        sys.stderr = self.old_stderr
+        sys.stdout = self.old_stdout
+        if self.file:
+            self.file.close()
+
+
+redirect_stdout_stderr_to_file = RedirectStdoutStderrToFile
 
 
 def sample(
@@ -910,13 +976,14 @@ def with_ofname(  # noqa: ANN201
 
     if not ofname:
         ofname = fname
+    if not ofname:
+        ofname = call._func.__name__  # noqa: SLF001
 
     if ofname:
         ofname = new_filename(ofname, prefix=prefix, suffix=suffix)
         if hasattr(call, "ofname"):
             return redirect_stdout_to_file(ofname, mode=mode)(call)(ofname=ofname)
-        else:
-            return redirect_stdout_to_file(ofname, mode=mode)(call)()
+        return redirect_stdout_to_file(ofname, mode=mode)(call)()
     return call()
 
 
@@ -980,6 +1047,92 @@ def md5(input_string: str) -> str:
     md5 = hashlib.md5()  # noqa: S324
     md5.update(input_string.encode("utf-8"))
     return md5.hexdigest()
+
+
+def fcache(cache_dir: str, *args, **kwargs):  # noqa: ANN002
+    """diskcache for function
+
+    https://grantjenks.com/docs/diskcache/api.html#diskcache.FanoutCache.memoize
+    usage:
+        @utils.fcache("./.cache")
+        @utils.fcache("./cache_new", expire=60*60*24*7) # 7天过时
+    """
+    try:
+        from diskcache import Cache
+    except ModuleNotFoundError:
+        import warnings
+
+        warnings.warn("diskcache library not found")
+        return lambda orig_func: orig_func
+    else:
+        cache = Cache(cache_dir)
+        import atexit
+
+        atexit.register(cache.close)
+        return cache.memoize(*args, **kwargs)
+
+
+def fcache_op(
+    cache_dir: str, op: Literal["clear", "check", "get", "set", "pop", "len", "peekitem"], *args: str, **kwargs: Any
+) -> Any:  # noqa: ANN401
+    """操作fcache对应
+
+    https://grantjenks.com/docs/diskcache/api.html#diskcache.Cache.peekitem
+
+    python utils.py fcache_op .gsearch_v1 peek
+
+    python utils.py fcache_op .gsearch_v1 get "google_search.search"  "lv 是什么牌子" None
+    """
+    from diskcache import Cache
+
+    if op == "len":
+        op == "__len__"  # noqa: B015
+    if op == "peek":
+        op = "peekitem"
+    if op in {"get", "pop"}:
+        args = [tuple(args)]
+
+    cache = Cache(cache_dir)
+    func = getattr(cache, op)
+    ret = func(*args, **kwargs)
+    xerr(args, kwargs, ret)
+    cache.close()
+    return ret
+
+
+def b64decode(s: str, *, encoding: str = "utf8", ignore_exception: bool = False) -> str:
+    """base64 decode"""
+    try:
+        # return base64.b64decode(s).decode(encoding, errors="replace")
+        return base64.b64decode(s).decode(encoding)
+    except Exception:
+        if ignore_exception:
+            return s
+        raise
+
+
+def may_from_stdin(arg: str) -> Callable:
+    """如果arg为None，读取stdin的输入作为其值"""
+
+    def decorate(f: Callable) -> Callable:
+        @wraps(f)
+        def wrapped(*args, **kwargs: str) -> Callable:  # noqa: ANN002
+            # 获取函数的参数信息
+            sig = inspect.signature(f)
+            bound_args = sig.bind(*args, **kwargs)
+            bound_args.apply_defaults()
+
+            # 检查指定的参数是否为None
+            if bound_args.arguments.get(arg) is None:
+                # 读取stdin的输入
+                input_value = sys.stdin.read().strip()
+                bound_args.arguments[arg] = input_value
+
+            return f(*bound_args.args, **bound_args.kwargs)
+
+        return wrapped
+
+    return decorate
 
 
 if __name__ == "__main__":

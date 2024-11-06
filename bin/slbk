@@ -1,8 +1,5 @@
 #!/usr/bin/env python3
-# -*- coding: gbk -*-
-# Last modified:
-"""docstring
-"""
+"""select line by key"""
 
 
 import sys
@@ -17,29 +14,31 @@ def get_list_by_cols(line, key_cols, delim):
 
 
 def proc(input_fd_list, key_fd, key_cols1, key_cols2, delim, reverse_flag, ignore_flag,
-         input_delim, ignore_space):
+         input_delim, ignore_space, is_http_key) -> None:
 
-    # Èôk1, k2ÖĞÓĞÒ»¸öÃ»ÉèÖÃ£¬ÓÃÁíÍâÒ»¸ö
+    # è‹¥k1, k2ä¸­æœ‰ä¸€ä¸ªæ²¡è®¾ç½®ï¼Œç”¨å¦å¤–ä¸€ä¸ª
     if key_cols1 is None and key_cols2 is not None:
         key_cols1 = key_cols2
     elif key_cols1 is not None and key_cols2 is None:
         key_cols2 = key_cols1
 
-    # Èç¹û¶¼Ã»ÉèÖÃ£¬k1Ä¬ÈÏÊ¹ÓÃÕûĞĞ£¬k2Óëk1Ò»ÖÂ
+    # å¦‚æœéƒ½æ²¡è®¾ç½®ï¼Œk1é»˜è®¤ä½¿ç”¨æ•´è¡Œï¼Œk2ä¸k1ä¸€è‡´
     if key_cols2 is None:
         key_cols2_range = None
     else:
         key_cols2_range = len(key_cols2)
 
-    # ¶ÁÈ¡key_file
+    # è¯»å–key_file
     keys = set()
     for line in key_fd:
         line = line.rstrip('\n')
         tmp = tuple(get_list_by_cols(line, key_cols1, delim))
         if ignore_flag:
-            tmp = tuple([x.upper() for x in tmp])
+            tmp = tuple(x.upper() for x in tmp)
         if ignore_space:
-            tmp = tuple(["".join(x.split()) for x in tmp])
+            tmp = tuple("".join(x.split()) for x in tmp)
+        if is_http_key:
+            tmp = tuple(x.removeprefix("http://").removeprefix("https://") for x in tmp)
 
         if key_cols2_range is None:
             key_cols2_range = len(tmp)
@@ -52,11 +51,14 @@ def proc(input_fd_list, key_fd, key_cols1, key_cols2, delim, reverse_flag, ignor
     for fd in input_fd_list:
         for line in fd:
             line = line.rstrip('\n')
-            key = tuple(get_list_by_cols(line, key_cols2, input_delim))
+            tmp = tuple(get_list_by_cols(line, key_cols2, input_delim))
             if ignore_flag:
-                key = tuple([x.upper() for x in key])
+                tmp = tuple(x.upper() for x in tmp)
             if ignore_space:
-                key = tuple(["".join(x.split()) for x in key])
+                tmp = tuple("".join(x.split()) for x in tmp)
+            if is_http_key:
+                tmp = tuple(x.removeprefix("http://").removeprefix("https://") for x in tmp)
+            key = tmp
             if reverse_flag:
                 if key not in keys:
                     print(line)
@@ -107,12 +109,14 @@ if __name__ == "__main__":
         action="store_true",
         default=False)
     parser.add_option(
+        "-H", dest="is_http_key", help="is http key, strip front protocol", action="store_true", default=False)
+    parser.add_option(
         "-i", dest="ignore_case", help="ignore case", action="store_true", default=False)
     parser.add_option(
         "-I", dest="ignore_space", help="ignore space", action="store_true", default=False)
     (options, args) = parser.parse_args()
     # print options,args
-    # ±éÀúÎÄ¼şÁĞ±í
+    # éå†æ–‡ä»¶åˆ—è¡¨
     fd_list = []
     if not args:
         fd_list.append(sys.stdin)
@@ -125,4 +129,4 @@ if __name__ == "__main__":
         sys.exit(1)
 
     proc(fd_list, open(options.key_file), options.key_cols1, options.key_cols2, options.delim,
-         options.reverse_flag, options.ignore_case, options.input_delim, options.ignore_space)
+         options.reverse_flag, options.ignore_case, options.input_delim, options.ignore_space, options.is_http_key)

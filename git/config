@@ -47,3 +47,10 @@
   path = ~/conf/git/gitconfig-github
 [includeIf "gitdir:~/work/*"]
   path = ~/.gitconfig-work
+[user]
+	email = youbin@gmail.com
+	name = commiyou
+[https]
+	proxy = http://10.162.37.16:8128
+[http]
+	proxy = http://10.162.37.16:8128

@@ -19,6 +19,8 @@ ignore = [
   "D415", # First line should end with a period, question mark, or exclamation point
   "D417",  # Missing argument descriptions in the docstring
   "E722", # python exception
+  "FA100",
+  "DOC201",
   "EM101",
   "ERA001",# Found commented-out code
   "EXE",

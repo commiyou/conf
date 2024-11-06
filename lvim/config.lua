@@ -112,6 +112,7 @@ local function find_gitroot_files(prompt_bufnr)
   require('fzf-lua').files(opt)
 end
 -- binding for switching
+lvim.builtin.which_key.mappings["t"] = { "<cmd>Outline<CR>", "Toggle outline" }
 lvim.builtin.which_key.mappings["b"] = { "<cmd>lua require('fzf-lua').buffers()<cr>", "Open Buffers" }
 lvim.builtin.which_key.mappings["m"] = { "<cmd>lua require('fzf-lua').oldfiles()<cr>", "Open Recent File" }
 lvim.builtin.which_key.mappings["f"] = {
@@ -132,7 +133,8 @@ lvim.builtin.which_key.mappings["f"] = {
   P = { "<cmd>Telescope projects<CR>", "Projects" },
   r = { "<cmd>lua require('fzf-lua').live_grep_resume()<cr>", "Live Grep" },
   R = { '<cmd>lua require("spectre").open_visual({select_word=true})<cr>', "Search files & Replace" },
-  s = { "<cmd>lua require('fzf-lua').lsp_document_symbols({ resume = true })<cr>", "Buffer Symbol" },
+  -- https://github.com/ibhagwan/fzf-lua/issues/441
+  s = { "<cmd>lua require('fzf-lua').lsp_document_symbols({  regex_filter = 'F.*' })<cr>", "Buffer Symbol" },
   S = { "<cmd>lua require('fzf-lua').lsp_workspace_symbols({ resume = true })<cr>", "WorkSpace Symbol" },
   t = { "<cmd>TlistToggle<cr>", "taglist" }, -- yegappan/taglist
   w = { "<cmd>lua require('fzf-lua').grep_cword({ resume = true })<cr>", "Grep Word" },
@@ -304,7 +306,7 @@ lvim.plugins = {
 
   },
   { 'mbbill/undotree' }, -- :UndotreeToggle
-  { "tpope/vim-unimpaired" },
+  --{ "tpope/vim-unimpaired" },
   {
     "Julian/vim-textobj-variable-segment", --  iv / av for variable segments.(snake case/camel case)
     dependencies = {
@@ -512,17 +514,6 @@ lvim.plugins = {
 
       }
       )
-      -- require("cmp").setup({
-      --   sources = {
-      --     {
-      --       name = "tmux",
-      --       option = {
-      --         all_panes = false, -- 防止太卡
-      --         capture_history = true
-      --       }
-      --     },
-      --   },
-      -- })
     end
   },
 
@@ -1266,10 +1257,10 @@ lvim.plugins = {
       vim.cmd([[cab cc CodeCompanionToggle]])
     end
   },
-  {
-    'ZSaberLv0/ZFVimIM', -- ;; 开启或关闭输入法, ;: 切换词库, - 和 = 翻页,[ 和 ] 快速从词组选字,
-    dependencies = { 'ZSaberLv0/ZFVimJob', 'ZSaberLv0/ZFVimIM_openapi', 'ZSaberLv0/ZFVimIM_english_base', 'ZSaberLv0/ZFVimIM_pinyin' },
-  },
+  -- {
+  --   'ZSaberLv0/ZFVimIM', -- ;; 开启或关闭输入法, ;: 切换词库, - 和 = 翻页,[ 和 ] 快速从词组选字,
+  --   dependencies = { 'ZSaberLv0/ZFVimJob', 'ZSaberLv0/ZFVimIM_openapi', 'ZSaberLv0/ZFVimIM_english_base', 'ZSaberLv0/ZFVimIM_pinyin' },
+  -- },
   {
     "nvim-treesitter/nvim-treesitter-textobjects",
     dependencies = { "nvim-treesitter/nvim-treesitter" },
@@ -1316,6 +1307,33 @@ lvim.plugins = {
             -- and should return true or false
             include_surrounding_whitespace = false,
           },
+          move = { enable = true,
+            set_jumps = true, -- whether to set jumps in the jumplist
+            goto_next_start = {
+              ["]f"] = "@function.outer",
+              ["]]"] = { query = "@class.outer", desc = "Next class start" },
+              --
+              -- You can use regex matching (i.e. lua pattern) and/or pass a list in a "query" key to group multiple queries.
+              ["]o"] = "@loop.*",
+              -- ["]o"] = { query = { "@loop.inner", "@loop.outer" } }
+              --
+              -- You can pass a query group to use query from `queries/<lang>/<query_group>.scm file in your runtime path.
+              -- Below example nvim-treesitter's `locals.scm` and `folds.scm`. They also provide highlights.scm and indent.scm.
+              ["]s"] = { query = "@local.scope", query_group = "locals", desc = "Next scope" },
+              ["]z"] = { query = "@fold", query_group = "folds", desc = "Next fold" },
+            },
+            goto_next_end = {
+              ["]F"] = "@function.outer",
+              ["]["] = "@class.outer",
+            },
+            goto_previous_start = {
+              ["[f"] = "@function.outer",
+              ["[["] = "@class.outer",
+            },
+            goto_previous_end = {
+              ["[F"] = "@function.outer",
+              ["[]"] = "@class.outer",
+            }, },
         },
       }
     end

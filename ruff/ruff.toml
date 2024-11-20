@@ -5,6 +5,8 @@ extend-select = ["I"]
 ignore = [
   # imported but unused
   "ANN101",
+  "[G004]",
+  "DOC402",
   "DOC501", # Raised exception `Exception` missing from docstring
   "PD901",
   "ANN204",

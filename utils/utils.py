@@ -4,6 +4,11 @@
 import base64
 import collections
 import contextlib
+import requests
+from requests.exceptions import RequestException
+import time
+import random
+
 import dataclasses
 import datetime
 import functools
@@ -14,11 +19,9 @@ import itertools
 import json
 import locale
 import os
-import random
 import re
 import string
 import sys
-import time
 import traceback
 from collections.abc import Mapping, Sequence
 from collections.abc import Set as AbstractSet
@@ -80,7 +83,7 @@ class Char(str, metaclass=MetaChar):
     __slots__ = ()
 
 
-def make_str(value: object, encoding: str = "utf8") -> bytes:
+def make_str(value: object) -> bytes:
     r"""Set/Map/Sequence to json str
 
     >>> make_str({1, 2, 3})
@@ -118,7 +121,7 @@ def xprint(
     end = suffix + "\n"
     values = [make_str(value) for value in values]
     out = sep.join(values) + end
-    if color:
+    if color and sys.stdout.isatty():
         out = colored(out, color)
     file.buffer.write(out.encode(encoding))
     if flush:
@@ -155,17 +158,31 @@ def in_debug() -> bool:
     return not (v is None or v == "0")
 
 
+def get_caller_name(level: int = 1) -> str:
+    """获取callaer name, level 为0时代表自身"""
+    caller_frame = sys._getframe(level + 1)
+    function_name = caller_frame.f_code.co_name
+    return function_name
+
+
 def xdebug(
     *values: object,
     suffix: str = "",
     sep: str = "\t",
     encoding: str = "utf8",
-    color: Literal["red", "blue", "green"] | None = "green",
+    color: Literal["red", "blue", "green"] | None = None,
 ) -> None:
     """处于debug模式时，输出"""
     if not in_debug():
         return
+    caller_frame = sys._getframe(1)
+    function_name = caller_frame.f_code.co_name
+    prefix = f"DEBUG: {function_name}"
+    if sys.stdout.isatty() and not color:
+        prefix = colored(prefix, "green")
+
     xerr(
+        prefix,
         *values,
         suffix=suffix,
         sep=sep,
@@ -320,7 +337,11 @@ def read_file(  # noqa: C901, PLR0912
 
     input_: file name/path or io; excel时，返回的每一列都是str
     """
-    if isinstance(input_, (str, Path)) and skip_notexists and not os.path.exists(input_):
+    if (
+        isinstance(input_, (str, Path))
+        and skip_notexists
+        and not os.path.exists(input_)
+    ):
         return iter([])  # noqa: B901
 
     if isinstance(input_, str) and input_.endswith(".xlsx"):
@@ -338,13 +359,19 @@ def read_file(  # noqa: C901, PLR0912
     if tqdm is None and sys.stderr.isatty():
         tqdm = str(f"proc file {input_}") if isinstance(input_, (str, Path)) else True
 
-    cm = open(input_, "rb") if isinstance(input_, (str, Path)) else contextlib.nullcontext(input_)  # noqa: SIM115
+    cm = (
+        open(input_, "rb")
+        if isinstance(input_, (str, Path))
+        else contextlib.nullcontext(input_)
+    )  # noqa: SIM115
 
     with cm as input_:
         if skip_header:
             input_ = funcy.rest(input_)  # type:ignore  # noqa: PLW2901
         if tqdm:
-            input_ = tqdm_.tqdm(input_, total=total, desc=tqdm if isinstance(tqdm, str) else None)  # noqa: PLW2901
+            input_ = tqdm_.tqdm(
+                input_, total=total, desc=tqdm if isinstance(tqdm, str) else None
+            )  # noqa: PLW2901
 
         for i, line in enumerate(input_):  # type:ignore
             if not isinstance(line, str):
@@ -504,7 +531,9 @@ def xprint_json(obj: object, indent: int = 4) -> None:
     xprint(json.dumps(obj, ensure_ascii=False, indent=indent, cls=JsonCustomEncoder))
 
 
-def safe_divide(p1: float, p2: float, *, digits: int = 2, percentage: bool = False) -> str:
+def safe_divide(
+    p1: float, p2: float, *, digits: int = 2, percentage: bool = False
+) -> str:
     """return n/a if divide 0 else value with str type
 
     >>> safe_divide(1, 0)
@@ -521,7 +550,9 @@ def safe_divide(p1: float, p2: float, *, digits: int = 2, percentage: bool = Fal
     return f"{{:.{digits}f}}".format(p1 / p2)
 
 
-def safe_diff(p1: float | str, p2: float | str, *, digits: int = 2, percentage: bool = True) -> str | float:
+def safe_diff(
+    p1: float | str, p2: float | str, *, digits: int = 2, percentage: bool = True
+) -> str | float:
     """return n/a if divide 0 else value with str type
 
     >>> safe_diff(1, 0)
@@ -588,7 +619,9 @@ class RedirectStdoutToFile(contextlib.ContextDecorator):
     ...     print(123)
     """
 
-    def __init__(self, fname: str | Path | None, mode: str = "w", tpl: str | None = None) -> None:
+    def __init__(
+        self, fname: str | Path | None, mode: str = "w", tpl: str | None = None
+    ) -> None:
         """file name and write mode"""
         if tpl is None:
             tpl = "{}"
@@ -752,7 +785,7 @@ def parallel_process_items_processes(
     process_cnt: int | None = None,
     tqdm: str | bool = True,
     total: int | None = None,
-) -> None:
+):
     """返回的是proc_func的输出"""
     xerr(f"pcnt {process_cnt}")
     if process_cnt == 1:
@@ -816,7 +849,17 @@ def starmap_func(func, ll: list, *args, **kws):  # noqa: ANN001, ANN002, ANN003,
     return ll, ret
 
 
-VALID_FILE_SUFFIX = (".tsv", ".xlsx", ".txt", ".dat", ".data", ".json", ".jpg", ".png", ".jpeg")
+VALID_FILE_SUFFIX = (
+    ".tsv",
+    ".xlsx",
+    ".txt",
+    ".dat",
+    ".data",
+    ".json",
+    ".jpg",
+    ".png",
+    ".jpeg",
+)
 
 
 def remove_file_suffix(fname: str) -> str:
@@ -894,7 +937,12 @@ class TermMatcher:
         # 添加模式串
         for term in terms:
             # 第二个是value
-            k = nterm(term, lower=ignore_case, remove_punctions=remove_punctions, remove_whitespace=remove_whitespace)
+            k = nterm(
+                term,
+                lower=ignore_case,
+                remove_punctions=remove_punctions,
+                remove_whitespace=remove_whitespace,
+            )
             if not k:
                 xerr(f"term[{term}] empty after norm, skip")
                 continue
@@ -987,7 +1035,7 @@ def with_ofname(  # noqa: ANN201
     return call()
 
 
-def unpack_list_args(func):  # noqa: ANN001
+def unpack_list_args(func):
     """将输入的list自动解包成函数的参数
 
     def func(a, b): pass
@@ -1049,7 +1097,7 @@ def md5(input_string: str) -> str:
     return md5.hexdigest()
 
 
-def fcache(cache_dir: str, *args, **kwargs):  # noqa: ANN002
+def fcache(cache_dir: str, *args, **kwargs):
     """diskcache for function
 
     https://grantjenks.com/docs/diskcache/api.html#diskcache.FanoutCache.memoize
@@ -1073,7 +1121,10 @@ def fcache(cache_dir: str, *args, **kwargs):  # noqa: ANN002
 
 
 def fcache_op(
-    cache_dir: str, op: Literal["clear", "check", "get", "set", "pop", "len", "peekitem"], *args: str, **kwargs: Any
+    cache_dir: str,
+    op: Literal["clear", "check", "get", "set", "pop", "len", "peekitem"],
+    *args: str,
+    **kwargs: Any,
 ) -> Any:  # noqa: ANN401
     """操作fcache对应
 
@@ -1133,6 +1184,85 @@ def may_from_stdin(arg: str) -> Callable:
         return wrapped
 
     return decorate
+
+
+def fetch_url(
+    url: str,
+    params: dict | None = None,
+    json: dict | None = None,
+    data: dict | bytes | None = None,
+    retry_cnt: int = 3,
+    return_format: Literal["html", "json", "markdown"] = "json",
+    method: Literal["get", "post"] = "get",
+    timeout: int = 10,
+    proxy: str | list[str] | None = None,
+    **kwargs,
+):
+    """
+    A function to fetch a URL with retry logic, random proxy selection, and format the response.
+
+    :param url: URL to request.
+    :param params: Parameters for GET requests.
+    :param data: Data for POST requests (form-encoded).
+    :param json: JSON data for POST requests.
+    :param retry_cnt: Number of times to retry on failure.
+    :param return_format: The format to return ('json' or 'html').
+    :param method: HTTP method ('get' or 'post').
+    :param timeout: Timeout for the request in seconds.
+    :param proxy: A single proxy string or a list of proxy strings.
+    :param kwargs: Additional arguments passed to requests.
+    :return: Response content in the specified format.
+    """
+    method = method.lower()
+    assert method in ["get", "post"], "Method must be 'get' or 'post'."
+    assert return_format in ["json", "html"], "Return format must be 'json' or 'html'."
+
+    # Determine which proxy to use
+    proxies = None
+    if proxy:
+        if "," in proxy:
+            proxy = proxy.split(",")
+        if isinstance(proxy, list):
+            selected_proxy = random.choice(proxy)
+        else:
+            selected_proxy = proxy
+
+        proxies = {"http": selected_proxy, "https": selected_proxy}
+
+    for attempt in range(retry_cnt):
+        try:
+            if method == "get":
+                response = requests.get(
+                    url, timeout=timeout, proxies=proxies, params=params, **kwargs
+                )
+            elif method == "post":
+                response = requests.post(
+                    url,
+                    timeout=timeout,
+                    proxies=proxies,
+                    data=data,
+                    json=json,
+                    **kwargs,
+                )
+
+            response.raise_for_status()  # Raise an error for bad responses
+
+            if return_format == "json":
+                return response.json()  # Return JSON data
+            elif return_format == "html":
+                return response.text  # Return HTML content
+            elif return_format == "markdown":
+                import html2text
+
+                h = html2text.HTML2Text()
+                return h.handle(response.text)
+
+        except (RequestException, ValueError) as e:
+            print(f"Attempt {attempt + 1} failed: {e}")
+            if attempt < retry_cnt - 1:
+                time.sleep(2**attempt)  # Exponential backoff
+            else:
+                raise  # Re-raise the last exception if max retries reached
 
 
 if __name__ == "__main__":

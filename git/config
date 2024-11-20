@@ -48,9 +48,5 @@
 [includeIf "gitdir:~/work/*"]
   path = ~/.gitconfig-work
 [user]
-	email = youbin@gmail.com
+	email = commiyou@gmail.com
 	name = commiyou
-[https]
-	proxy = http://10.162.37.16:8128
-[http]
-	proxy = http://10.162.37.16:8128

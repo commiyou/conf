@@ -76,9 +76,9 @@ git_current_remote_branch() {
 }
 
 git_config_user() {
-	local email name
-	if [ $# -eq 0 ]; then
-		email=commiyou@gmail.com
+  local email name
+  if [ $# -eq 0 ]; then
+    email=commiyou@gmail.com
     name=commiyou
   elif [ $# -eq 1 ]; then
     email="$1"
@@ -112,18 +112,18 @@ myip() {
 }
 
 fp() {
-	[[ $# = 0 ]] && echo $(myip | head -1):$(filepath .) && return
-	for file in "$@"; do
-		[[ -e "$file" ]] && echo $(myip | head -1):$(filepath "$file") \
-			|| echo "can NOT find $file" >&2
-	done
+  [[ $# = 0 ]] && echo $(myip | head -1):$(filepath .) && return
+  for file in "$@"; do
+    [[ -e "$file" ]] && echo $(myip | head -1):$(filepath "$file") \
+      || echo "can NOT find $file" >&2
+    done
 }
 # human size
 human() {
-	for arg in "$@"
-	do
-		echo "$arg" | awk '{ split( "B KB MB GB TB" , v ); s=1;size=int($1); while( size>1024 && s<5){ size/=1024; s++ } printf("%s\t%.1f%s\n", $0, size, v[s]) }'
-	done
+  for arg in "$@"
+  do
+    echo "$arg" | awk '{ split( "B KB MB GB TB" , v ); s=1;size=int($1); while( size>1024 && s<5){ size/=1024; s++ } printf("%s\t%.1f%s\n", $0, size, v[s]) }'
+  done
 }
 
 # calc expresion
@@ -141,7 +141,7 @@ escape_string() {
 
 #   buf:  back up file with timestamp
 #   ---------------------------------------------------------
-buf () {
+buf() {
   local filename filetime newest_buf  bufs
   filename="$1"
   [ -e "$filename" ] || { err file $filename not exists; return 1; }
@@ -152,7 +152,7 @@ buf () {
 
 #   unbuf:  restore back up file
 #   ---------------------------------------------------------
-unbuf () {
+unbuf() {
   local filename filetime
   filename=$1
   [ -e "$filename" ] || { err file $filename not exists; return 1; }

@@ -388,8 +388,15 @@ def read_file(  # noqa: C901, PLR0912
                 uline = line
 
             if norm:
+                # chr(160)是一个不可见的空白字符
                 uline = uline.replace(chr(160), " ")
+                uline = uline.replace("‌", "")
             ll = split_str(uline, sep=sep, maxsplit=maxsplit)
+            if norm:
+                # 一个特殊的Unicode字符，表示零宽不连字符（Zero Width Non-Joiner，ZWNJ）
+                # ll = funcy.lmap(lambda x: x.strip("‌"), ll)
+                pass
+
             if filter_func is not None and not filter_func(ll):
                 continue
 
@@ -862,9 +869,9 @@ VALID_FILE_SUFFIX = (
 )
 
 
-def remove_file_suffix(fname: str) -> str:
+def remove_file_suffix(fname: str, *, force: bool = False) -> str:
     """去除文件特定后缀"""
-    if fname.endswith(VALID_FILE_SUFFIX):
+    if force or fname.endswith(VALID_FILE_SUFFIX):
         return Path(f"{fname}").stem
     return fname
 
@@ -884,33 +891,45 @@ def join_with_delim(s1: str, s2: str, delim: str = ".") -> str:
     return f"{s1}{s2}"
 
 
-def new_filename(fpath: str | None, prefix: str = "", suffix: str = "") -> None:
+def new_filename(fpath: str | None, *, prefix: str = "", suffix: str = "", force: bool = False) -> None:
     """新文件名
 
-    >>> new_filename("1.tsv", "2", "3")
+    >>> new_filename("1.tsv", prefix="2", suffix="3")
     '2.1.3.tsv'
-    >>> new_filename("1.tsv", "2", "3.xlsx")
+    >>> new_filename("1.tsv", prefix="2", suffix="3.xlsx")
     '2.1.3.xlsx'
-    >>> new_filename("1", "2", "3")
+    >>> new_filename("1", prefix="2", suffix="3")
     '2.1.3'
-    >>> new_filename("1", "", "3")
+    >>> new_filename("1", prefix="", suffix="3")
     '1.3'
-    >>> new_filename("1", "2")
+    >>> new_filename("1", prefix="2")
     '2.1'
     >>> new_filename("./data1", suffix="2.tsv")
     './data1.2.tsv'
+
+    >>> new_filename("./data1", suffix="2.tsv", force=1)
+    './data1.2.tsv'
+
+    >>> new_filename("./data1.xxx", suffix="2", force=1)
+    './data1.2.xxx'
     """
     if fpath is None:
         return None
-    curr_suffix = Path(fpath).suffix if fpath.endswith(VALID_FILE_SUFFIX) else ""
+    assert prefix or suffix
 
-    if suffix.endswith(VALID_FILE_SUFFIX):
-        curr_suffix = ""
+    if not force:
+        curr_suffix = Path(fpath).suffix if fpath.endswith(VALID_FILE_SUFFIX) else ""
+
+        if suffix.endswith(VALID_FILE_SUFFIX):
+            curr_suffix = ""
+    else:
+        _, extension = os.path.splitext(fpath)
+        curr_suffix = extension
 
     fname = os.path.basename(fpath)
     dname = os.path.dirname(fpath)
 
-    ret = join_with_delim(prefix, remove_file_suffix(fname), ".")
+    ret = join_with_delim(prefix, remove_file_suffix(fname, force=force), ".")
     ret = join_with_delim(ret, suffix, ".")
     ret = join_with_delim(ret, curr_suffix, ".")
     ret = os.path.join(dname, ret)
@@ -1082,7 +1101,7 @@ def doctest() -> None:
     """test"""
     import doctest
 
-    doctest.testmod(verbose=True)
+    doctest.testmod(verbose=False)
 
 
 def urlencode_params(**params: dict[str, any]) -> str:

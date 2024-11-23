@@ -191,6 +191,25 @@ def xdebug(
     )
 
 
+__dd_xcount = collections.defaultdict(int)
+
+
+def xcount(key: str, *args, **kwargs) -> None:
+    """debug key的出现次数"""
+    __dd_xcount[key] += 1
+    xdebug(f"{key}:count:{__dd_xcount[key]}", *args, **kwargs)
+
+
+__dd_xonce = set()
+
+
+def xonce(key: str, *args, **kwargs) -> None:
+    """对每个key只debug一次"""
+    if key not in __dd_xonce:
+        __dd_xonce.add(key)
+        xdebug(key, *args, **kwargs)
+
+
 def is_chinese_char(uchar: Char) -> bool:
     """char is chinese or alpha/number
 

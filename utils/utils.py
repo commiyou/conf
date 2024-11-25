@@ -171,9 +171,10 @@ def xdebug(
     sep: str = "\t",
     encoding: str = "utf8",
     color: Literal["red", "blue", "green"] | None = None,
+    force_debug: bool = False,
 ) -> None:
     """处于debug模式时，输出"""
-    if not in_debug():
+    if not force_debug and not in_debug():
         return
     caller_frame = sys._getframe(1)
     function_name = caller_frame.f_code.co_name
@@ -910,7 +911,9 @@ def join_with_delim(s1: str, s2: str, delim: str = ".") -> str:
     return f"{s1}{s2}"
 
 
-def new_filename(fpath: str | None, *, prefix: str = "", suffix: str = "", force: bool = False) -> None:
+def new_filename(
+    fpath: str | None, *, prefix: str = "", suffix: str = "", force: bool = False
+) -> None:
     """新文件名
 
     >>> new_filename("1.tsv", prefix="2", suffix="3")

@@ -5,6 +5,7 @@ extend-select = ["I"]
 ignore = [
   # imported but unused
   "ANN101",
+  "DOC202",
   "ANN204",
   "C408", #Unnecessary `dict` call (rewrite as a literal)
   "COM812",

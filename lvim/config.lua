@@ -286,6 +286,14 @@ lvim.plugins = {
     opts = { { highlight_node_at_cursor = true } },
   },
   {
+    "rachartier/tiny-inline-diagnostic.nvim",
+    event = "VeryLazy", -- Or `LspAttach`
+    priority = 1000,    -- needs to be loaded in first
+    config = function()
+      require('tiny-inline-diagnostic').setup()
+    end
+  },
+  {
     "cameron-wags/rainbow_csv.nvim",
     config = true,
     ft = {
@@ -1257,10 +1265,21 @@ lvim.plugins = {
       vim.cmd([[cab cc CodeCompanionToggle]])
     end
   },
-  -- {
-  --   'ZSaberLv0/ZFVimIM', -- ;; 开启或关闭输入法, ;: 切换词库, - 和 = 翻页,[ 和 ] 快速从词组选字,
-  --   dependencies = { 'ZSaberLv0/ZFVimJob', 'ZSaberLv0/ZFVimIM_openapi', 'ZSaberLv0/ZFVimIM_english_base', 'ZSaberLv0/ZFVimIM_pinyin' },
-  -- },
+  {
+    "chrisgrieser/nvim-scissors",
+    dependencies = { "nvim-telescope/telescope.nvim", "L3MON4D3/LuaSnip" },
+    opts = {
+      snippetDir = vim.fn.stdpath("config") .. "/snips/",
+      require("luasnip.loaders.from_vscode").lazy_load {
+        paths = { vim.fn.stdpath("config") .. "/snips/" },
+      },
+
+      vim.keymap.set("n", "<leader>se", function() require("scissors").editSnippet() end),
+
+      -- when used in visual mode, prefills the selection as snippet body
+      vim.keymap.set({ "n", "x" }, "<leader>sa", function() require("scissors").addNewSnippet() end),
+    }
+  },
   {
     "nvim-treesitter/nvim-treesitter-textobjects",
     dependencies = { "nvim-treesitter/nvim-treesitter" },
@@ -1676,6 +1695,10 @@ lvim.builtin.lualine.sections.lualine_x = {
   components.filetype,
   'swenv'
 }
+
+-- lvim.builtin.luasnip.loaders.from_vscode.lazy_load {
+--   paths = { "$XDG_CONFIG_HOME/lvim/snips/" },
+-- }
 -- 命令行 移动
 vim.api.nvim_set_keymap('c', '<C-a>', '<Home>', { noremap = true })
 vim.api.nvim_set_keymap('c', '<M-b>', '<S-Left>', { noremap = true })

@@ -1,0 +1,1 @@
+{"fire":{"body":["if __name__ == \"__main__\":","    import fire","","    fire.Fire()"],"prefix":"fire"},"ifmain":{"body":["if __name__ == \"__main__\":","    import fire","","    fire.Fire()"],"prefix":"ifmain"}}

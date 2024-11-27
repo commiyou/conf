@@ -4,11 +4,6 @@
 import base64
 import collections
 import contextlib
-import requests
-from requests.exceptions import RequestException
-import time
-import random
-
 import dataclasses
 import datetime
 import functools
@@ -19,9 +14,11 @@ import itertools
 import json
 import locale
 import os
+import random
 import re
 import string
 import sys
+import time
 import traceback
 from collections.abc import Mapping, Sequence
 from collections.abc import Set as AbstractSet
@@ -37,6 +34,7 @@ import pandas as pd
 import requests
 import tqdm as tqdm_
 from bs4 import BeautifulSoup
+from requests.exceptions import RequestException
 from termcolor import colored
 
 # try:
@@ -357,11 +355,7 @@ def read_file(  # noqa: C901, PLR0912
 
     input_: file name/path or io; excel时，返回的每一列都是str
     """
-    if (
-        isinstance(input_, (str, Path))
-        and skip_notexists
-        and not os.path.exists(input_)
-    ):
+    if isinstance(input_, (str, Path)) and skip_notexists and not os.path.exists(input_):
         return iter([])  # noqa: B901
 
     if isinstance(input_, str) and input_.endswith(".xlsx"):
@@ -379,19 +373,13 @@ def read_file(  # noqa: C901, PLR0912
     if tqdm is None and sys.stderr.isatty():
         tqdm = str(f"proc file {input_}") if isinstance(input_, (str, Path)) else True
 
-    cm = (
-        open(input_, "rb")
-        if isinstance(input_, (str, Path))
-        else contextlib.nullcontext(input_)
-    )  # noqa: SIM115
+    cm = open(input_, "rb") if isinstance(input_, (str, Path)) else contextlib.nullcontext(input_)  # noqa: SIM115
 
     with cm as input_:
         if skip_header:
             input_ = funcy.rest(input_)  # type:ignore  # noqa: PLW2901
         if tqdm:
-            input_ = tqdm_.tqdm(
-                input_, total=total, desc=tqdm if isinstance(tqdm, str) else None
-            )  # noqa: PLW2901
+            input_ = tqdm_.tqdm(input_, total=total, desc=tqdm if isinstance(tqdm, str) else None)  # noqa: PLW2901
 
         for i, line in enumerate(input_):  # type:ignore
             if not isinstance(line, str):
@@ -558,9 +546,7 @@ def xprint_json(obj: object, indent: int = 4) -> None:
     xprint(json.dumps(obj, ensure_ascii=False, indent=indent, cls=JsonCustomEncoder))
 
 
-def safe_divide(
-    p1: float, p2: float, *, digits: int = 2, percentage: bool = False
-) -> str:
+def safe_divide(p1: float, p2: float, *, digits: int = 2, percentage: bool = False) -> str:
     """return n/a if divide 0 else value with str type
 
     >>> safe_divide(1, 0)
@@ -577,9 +563,7 @@ def safe_divide(
     return f"{{:.{digits}f}}".format(p1 / p2)
 
 
-def safe_diff(
-    p1: float | str, p2: float | str, *, digits: int = 2, percentage: bool = True
-) -> str | float:
+def safe_diff(p1: float | str, p2: float | str, *, digits: int = 2, percentage: bool = True) -> str | float:
     """return n/a if divide 0 else value with str type
 
     >>> safe_diff(1, 0)
@@ -646,9 +630,7 @@ class RedirectStdoutToFile(contextlib.ContextDecorator):
     ...     print(123)
     """
 
-    def __init__(
-        self, fname: str | Path | None, mode: str = "w", tpl: str | None = None
-    ) -> None:
+    def __init__(self, fname: str | Path | None, mode: str = "w", tpl: str | None = None) -> None:
         """file name and write mode"""
         if tpl is None:
             tpl = "{}"
@@ -911,9 +893,7 @@ def join_with_delim(s1: str, s2: str, delim: str = ".") -> str:
     return f"{s1}{s2}"
 
 
-def new_filename(
-    fpath: str | None, *, prefix: str = "", suffix: str = "", force: bool = False
-) -> None:
+def new_filename(fpath: str | None, *, prefix: str = "", suffix: str = "", force: bool = False) -> None:
     """新文件名
 
     >>> new_filename("1.tsv", prefix="2", suffix="3")
@@ -1138,7 +1118,30 @@ def md5(input_string: str) -> str:
     return md5.hexdigest()
 
 
-def fcache(cache_dir: str, *args, **kwargs):
+# def fcache(cache_dir: str, *args, **kwargs):
+#     """diskcache for function
+
+#     https://grantjenks.com/docs/diskcache/api.html#diskcache.FanoutCache.memoize
+#     usage:
+#         @utils.fcache("./.cache")
+#         @utils.fcache("./cache_new", expire=60*60*24*7) # 7天过时
+#     """
+#     try:
+#         from diskcache import Cache
+#     except ModuleNotFoundError:
+#         import warnings
+
+#         warnings.warn("diskcache library not found")
+#         return lambda orig_func: orig_func
+#     else:
+#         cache = Cache(cache_dir)
+#         import atexit
+
+#         atexit.register(cache.close)
+#         return cache.memoize(*args, **kwargs)
+
+
+def fcache(cache_dir: str, ignore_empty_result: bool = True, *args, **kwargs):
     """diskcache for function
 
     https://grantjenks.com/docs/diskcache/api.html#diskcache.FanoutCache.memoize
@@ -1149,16 +1152,32 @@ def fcache(cache_dir: str, *args, **kwargs):
     try:
         from diskcache import Cache
     except ModuleNotFoundError:
-        import warnings
-
-        warnings.warn("diskcache library not found")
+        xerr("diskcache library not found")
         return lambda orig_func: orig_func
     else:
         cache = Cache(cache_dir)
         import atexit
 
         atexit.register(cache.close)
-        return cache.memoize(*args, **kwargs)
+
+        def decorator(func):  # noqa: ANN001
+            memoized_func = cache.memoize(*args, **kwargs)(func)
+
+            def wrapper(*func_args, **func_kwargs):  # noqa: ANN002
+                result = memoized_func(*func_args, **func_kwargs)
+
+                # Check if we should ignore caching for empty results
+                if ignore_empty_result and (not result or isinstance(result, str) and not result.strip()):
+                    # Manually remove the result from cache if it was just stored
+                    key = memoized_func.__cache_key__(*func_args, **func_kwargs)
+                    if key in cache:
+                        del cache[key]
+
+                return result
+
+            return wrapper
+
+        return decorator
 
 
 def fcache_op(
@@ -1237,10 +1256,9 @@ def fetch_url(
     method: Literal["get", "post"] = "get",
     timeout: int = 10,
     proxy: str | list[str] | None = None,
-    **kwargs,
+    **kwargs: Any,
 ):
-    """
-    A function to fetch a URL with retry logic, random proxy selection, and format the response.
+    """A function to fetch a URL with retry logic, random proxy selection, and format the response.
 
     :param url: URL to request.
     :param params: Parameters for GET requests.
@@ -1255,27 +1273,22 @@ def fetch_url(
     :return: Response content in the specified format.
     """
     method = method.lower()
-    assert method in ["get", "post"], "Method must be 'get' or 'post'."
-    assert return_format in ["json", "html"], "Return format must be 'json' or 'html'."
+    assert method in {"get", "post"}, "Method must be 'get' or 'post'."
+    assert return_format in {"json", "html", "markdown"}, "Return format must be 'json' or 'html'."
 
     # Determine which proxy to use
     proxies = None
     if proxy:
         if "," in proxy:
             proxy = proxy.split(",")
-        if isinstance(proxy, list):
-            selected_proxy = random.choice(proxy)
-        else:
-            selected_proxy = proxy
+        selected_proxy = random.choice(proxy) if isinstance(proxy, list) else proxy
 
         proxies = {"http": selected_proxy, "https": selected_proxy}
 
     for attempt in range(retry_cnt):
         try:
             if method == "get":
-                response = requests.get(
-                    url, timeout=timeout, proxies=proxies, params=params, **kwargs
-                )
+                response = requests.get(url, timeout=timeout, proxies=proxies, params=params, **kwargs)
             elif method == "post":
                 response = requests.post(
                     url,
@@ -1290,20 +1303,21 @@ def fetch_url(
 
             if return_format == "json":
                 return response.json()  # Return JSON data
-            elif return_format == "html":
+            if return_format == "html":
                 return response.text  # Return HTML content
-            elif return_format == "markdown":
+            if return_format == "markdown":
                 import html2text
 
                 h = html2text.HTML2Text()
                 return h.handle(response.text)
 
-        except (RequestException, ValueError) as e:
-            print(f"Attempt {attempt + 1} failed: {e}")
+        except (RequestException, ValueError) as e:  # noqa: PERF203
+            xerr(f"Attempt {attempt + 1} failed: {e}")
             if attempt < retry_cnt - 1:
                 time.sleep(2**attempt)  # Exponential backoff
             else:
                 raise  # Re-raise the last exception if max retries reached
+    return None
 
 
 if __name__ == "__main__":

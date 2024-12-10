@@ -1107,164 +1107,194 @@ lvim.plugins = {
     opts = {
     },
   },
-  -- {
-  --   "Exafunction/codeium.nvim",
-  --   dependencies = {
-  --     "nvim-lua/plenary.nvim",
-  --     "hrsh7th/nvim-cmp",
-  --   },
-  --   config = function()
-  --     require("codeium").setup({
-  --     })
-  --     lvim.builtin.cmp.formatting.source_names["codeium"] = "(Codeium)"
-  --     table.insert(lvim.builtin.cmp.sources, {
-  --       name = "codeium"
-  --     })
-  --     require('cmp').setup {
-  --       mapping = require("cmp").mapping.preset.insert({
-  --         ["<c-x><c-y>"] = require('codieium').make_cmp_map()
-  --       }),
-  --     }
-  --   end
-  -- },
-  -- {
-  --   'milanglacier/minuet-ai.nvim',
-  --   dependencies = { 'nvim-lua/plenary.nvim', 'hrsh7th/nvim-cmp' },
-  --   config = function()
-  --     require('minuet').setup {
-  --       -- Your configuration options here
-  --       provider = "gemini",
-  --     }
-
-  --     require('cmp').setup {
-  --       mapping = require("cmp").mapping.preset.insert({
-  --         ["<c-x><c-y>"] = require('minuet').make_cmp_map()
-  --       }),
-  --     }
-  --   end
-  -- },
-  -- {
-  --   "jackMort/ChatGPT.nvim",
-  --   event = "VeryLazy",
-  --   config = function()
-  --     require("chatgpt").setup({ model = "gpt-4o" })
-  --   end,
-  --   dependencies = {
-  --     "MunifTanjim/nui.nvim",
-  --     "nvim-lua/plenary.nvim",
-  --     "folke/trouble.nvim",
-  --     "nvim-telescope/telescope.nvim"
-  --   }
-  -- },
-  -- {
-  --   "yetone/avante.nvim",
-  --   event = "VeryLazy",
-  --   lazy = false,
-  --   opts = {
-  --     -- add any opts here
-  --     provider = "openai",
-  --     endpoint = "http://10.12.215.17:8000/v1/chat/completions",
-  --     parse_curl_args = function(opts, code_opts)
-  --       return {
-  --         url = opts.endpoint,
-  --         headers = {
-  --           ["Accept"] = "application/json",
-  --           ["Content-Type"] = "application/json",
-  --           ["Authorization"] = "Bearer " .. os.getenv(opts.api_key_name),
-  --         },
-  --         body = {
-  --           model = opts.model,
-  --           messages = { -- you can make your own message, but this is very advanced
-  --             { role = "system", content = code_opts.system_prompt },
-  --             { role = "user",   content = require("avante.providers.openai").get_user_message(code_opts) },
-  --           },
-  --           temperature = 0,
-  --           max_tokens = 4096,
-  --           stream = true, -- this will be set by default.
-  --         },
-  --       }
-  --     end,
-  --     parse_response_data = function(data_stream, event_state, opts)
-  --       require("avante.providers").openai.parse_response(data_stream, event_state, opts)
-  --     end,
-  --     --api_key_name = "OPENAI_API_KEY"
-  --   },
-  --   build = ":AvanteBuild", -- This is optional, recommended tho. Also note that this will block the startup for a bit since we are compiling bindings in Rust.
-  --   dependencies = {
-  --     "stevearc/dressing.nvim",
-  --     "nvim-lua/plenary.nvim",
-  --     "MunifTanjim/nui.nvim",
-  --     --- The below dependencies are optional,
-  --     "nvim-tree/nvim-web-devicons", -- or echasnovski/mini.icons
-  --     --"zbirenbaum/copilot.lua",    -- for providers='copilot'
-  --     {
-  --       -- support for image pasting
-  --       "HakonHarnes/img-clip.nvim",
-  --       event = "VeryLazy",
-  --       opts = {
-  --         -- recommended settings
-  --         default = {
-  --           embed_image_as_base64 = false,
-  --           prompt_for_file_name = false,
-  --           drag_and_drop = {
-  --             insert_mode = true,
-  --           },
-  --           -- required for Windows users
-  --           use_absolute_path = true,
-  --         },
-  --       },
-  --     },
-  --     {
-  --       -- Make sure to setup it properly if you have lazy=true
-  --       'MeanderingProgrammer/render-markdown.nvim',
-  --       opts = {
-  --         file_types = { "markdown", "Avante" },
-  --       },
-  --       ft = { "markdown", "Avante" },
-  --     },
-  --   },
-  -- },
   {
-    "olimorris/codecompanion.nvim",
-    dependencies = {
-      "nvim-lua/plenary.nvim",
-      "nvim-treesitter/nvim-treesitter",
-      "nvim-telescope/telescope.nvim", -- Optional
-      {
-        "stevearc/dressing.nvim",      -- Optional: Improves the default Neovim UI
-        opts = {},
-      },
+    "yetone/avante.nvim",
+    event = "VeryLazy",
+    lazy = false,
+    version = false,           -- set this if you want to always pull the latest change
+    behaviour = {
+      auto_suggestions = true, -- Experimental stage
+      auto_set_highlight_group = true,
+      auto_set_keymaps = true,
+      auto_apply_diff_after_generation = false,
+      support_paste_from_clipboard = false,
+      minimize_diff = true,
     },
     opts = {
-      --log_level = "DEBUG"
-    },
-    config = function()
-      require("codecompanion").setup({
-        -- log_level = "DEBUG", -- or "TRACE"
-        adapters = {
-          openai = function()
-            return require("codecompanion.adapters").extend("openai", {
-              env = {
-                url = "http://10.12.215.17:8000/v1/chat/completions",
-                --api_key =
-                --sk-
-                --2r3aBJdY1C83D1AyQuK0T3BlbkFJgC8twJCaURWvTwFSyuOS
-              },
-            })
-          end,
+      -- add any opts here
+      debug = false,
+
+      provider = "openai",
+      auto_suggestions_provider = "gemini",
+      openai = {
+        endpoint = "http://10.12.215.17:8000/v1",
+        model = "gpt-4o",
+        timeout = 30000, -- Timeout in milliseconds
+        temperature = 0,
+        max_tokens = 4096,
+      },
+      mappings = {
+        -- :checkhealth which-key
+        -- https://github.com/yetone/avante.nvim/blob/main/lua/avante/config.lua
+        ask = "<leader>aa",
+        edit = "<leader>ae",
+        refresh = "<leader>ar",
+        focus = "<leader>af",
+        toggle = {
+          default = "<leader>at",
+          debug = "<leader>ad",
+          hint = "<leader>ah",
+          suggestion = "<leader>as",
+          repomap = "<leader>aR",
         },
-      })
+        sidebar = {
+          apply_all = "gA",
+          apply_cursor = "ga",
+          switch_windows = "<Tab>",
+          reverse_switch_windows = "<S-Tab>",
+        },
+        suggestion = {
+          accept = "<M-l>",
+          next = "<M-]>",
+          prev = "<M-[>",
+          dismiss = "<C-]>",
+        },
+      },
+      diff = {
+        ours = "co",
+        theirs = "ct",
+        all_theirs = "ca",
+        both = "cb",
+        cursor = "cc",
+        next = "]x",
+        prev = "[x",
+      },
 
-      --vim.api.nvim_set_keymap("n", "<C-a>", "<cmd>CodeCompanionActions<cr>", { noremap = true, silent = true })
-      --vim.api.nvim_set_keymap("v", "<C-a>", "<cmd>CodeCompanionActions<cr>", { noremap = true, silent = true })
-      vim.api.nvim_set_keymap("n", "<LocalLeader>a", "<cmd>CodeCompanionToggle<cr>", { noremap = true, silent = true })
-      vim.api.nvim_set_keymap("v", "<LocalLeader>a", "<cmd>CodeCompanionToggle<cr>", { noremap = true, silent = true })
-      vim.api.nvim_set_keymap("v", "ga", "<cmd>CodeCompanionAdd<cr>", { noremap = true, silent = true })
+    },
+    keys = function(_, keys)
+      ---@type avante.Config
+      local opts =
+          require("lazy.core.plugin").values(require("lazy.core.config").spec.plugins["avante.nvim"], "opts", false)
 
-      -- Expand 'cc' into 'CodeCompanion' in the command line
-      vim.cmd([[cab cc CodeCompanionToggle]])
-    end
+      local mappings = {
+        {
+          opts.mappings.ask,
+          function() require("avante.api").ask() end,
+          desc = "avante: ask",
+          mode = { "n", "v" },
+        },
+        {
+          opts.mappings.refresh,
+          function() require("avante.api").refresh() end,
+          desc = "avante: refresh",
+          mode = "v",
+        },
+        {
+          opts.mappings.edit,
+          function() require("avante.api").edit() end,
+          desc = "avante: edit",
+          mode = { "n", "v" },
+        },
+      }
+      mappings = vim.tbl_filter(function(m) return m[1] and #m[1] > 0 end, mappings)
+      return vim.list_extend(mappings, keys)
+    end,
+    -- if you want to build from source then do `make BUILD_FROM_SOURCE=true`
+    build = "make",
+    -- build = "powershell -ExecutionPolicy Bypass -File Build.ps1 -BuildFromSource false" -- for windows
+    dependencies = {
+      "nvim-treesitter/nvim-treesitter",
+      "stevearc/dressing.nvim",
+      "nvim-lua/plenary.nvim",
+      "MunifTanjim/nui.nvim",
+      --- The below dependencies are optional,
+      "nvim-tree/nvim-web-devicons", -- or echasnovski/mini.icons
+      "zbirenbaum/copilot.lua",      -- for providers='copilot'
+      {
+        -- support for image pasting
+        "HakonHarnes/img-clip.nvim",
+        event = "VeryLazy",
+        opts = {
+          -- recommended settings
+          default = {
+            embed_image_as_base64 = false,
+            prompt_for_file_name = false,
+            drag_and_drop = {
+              insert_mode = true,
+            },
+            -- required for Windows users
+            use_absolute_path = true,
+          },
+        },
+      },
+      {
+        -- Make sure to set this up properly if you have lazy=true
+        'MeanderingProgrammer/render-markdown.nvim',
+        opts = {
+          file_types = { "markdown", "Avante" },
+        },
+        ft = { "markdown", "Avante" },
+      },
+    },
   },
+  -- {
+  --   -- :CodeCompanionChat
+  --   -- <C-s> to send a message to the LLM
+  --   -- <C-c> to close the chat buffer
+  --   -- gc to insert a codeblock in the chat buffer
+  --   -- gf to fold any codeblocks in the chat buff
+  --   -- gx to clear the chat buffer's contents
+  --   -- gy to yank the last codeblock in the chat buffer
+  --   -- [[ to move to the previous header
+  --   -- ]] to move to the next header
+  --   -- { to move to the previous chat
+  --   -- } to move to the next chat
+  --   "olimorris/codecompanion.nvim",
+  --   dependencies = {
+  --     "nvim-lua/plenary.nvim",
+  --     "nvim-treesitter/nvim-treesitter",
+  --     { "MeanderingProgrammer/render-markdown.nvim", ft = { "markdown", "codecompanion" } },
+  --   },
+  --   opts = {
+  --     --log_level = "DEBUG"
+  --   },
+  --   config = function()
+  --     require("codecompanion").setup({
+  --       -- log_level = "DEBUG", -- or "TRACE"
+  --       adapters = {
+  --         openai = function()
+  --           return require("codecompanion.adapters").extend("openai", {
+  --             url = "http://10.12.215.17:8000/v1/chat/completions",
+  --             env = {
+  --               --api_key =
+  --               --sk-
+  --               --2r3aBJdY1C83D1AyQuK0T3BlbkFJgC8twJCaURWvTwFSyuOS
+  --             },
+  --           })
+  --         end,
+  --       },
+  --       strategies = {
+  --         --NOTE: Change the adapter as required
+  --         chat = { adapter = "openai" },
+  --         inline = { adapter = "openai" },
+  --       },
+  --       opts = {
+  --         log_level = "DEBUG",
+  --       },
+  --     })
+
+  --     --vim.api.nvim_set_keymap("n", "<C-a>", "<cmd>CodeCompanionActions<cr>", { noremap = true, silent = true })
+  --     --vim.api.nvim_set_keymap("v", "<C-a>", "<cmd>CodeCompanionActions<cr>", { noremap = true, silent = true })
+  --     vim.api.nvim_set_keymap("n", "<LocalLeader>a", "<cmd>CodeCompanionChat Toggle<cr>",
+  --       { noremap = true, silent = true })
+  --     vim.api.nvim_set_keymap("v", "<LocalLeader>a", "<cmd>CodeCompanionChat Toggle<cr>",
+  --       { noremap = true, silent = true })
+  --     vim.api.nvim_set_keymap("v", "ga", "<cmd>CodeCompanionChat Add<cr>", { noremap = true, silent = true })
+
+  --     -- Expand 'cc' into 'CodeCompanion' in the command line
+  --     vim.cmd([[cab cc CodeCompanion]])
+  --   end
+  -- },
   {
     "chrisgrieser/nvim-scissors",
     dependencies = { "nvim-telescope/telescope.nvim", "L3MON4D3/LuaSnip" },

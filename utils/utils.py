@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """python3 utils"""
 
+import ast
 import base64
 import collections
 import contextlib
@@ -16,17 +17,19 @@ import locale
 import os
 import random
 import re
+import signal
 import string
 import sys
+import threading
 import time
 import traceback
-from collections.abc import Mapping, Sequence
+from collections.abc import Iterable, Iterator, Mapping, Sequence
 from collections.abc import Set as AbstractSet
 from contextlib import ExitStack
 from functools import partial, wraps
 from operator import itemgetter
 from pathlib import Path
-from typing import IO, Any, Callable, Iterable, Iterator, Literal, Optional, TypeAlias
+from typing import IO, Any, Callable, Literal, Optional, TypeAlias, TypeVar
 from urllib.parse import urlencode
 
 import funcy
@@ -119,8 +122,7 @@ def xprint(
     end = suffix + "\n"
     values = [make_str(value) for value in values]
     out = sep.join(values) + end
-    if color and sys.stdout.isatty():
-        out = colored(out, color)
+    out = color_text_if_atty(out, color)
     file.buffer.write(out.encode(encoding))
     if flush:
         file.flush()
@@ -163,6 +165,101 @@ def get_caller_name(level: int = 1) -> str:
     return function_name
 
 
+def _is_literal(s: Any) -> bool:  # noqa: ANN401
+    """是否是字面值"""
+    try:
+        ast.literal_eval(s)
+    except Exception:
+        return False
+    return True
+
+
+def color_text_if_atty(
+    text: str,
+    color: str,
+    on_color: str | None = None,
+    attrs: Iterable[str] | None = None,
+    force: bool = False,
+) -> str:
+    """颜色 text
+
+    Available text colors:
+        black, red, green, yellow, blue, magenta, cyan, white,
+        light_grey, dark_grey, light_red, light_green, light_yellow, light_blue,
+        light_magenta, light_cyan.
+
+    Available text highlights:
+        on_black, on_red, on_green, on_yellow, on_blue, on_magenta, on_cyan, on_white,
+        on_light_grey, on_dark_grey, on_light_red, on_light_green, on_light_yellow,
+        on_light_blue, on_light_magenta, on_light_cyan.
+
+    Available attributes:
+        bold, dark, underline, blink, reverse, concealed.
+    """
+    if color and (force or sys.stdout.isatty()):
+        return colored(text, color, on_color, attrs)
+    return text
+
+
+def xvar(
+    *values: object,
+    suffix: str = "",
+    sep: str = "\t",
+    encoding: str = "utf8",
+    color: Literal["red", "blue", "green"] | None = None,
+    force_debug: bool = False,
+) -> None:
+    """Output in debug mode."""
+    if not force_debug and not in_debug():
+        return
+    import executing
+
+    caller_frame = sys._getframe(1)
+    function_name = caller_frame.f_code.co_name
+    prefix = f"DEBUG: {function_name}"
+
+    prefix = color_text_if_atty(prefix, "green")
+
+    # Use executing to get the node information
+    executor = executing.Source.executing(caller_frame)
+    if executor.node is not None:
+        # Decompose the expressions
+        value_names = []
+        for value in executor.node.args:
+            # Try to get the source of the argument
+            try:
+                source = executor.source.asttokens().get_text(value)
+                value_names.append(source)
+            except Exception:  # noqa:  PERF203
+                value_names.append("<unknown>")
+
+        # Combine names with values
+        value_info = []
+        for name, val in zip(value_names, values):
+            import pprint
+
+            val_str = pprint.pformat(val, width=119)
+            if _is_literal(name):
+                # For literal types, just append the value
+                value_info.append(val_str)
+            else:
+                # For non-literal types, append the name, value, and type
+                value_info.append(f"{color_text_if_atty(name, 'red', attrs=['bold'])}:{type(val).__name__}={val_str}")
+
+        output = f"{prefix}: " + sep.join(value_info)
+    else:
+        # Fallback if we can't get the node
+        output = f"{prefix}: " + sep.join(map(str, values))
+
+    xerr(
+        output,
+        suffix=suffix,
+        sep=sep,
+        color=color,
+        encoding="unicode_escape" if is_mr() else encoding,
+    )
+
+
 def xdebug(
     *values: object,
     suffix: str = "",
@@ -193,7 +290,7 @@ def xdebug(
 __dd_xcount = collections.defaultdict(int)
 
 
-def xcount(key: str, *args, **kwargs) -> None:
+def xcount(key: str, *args: object, **kwargs: object) -> None:
     """debug key的出现次数"""
     __dd_xcount[key] += 1
     xdebug(f"{key}:count:{__dd_xcount[key]}", *args, **kwargs)
@@ -202,7 +299,7 @@ def xcount(key: str, *args, **kwargs) -> None:
 __dd_xonce = set()
 
 
-def xonce(key: str, *args, **kwargs) -> None:
+def xonce(key: str, *args: object, **kwargs: object) -> None:
     """对每个key只debug一次"""
     if key not in __dd_xonce:
         __dd_xonce.add(key)
@@ -787,15 +884,81 @@ def date(ts: str | int | None = None, fmt: str = "%Y-%m-%d") -> str:
     return formatted_time
 
 
+T = TypeVar("T")
+
+
+def stop_function() -> None:
+    """kill process"""
+    os.kill(os.getpid(), signal.SIGINT)
+
+
+def stopit_after_timeout(seconds: float, raise_exception: bool = True) -> Callable[[T], T]:
+    """decorator 超时停止函数"""
+
+    def actual_decorator(func: T) -> T:
+        @functools.wraps(func)
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
+            timer = threading.Timer(seconds, stop_function)
+            try:
+                timer.start()
+                result = func(*args, **kwargs)
+            except KeyboardInterrupt:
+                msg = f"function {func.__name__} took longer than {seconds} s."
+                if raise_exception:
+                    raise TimeoutError(msg)  # noqa: B904
+                result = msg
+            finally:
+                timer.cancel()
+            return result
+
+        return wrapper
+
+    return actual_decorator
+
+
 def parallel_process_items_processes(
     inputs: Iterable,
-    proc_func: Callable,
+    proc_func: Callable[..., T],
     *,
     process_cnt: int | None = None,
     tqdm: str | bool = True,
     total: int | None = None,
-):
-    """返回的是proc_func的输出"""
+    timeout: float | None = None,
+    max_fail_cnt: int = 1,
+) -> Iterator[T | TimeoutError]:
+    """Returns an iterator over the outputs of proc_func."""
+    xerr(f"pcnt {process_cnt}")
+    if process_cnt == 1:
+        yield from iter(proc_func(ll) for ll in tqdm_.tqdm(inputs))
+        return
+
+    if not total and isinstance(inputs, (list, tuple, set, dict)):
+        total = len(inputs)
+
+    from mpire import WorkerPool
+
+    with WorkerPool(n_jobs=process_cnt) as pool:
+        yield from pool.imap(
+            proc_func,
+            inputs,
+            iterable_len=total,
+            task_timeout=timeout,
+            progress_bar=bool(tqdm),
+            progress_bar_options=dict(desc=tqdm) if isinstance(tqdm, str) else None,
+        )
+
+
+def parallel_process_items_processes_old(
+    inputs: Iterable,
+    proc_func: Callable[..., T],
+    *,
+    process_cnt: int | None = None,
+    tqdm: str | bool = True,
+    total: int | None = None,
+    timeout: float | None = None,
+    max_fail_cnt: int = 1,
+) -> Iterator[T]:
+    """Returns an iterator over the outputs of proc_func."""
     xerr(f"pcnt {process_cnt}")
     if process_cnt == 1:
         yield from iter(proc_func(ll) for ll in tqdm_.tqdm(inputs))
@@ -806,12 +969,141 @@ def parallel_process_items_processes(
 
     from multiprocessing import Pool
 
-    with Pool(processes=process_cnt) as pool:
-        yield from tqdm_.tqdm(
-            pool.imap(proc_func, inputs),
-            total=total,
-            desc=tqdm if isinstance(tqdm, str) else None,
-        )
+    # with Pool(processes=process_cnt) as pool:
+    #     yield from tqdm_.tqdm(
+    #         pool.imap(proc_func, inputs),
+    #         total=total,
+    #         desc=tqdm if isinstance(tqdm, str) else None,
+    #     )
+
+    # 参见 https://stackoverflow.com/questions/69927597/python-multiprocessing-imap-discard-timeout-processes
+    # https://towardsdatascience.com/exception-handling-in-methods-of-the-multiprocessing-pool-class-in-python-7fbb73746c26
+    # imap的  if chunksize is 1 then the next(), 只是超时了抛出一个异常，但是原进程仍然进行
+
+    # if timeout:
+    #     proc_func = stopit_after_timeout(timeout)(proc_func)
+
+    with Pool(processes=process_cnt) as pool, tqdm_.tqdm(
+        total=total,
+        desc=tqdm if isinstance(tqdm, str) else None,
+    ) as pbar:
+        it = iter(pool.imap(proc_func, inputs))
+        fail_cnt = 0
+        while True:
+            try:
+                ret = next(it)
+                yield ret
+            except StopIteration:
+                break
+            except Exception as e:
+                fail_cnt += 1
+                if fail_cnt >= max_fail_cnt:
+                    traceback.print_exception(None, e, e.__traceback__, file=sys.stderr)
+                    raise
+            pbar.update(1)
+
+
+def parallel_process_items_processes_new(
+    inputs: Iterable,
+    proc_func: Callable[[Any], T],
+    *,
+    process_cnt: Optional[int] = None,
+    tqdm: str | bool = True,
+    total: Optional[int] = None,
+    max_fail_cnt: int = 2,
+    preserve_order: bool = True,
+    timeout: int | None = None,
+) -> Iterator[T]:
+    """
+    并行处理输入项并返回结果的迭代器。
+
+    参数：
+    - inputs: 可迭代的输入项。
+    - proc_func: 处理每个输入项的函数。
+    - process_cnt: 并行进程数。默认为 CPU 核心数。
+    - tqdm: 是否显示进度条。可以是布尔值或描述字符串。
+    - total: 输入项的总数。如果未提供，且输入是序列类型，则自动计算。
+    - max_fail_cnt: 允许的最大失败次数。超过后将抛出异常。
+    - preserve_order: 是否保留输入顺序。默认为 True。
+    - timeout: 每个任务的超时时间（秒）。如果任务超时，将忽略该任务并计入失败次数。
+
+    返回：
+    - 结果的迭代器。
+    """
+    if process_cnt is None:
+        process_cnt = os.cpu_count() or 1
+
+    xerr(f"pcnt {process_cnt}")
+    if process_cnt == 1:
+        yield from iter(proc_func(ll) for ll in tqdm_.tqdm(inputs))
+        return
+
+    if not total and isinstance(inputs, (list, tuple, set, dict)):
+        total = len(inputs)
+
+    fail_cnt = 0
+    from concurrent.futures import ProcessPoolExecutor, TimeoutError, as_completed
+
+    with ProcessPoolExecutor(max_workers=process_cnt) as executor:
+        if preserve_order:
+            # 提交所有任务并收集Future对象
+            futures = [executor.submit(proc_func, item) for item in inputs]
+
+            if tqdm:
+                desc = tqdm if isinstance(tqdm, str) else None
+                progress_bar = tqdm.tqdm(futures, total=total, desc=desc)
+            else:
+                progress_bar = futures
+
+            for future in progress_bar:
+                try:
+                    result = future.result(timeout=timeout)
+                    yield result
+                except TimeoutError:  # noqa: PERF203
+                    fail_cnt += 1
+                    xerr(f"任务超时，已达到 {fail_cnt}/{max_fail_cnt} 次失败。")
+                    if fail_cnt > max_fail_cnt:
+                        xerr("超过最大失败次数，终止处理。")
+                        raise
+                    # 继续处理下一个任务
+                except Exception as e:
+                    fail_cnt += 1
+                    xerr(f"任务失败 {fail_cnt}/{max_fail_cnt}: {e}")
+                    traceback.print_exception(type(e), e, e.__traceback__, file=sys.stderr)
+                    if fail_cnt > max_fail_cnt:
+                        xerr("超过最大失败次数，终止处理。")
+                        raise
+                    # 继续处理下一个任务
+
+        else:
+            # 不保留顺序，使用as_completed
+            futures_to_input = {executor.submit(proc_func, item): item for item in inputs}
+
+            if tqdm:
+                desc = tqdm if isinstance(tqdm, str) else None
+                progress_bar = tqdm.tqdm(as_completed(futures_to_input), total=total, desc=desc)
+            else:
+                progress_bar = as_completed(futures_to_input)
+
+            for future in progress_bar:
+                try:
+                    result = future.result(timeout=timeout)
+                    yield result
+                except TimeoutError:  # noqa: PERF203
+                    fail_cnt += 1
+                    xerr(f"任务超时，已达到 {fail_cnt}/{max_fail_cnt} 次失败。")
+                    if fail_cnt > max_fail_cnt:
+                        xerr("超过最大失败次数，终止处理。")
+                        raise
+                    # 继续处理下一个任务
+                except Exception as e:
+                    fail_cnt += 1
+                    xerr(f"任务失败 {fail_cnt}/{max_fail_cnt}: {e}")
+                    traceback.print_exception(type(e), e, e.__traceback__, file=sys.stderr)
+                    if fail_cnt > max_fail_cnt:
+                        xerr("超过最大失败次数，终止处理。")
+                        raise
+                    # 继续处理下一个任务
 
 
 def parallel_process_items_threads(
@@ -1056,7 +1348,7 @@ def with_ofname(  # noqa: ANN201
     return call()
 
 
-def unpack_list_args(func):
+def unpack_list_args(func: Callable[..., T]) -> Callable[[list[Any]], T]:
     """将输入的list自动解包成函数的参数
 
     def func(a, b): pass
@@ -1064,8 +1356,7 @@ def unpack_list_args(func):
     """
     args_count = len(inspect.signature(func).parameters)
 
-    # @functools.wraps(func)
-    def wrapper(ll: list):  # noqa: ANN202
+    def wrapper(ll: list) -> T:
         return func(*ll[:args_count])
 
     return wrapper
@@ -1118,30 +1409,9 @@ def md5(input_string: str) -> str:
     return md5.hexdigest()
 
 
-# def fcache(cache_dir: str, *args, **kwargs):
-#     """diskcache for function
-
-#     https://grantjenks.com/docs/diskcache/api.html#diskcache.FanoutCache.memoize
-#     usage:
-#         @utils.fcache("./.cache")
-#         @utils.fcache("./cache_new", expire=60*60*24*7) # 7天过时
-#     """
-#     try:
-#         from diskcache import Cache
-#     except ModuleNotFoundError:
-#         import warnings
-
-#         warnings.warn("diskcache library not found")
-#         return lambda orig_func: orig_func
-#     else:
-#         cache = Cache(cache_dir)
-#         import atexit
-
-#         atexit.register(cache.close)
-#         return cache.memoize(*args, **kwargs)
-
-
-def fcache(cache_dir: str, ignore_empty_result: bool = True, *args, **kwargs):
+def fcache(
+    cache_dir: str, ignore_empty_result: bool = True, *args: object, **kwargs: object
+) -> Callable[[Callable[..., T]], Callable[..., T]]:
     """diskcache for function
 
     https://grantjenks.com/docs/diskcache/api.html#diskcache.FanoutCache.memoize
@@ -1160,18 +1430,19 @@ def fcache(cache_dir: str, ignore_empty_result: bool = True, *args, **kwargs):
 
         atexit.register(cache.close)
 
-        def decorator(func):  # noqa: ANN001
+        def decorator(func: Callable[..., T]) -> Callable[..., T]:
             memoized_func = cache.memoize(*args, **kwargs)(func)
 
-            def wrapper(*func_args, **func_kwargs):  # noqa: ANN002
-                result = memoized_func(*func_args, **func_kwargs)
+            @functools.wraps(func)
+            def wrapper(*func_args: object, **func_kwargs: object) -> T:
+                result: T = memoized_func(*func_args, **func_kwargs)
 
                 # Check if we should ignore caching for empty results
-                if ignore_empty_result and (not result or isinstance(result, str) and not result.strip()):
+                if ignore_empty_result and (not result or (isinstance(result, str) and not result.strip())):
                     # Manually remove the result from cache if it was just stored
                     key = memoized_func.__cache_key__(*func_args, **func_kwargs)
                     if key in cache:
-                        del cache[key]
+                        cache.pop(key, None)
 
                 return result
 
@@ -1256,8 +1527,8 @@ def fetch_url(
     method: Literal["get", "post"] = "get",
     timeout: int = 10,
     proxy: str | list[str] | None = None,
-    **kwargs: Any,
-):
+    **kwargs: object,
+) -> str | None:
     """A function to fetch a URL with retry logic, random proxy selection, and format the response.
 
     :param url: URL to request.
@@ -1274,7 +1545,8 @@ def fetch_url(
     """
     method = method.lower()
     assert method in {"get", "post"}, "Method must be 'get' or 'post'."
-    assert return_format in {"json", "html", "markdown"}, "Return format must be 'json' or 'html'."
+    return_formats = {"json", "html", "markdown"}
+    assert return_format in return_formats, f"Return format must in  {return_formats}."
 
     # Determine which proxy to use
     proxies = None
@@ -1318,6 +1590,36 @@ def fetch_url(
             else:
                 raise  # Re-raise the last exception if max retries reached
     return None
+
+
+def retry(
+    exception_to_check: type[Exception] | tuple[Exception, ...], tries: int = 3, delay: int = 1, backoff: int = 2
+) -> Callable:
+    """Retry calling the decorated function using an exponential backoff.
+
+    :param exception_to_check: the exception to check. may be a tuple of exceptions to check
+    :param tries: number of times to try (not retry) before giving up
+    :param delay: initial delay between retries in seconds
+    :param backoff: backoff multiplier e.g. value of 2 will double the delay each retry
+    """
+
+    def deco_retry(f: Callable) -> Callable:
+        @functools.wraps(f)
+        def f_retry(*args: object, **kwargs: object):
+            mtries, mdelay = tries, delay
+            while mtries > 0:
+                try:
+                    return f(*args, **kwargs)
+                except exception_to_check as e:  # noqa: PERF203
+                    xerr(f"Exception: {e}, Retrying in {mdelay} seconds...")
+                    time.sleep(mdelay)
+                    mtries -= 1
+                    mdelay *= backoff
+            return f(*args, **kwargs)
+
+        return f_retry  # true decorator
+
+    return deco_retry
 
 
 if __name__ == "__main__":

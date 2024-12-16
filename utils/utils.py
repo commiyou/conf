@@ -916,36 +916,36 @@ def stopit_after_timeout(seconds: float, raise_exception: bool = True) -> Callab
     return actual_decorator
 
 
-def parallel_process_items_processes(
-    inputs: Iterable,
-    proc_func: Callable[..., T],
-    *,
-    process_cnt: int | None = None,
-    tqdm: str | bool = True,
-    total: int | None = None,
-    timeout: float | None = None,
-    max_fail_cnt: int = 1,
-) -> Iterator[T | TimeoutError]:
-    """Returns an iterator over the outputs of proc_func."""
-    xerr(f"pcnt {process_cnt}")
-    if process_cnt == 1:
-        yield from iter(proc_func(ll) for ll in tqdm_.tqdm(inputs))
-        return
+# def parallel_process_items_processes(
+#     inputs: Iterable,
+#     proc_func: Callable[..., T],
+#     *,
+#     process_cnt: int | None = None,
+#     tqdm: str | bool = True,
+#     total: int | None = None,
+#     timeout: float | None = None,
+#     max_fail_cnt: int = 1,
+# ) -> Iterator[T | TimeoutError]:
+#     """Returns an iterator over the outputs of proc_func."""
+#     xerr(f"pcnt {process_cnt}")
+#     if process_cnt == 1:
+#         yield from iter(proc_func(ll) for ll in tqdm_.tqdm(inputs))
+#         return
 
-    if not total and isinstance(inputs, (list, tuple, set, dict)):
-        total = len(inputs)
+#     if not total and isinstance(inputs, (list, tuple, set, dict)):
+#         total = len(inputs)
 
-    from mpire import WorkerPool
+#     from mpire import WorkerPool
 
-    with WorkerPool(n_jobs=process_cnt) as pool:
-        yield from pool.imap(
-            proc_func,
-            inputs,
-            iterable_len=total,
-            task_timeout=timeout,
-            progress_bar=bool(tqdm),
-            progress_bar_options=dict(desc=tqdm) if isinstance(tqdm, str) else None,
-        )
+#     with WorkerPool(n_jobs=process_cnt) as pool:
+#         yield from pool.imap(
+#             proc_func,
+#             inputs,
+#             iterable_len=total,
+#             task_timeout=timeout,
+#             progress_bar=bool(tqdm),
+#             progress_bar_options=dict(desc=tqdm) if isinstance(tqdm, str) else None,
+#         )
 
 
 def parallel_process_items_processes_old(
@@ -1003,17 +1003,20 @@ def parallel_process_items_processes_old(
             pbar.update(1)
 
 
+InputType = TypeVar("InputType")
+
+
 def parallel_process_items_processes_new(
-    inputs: Iterable,
-    proc_func: Callable[[Any], T],
+    inputs: Iterable[InputType],
+    proc_func: Callable[[InputType], T],
     *,
-    process_cnt: Optional[int] = None,
+    process_cnt: int | None = None,
+    slice_cnt: int | None = None,
     tqdm: str | bool = True,
-    total: Optional[int] = None,
-    max_fail_cnt: int = 2,
-    preserve_order: bool = True,
+    total: int | None = None,
     timeout: int | None = None,
-) -> Iterator[T]:
+    max_fail_cnt: int = 20,
+) -> Iterator[tuple[InputType, T]]:
     """
     并行处理输入项并返回结果的迭代器。
 
@@ -1024,11 +1027,13 @@ def parallel_process_items_processes_new(
     - tqdm: 是否显示进度条。可以是布尔值或描述字符串。
     - total: 输入项的总数。如果未提供，且输入是序列类型，则自动计算。
     - max_fail_cnt: 允许的最大失败次数。超过后将抛出异常。
-    - preserve_order: 是否保留输入顺序。默认为 True。
     - timeout: 每个任务的超时时间（秒）。如果任务超时，将忽略该任务并计入失败次数。
 
     返回：
     - 结果的迭代器。
+
+    参考 https://github.com/alexwlchan/concurrently
+    concurrent学习 https://rednafi.com/python/concurrent_futures/
     """
     if process_cnt is None:
         process_cnt = os.cpu_count() or 1
@@ -1042,68 +1047,64 @@ def parallel_process_items_processes_new(
         total = len(inputs)
 
     fail_cnt = 0
-    from concurrent.futures import ProcessPoolExecutor, TimeoutError, as_completed
+    import concurrent
 
-    with ProcessPoolExecutor(max_workers=process_cnt) as executor:
-        if preserve_order:
-            # 提交所有任务并收集Future对象
-            futures = [executor.submit(proc_func, item) for item in inputs]
+    max_concurrency = slice_cnt or process_cnt
+    if max_concurrency < process_cnt:
+        xerr(f"slice cnt[{max_concurrency}] < process cnt[{process_cnt}]!, using {process_cnt}")
+        max_concurrency = process_cnt
 
-            if tqdm:
-                desc = tqdm if isinstance(tqdm, str) else None
-                progress_bar = tqdm.tqdm(futures, total=total, desc=desc)
-            else:
-                progress_bar = futures
+    desc = tqdm if isinstance(tqdm, str) else None
 
-            for future in progress_bar:
+    def output_failed_tasks(failed_tasks: list) -> None:
+        for i, (inp, e) in enumerate(failed_tasks):
+            xerr(f"============failed input {i}/{len(failed_tasks)}", inp)
+            traceback.print_exception(type(e), e, e.__traceback__, file=sys.stderr)
+
+    # Make sure we get a consistent iterator throughout, rather than
+    # getting the first element repeatedly.
+    handler_inputs = iter(inputs)
+
+    failed_tasks = []
+    suc_cnt = 0
+    with concurrent.futures.ProcessPoolExecutor(max_workers=process_cnt) as executor, tqdm_.tqdm(
+        total=total, desc=desc
+    ) as pbar:
+        futures = {
+            executor.submit(proc_func, input): input for input in itertools.islice(handler_inputs, max_concurrency)
+        }
+
+        while futures:
+            done, _ = concurrent.futures.wait(futures, return_when=concurrent.futures.FIRST_COMPLETED)
+            for fut in done:
+                original_input = futures.pop(fut)
+                pbar.update(1)
+
                 try:
-                    result = future.result(timeout=timeout)
-                    yield result
-                except TimeoutError:  # noqa: PERF203
+                    result = fut.result(timeout=timeout)
+                    suc_cnt += 1
+                    yield original_input, result
+                except TimeoutError as e:
                     fail_cnt += 1
-                    xerr(f"任务超时，已达到 {fail_cnt}/{max_fail_cnt} 次失败。")
-                    if fail_cnt > max_fail_cnt:
-                        xerr("超过最大失败次数，终止处理。")
-                        raise
-                    # 继续处理下一个任务
+                    xerr(f"任务超时，已达到 {fail_cnt}/{max_fail_cnt} 次失败。input: ", original_input)
+                    failed_tasks.append([original_input, e])
                 except Exception as e:
                     fail_cnt += 1
-                    xerr(f"任务失败 {fail_cnt}/{max_fail_cnt}: {e}")
+                    xerr(f"任务失败 {fail_cnt}/{max_fail_cnt}， input：", original_input)
                     traceback.print_exception(type(e), e, e.__traceback__, file=sys.stderr)
-                    if fail_cnt > max_fail_cnt:
-                        xerr("超过最大失败次数，终止处理。")
-                        raise
-                    # 继续处理下一个任务
+                    failed_tasks.append([original_input, e])
 
-        else:
-            # 不保留顺序，使用as_completed
-            futures_to_input = {executor.submit(proc_func, item): item for item in inputs}
+                if fail_cnt > max_fail_cnt:
+                    xerr("超过最大失败次数，终止处理。")
+                    output_failed_tasks(failed_tasks)
+                    raise
 
-            if tqdm:
-                desc = tqdm if isinstance(tqdm, str) else None
-                progress_bar = tqdm.tqdm(as_completed(futures_to_input), total=total, desc=desc)
-            else:
-                progress_bar = as_completed(futures_to_input)
-
-            for future in progress_bar:
-                try:
-                    result = future.result(timeout=timeout)
-                    yield result
-                except TimeoutError:  # noqa: PERF203
-                    fail_cnt += 1
-                    xerr(f"任务超时，已达到 {fail_cnt}/{max_fail_cnt} 次失败。")
-                    if fail_cnt > max_fail_cnt:
-                        xerr("超过最大失败次数，终止处理。")
-                        raise
-                    # 继续处理下一个任务
-                except Exception as e:
-                    fail_cnt += 1
-                    xerr(f"任务失败 {fail_cnt}/{max_fail_cnt}: {e}")
-                    traceback.print_exception(type(e), e, e.__traceback__, file=sys.stderr)
-                    if fail_cnt > max_fail_cnt:
-                        xerr("超过最大失败次数，终止处理。")
-                        raise
-                    # 继续处理下一个任务
+                yield original_input, result
+            for input in itertools.islice(handler_inputs, len(done)):
+                fut = executor.submit(proc_func, input)
+                futures[fut] = input
+        output_failed_tasks(failed_tasks)
+        xerr(f"{suc_cnt + len(failed_tasks)} tasks done: suc [{suc_cnt}], fail [{len(failed_tasks)}]")
 
 
 def parallel_process_items_threads(

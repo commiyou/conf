@@ -29,7 +29,20 @@ from contextlib import ExitStack
 from functools import partial, wraps
 from operator import itemgetter
 from pathlib import Path
-from typing import IO, Any, Callable, Literal, Optional, TypeAlias, TypeVar
+from typing import (
+    IO,
+    Any,
+    Callable,
+    Concatenate,
+    Literal,
+    NewType,
+    Optional,
+    ParamSpec,
+    Self,
+    TypeAlias,
+    TypeVar,
+    TypeVarTuple,
+)
 from urllib.parse import urlencode
 
 import funcy
@@ -37,16 +50,14 @@ import pandas as pd
 import requests
 import tqdm as tqdm_
 from bs4 import BeautifulSoup
-from requests.exceptions import RequestException
 from termcolor import colored
 
-# try:
-#     from rich.traceback import install as _tr_install
+T = TypeVar("T")
+R = TypeVar("R")
+Ts = TypeVarTuple("Ts")
+P = ParamSpec("P")
+Char = NewType("Char", str)
 
-#     _tr_install(show_locals=True, width=121)
-# except:
-#     with contextlib.suppress(Exception):
-#         from traceback_with_variables import activate_by_import
 
 with contextlib.suppress(Exception):
     from traceback_with_variables import activate_by_import
@@ -70,21 +81,7 @@ CH_PUNCTIONS = (
 )
 
 
-class MetaChar(type):
-    """for type hint"""
-
-    def __instancecheck__(cls, instance: str):
-        """check is cahr"""
-        return isinstance(instance, str) and len(instance) == 1
-
-
-class Char(str, metaclass=MetaChar):
-    """for type hint"""
-
-    __slots__ = ()
-
-
-def make_str(value: object) -> bytes:
+def make_str(value: Any) -> str:
     r"""Set/Map/Sequence to json str
 
     >>> make_str({1, 2, 3})
@@ -105,7 +102,7 @@ def make_str(value: object) -> bytes:
 
 
 def xprint(
-    *values: object,
+    *values: Any,
     suffix: str = "",
     sep: str = "\t",
     flush: bool = True,
@@ -120,8 +117,8 @@ def xprint(
     if file is None:
         file = sys.stdout
     end = suffix + "\n"
-    values = [make_str(value) for value in values]
-    out = sep.join(values) + end
+    values_str = [make_str(value) for value in values]
+    out = sep.join(values_str) + end
     out = color_text_if_atty(out, color)
     file.buffer.write(out.encode(encoding))
     if flush:
@@ -160,12 +157,12 @@ def in_debug() -> bool:
 
 def get_caller_name(level: int = 1) -> str:
     """获取callaer name, level 为0时代表自身"""
-    caller_frame = sys._getframe(level + 1)
+    caller_frame = sys._getframe(level + 1)  # noqa: SLF001
     function_name = caller_frame.f_code.co_name
     return function_name
 
 
-def _is_literal(s: Any) -> bool:  # noqa: ANN401
+def _is_literal(s: Any) -> bool:
     """是否是字面值"""
     try:
         ast.literal_eval(s)
@@ -209,12 +206,15 @@ def xvar(
     color: Literal["red", "blue", "green"] | None = None,
     force_debug: bool = False,
 ) -> None:
-    """Output in debug mode."""
+    """Output var and var's name in debug mode.
+
+    参考 https://github.com/gruns/icecream/blob/master/icecream/icecream.py#L88
+    """
     if not force_debug and not in_debug():
         return
     import executing
 
-    caller_frame = sys._getframe(1)
+    caller_frame = sys._getframe(1)  # noqa: SLF001
     function_name = caller_frame.f_code.co_name
     prefix = f"DEBUG: {function_name}"
 
@@ -271,7 +271,7 @@ def xdebug(
     """处于debug模式时，输出"""
     if not force_debug and not in_debug():
         return
-    caller_frame = sys._getframe(1)
+    caller_frame = sys._getframe(1)  # noqa: SLF001
     function_name = caller_frame.f_code.co_name
     prefix = f"DEBUG: {function_name}"
     if sys.stdout.isatty() and not color:
@@ -287,10 +287,10 @@ def xdebug(
     )
 
 
-__dd_xcount = collections.defaultdict(int)
+__dd_xcount: dict[Any, int] = collections.defaultdict(int)
 
 
-def xcount(key: str, *args: object, **kwargs: object) -> None:
+def xcount(key: str, *args: P.args, **kwargs: P.kwargs) -> None:
     """debug key的出现次数"""
     __dd_xcount[key] += 1
     xdebug(f"{key}:count:{__dd_xcount[key]}", *args, **kwargs)
@@ -299,7 +299,7 @@ def xcount(key: str, *args: object, **kwargs: object) -> None:
 __dd_xonce = set()
 
 
-def xonce(key: str, *args: object, **kwargs: object) -> None:
+def xonce(key: str, *args: P.args, **kwargs: P.kwargs) -> None:
     """对每个key只debug一次"""
     if key not in __dd_xonce:
         __dd_xonce.add(key)
@@ -325,7 +325,7 @@ def is_chinese_char(uchar: Char) -> bool:
 
 def contain_chinese(s: str) -> bool:
     """是否包含中文字符，标点符号不算"""
-    return any(is_chinese_char(ch) for ch in s)
+    return any(is_chinese_char(Char(ch)) for ch in s)
 
 
 def is_chinese_or_alnum(uchar: Char) -> bool:
@@ -345,13 +345,15 @@ def is_chinese_or_alnum(uchar: Char) -> bool:
     return False
 
 
-def norm_line(line: str) -> str:
+def norm_line(line: T) -> T:
     r"""使用正则表达式替换多个空白符为单个空格, 去前后空白符
 
     >>> norm_line("1  2\n")
     '1 2'
     """
-    return re.sub(r"\s+", " ", line).strip()
+    if isinstance(line, str):
+        return re.sub(r"\s+", " ", line).strip()
+    return line
 
 
 trim_term = norm_line
@@ -453,7 +455,8 @@ def read_file(  # noqa: C901, PLR0912
     input_: file name/path or io; excel时，返回的每一列都是str
     """
     if isinstance(input_, (str, Path)) and skip_notexists and not os.path.exists(input_):
-        return iter([])  # noqa: B901
+        yield []
+        return
 
     if isinstance(input_, str) and input_.endswith(".xlsx"):
         df = pd.read_excel(input_, dtype=str)
@@ -609,13 +612,6 @@ def list_to_dict(
     return funcy.walk_values(value_accumulate_func, result)
 
 
-_has_pydantic = False
-with contextlib.suppress(Exception):
-    import pydantic
-
-    _has_pydantic = True
-
-
 class JsonCustomEncoder(json.JSONEncoder):
     """支持set、datacalss"""
 
@@ -627,7 +623,7 @@ class JsonCustomEncoder(json.JSONEncoder):
             return str(o)
         if dataclasses.is_dataclass(o):
             return dataclasses.asdict(o)
-        if _has_pydantic:
+        if hasattr(o, "model_dump") and callable(o.model_dump):
             with contextlib.suppress(Exception):
                 return o.model_dump()
         return json.JSONEncoder.default(self, o)
@@ -734,7 +730,7 @@ class RedirectStdoutToFile(contextlib.ContextDecorator):
         self.fname = tpl.format(fname) if fname else None
         self.mode = mode
 
-    def __enter__(self) -> None:
+    def __enter__(self) -> IO[Any]:
         """enter"""
         if self.fname is not None:
             self.file = open(self.fname, self.mode)
@@ -874,17 +870,21 @@ def timestamp(fmt: str = "%Y%m%d%H%M%S") -> str:
     return ts
 
 
-def date(ts: str | int | None = None, fmt: str = "%Y-%m-%d") -> str:
-    """return current local datetime from ts"""
+def date(
+    ts: str | int | None = None,
+    fmt: str = "%Y-%m-%d",
+    tz: datetime.timezone | None = None,
+) -> str:
+    """return current local datetime from ts with default timezone"""
 
-    ts = time.time() if ts is None or ts == 0 else int(ts)
-    dt_object = datetime.datetime.fromtimestamp(ts)  # noqa: DTZ006
+    if tz is None:
+        tz = datetime.datetime.now().astimezone().tzinfo
+
+    ts_int = time.time() if ts is None or ts == 0 else int(ts)
+    dt_object = datetime.datetime.fromtimestamp(ts_int, tz)
     formatted_time = dt_object.strftime(fmt)
 
     return formatted_time
-
-
-T = TypeVar("T")
 
 
 def stop_function() -> None:
@@ -892,12 +892,14 @@ def stop_function() -> None:
     os.kill(os.getpid(), signal.SIGINT)
 
 
-def stopit_after_timeout(seconds: float, raise_exception: bool = True) -> Callable[[T], T]:
+def stopit_after_timeout(
+    seconds: float, raise_exception: bool = True
+) -> Callable[[Callable[P, R]], Callable[P, R | str]]:
     """decorator 超时停止函数"""
 
-    def actual_decorator(func: T) -> T:
+    def actual_decorator(func: Callable[P, R]) -> Callable[P, R | str]:
         @functools.wraps(func)
-        def wrapper(*args: Any, **kwargs: Any) -> Any:
+        def wrapper(*args: P.args, **kwargs: P.kwargs) -> R | str:
             timer = threading.Timer(seconds, stop_function)
             try:
                 timer.start()
@@ -948,7 +950,7 @@ def stopit_after_timeout(seconds: float, raise_exception: bool = True) -> Callab
 #         )
 
 
-def parallel_process_items_processes_old(
+def parallel_process_items_processes(
     inputs: Iterable,
     proc_func: Callable[..., T],
     *,
@@ -968,6 +970,10 @@ def parallel_process_items_processes_old(
         total = len(inputs)
 
     from multiprocessing import Pool
+
+    # INFO:  fork will hung for lock
+    # https://pythonspeed.com/articles/python-multiprocessing/
+    multiprocessing.set_start_method("spawn")
 
     # with Pool(processes=process_cnt) as pool:
     #     yield from tqdm_.tqdm(
@@ -1003,12 +1009,9 @@ def parallel_process_items_processes_old(
             pbar.update(1)
 
 
-InputType = TypeVar("InputType")
-
-
 def parallel_process_items_processes_new(
-    inputs: Iterable[InputType],
-    proc_func: Callable[[InputType], T],
+    inputs: Iterable[tuple[*Ts]],
+    proc_func: Callable[[*Ts], T],
     *,
     process_cnt: int | None = None,
     slice_cnt: int | None = None,
@@ -1016,7 +1019,7 @@ def parallel_process_items_processes_new(
     total: int | None = None,
     timeout: int | None = None,
     max_fail_cnt: int = 20,
-) -> Iterator[tuple[InputType, T]]:
+) -> Iterator[tuple[tuple[*Ts], T]]:
     """
     并行处理输入项并返回结果的迭代器。
 
@@ -1034,13 +1037,16 @@ def parallel_process_items_processes_new(
 
     参考 https://github.com/alexwlchan/concurrently
     concurrent学习 https://rednafi.com/python/concurrent_futures/
+
+    多进程共享variable，参考multiprocessing.Manager
+
     """
     if process_cnt is None:
         process_cnt = os.cpu_count() or 1
 
     xerr(f"pcnt {process_cnt}")
     if process_cnt == 1:
-        yield from iter(proc_func(ll) for ll in tqdm_.tqdm(inputs))
+        yield from iter((ll, proc_func(*ll)) for ll in tqdm_.tqdm(inputs))
         return
 
     if not total and isinstance(inputs, (list, tuple, set, dict)):
@@ -1048,6 +1054,7 @@ def parallel_process_items_processes_new(
 
     fail_cnt = 0
     import concurrent
+    import multiprocessing
 
     max_concurrency = slice_cnt or process_cnt
     if max_concurrency < process_cnt:
@@ -1067,11 +1074,14 @@ def parallel_process_items_processes_new(
 
     failed_tasks = []
     suc_cnt = 0
-    with concurrent.futures.ProcessPoolExecutor(max_workers=process_cnt) as executor, tqdm_.tqdm(
-        total=total, desc=desc
-    ) as pbar:
+    with concurrent.futures.ProcessPoolExecutor(
+        max_workers=process_cnt,
+        mp_context=multiprocessing.get_context(
+            "spawn"
+        ),  # fix hang  https://pythonspeed.com/articles/python-multiprocessing/
+    ) as executor, tqdm_.tqdm(total=total, desc=desc) as pbar:
         futures = {
-            executor.submit(proc_func, input): input for input in itertools.islice(handler_inputs, max_concurrency)
+            executor.submit(proc_func, *input): input for input in itertools.islice(handler_inputs, max_concurrency)
         }
 
         while futures:
@@ -1086,23 +1096,32 @@ def parallel_process_items_processes_new(
                     yield original_input, result
                 except TimeoutError as e:
                     fail_cnt += 1
+                    failed_tasks.append((original_input, e))
                     xerr(f"任务超时，已达到 {fail_cnt}/{max_fail_cnt} 次失败。input: ", original_input)
-                    failed_tasks.append([original_input, e])
+                    if fail_cnt > max_fail_cnt:
+                        xerr("超过最大失败次数，终止处理。")
+                        output_failed_tasks(failed_tasks)
+                        raise
                 except Exception as e:
                     fail_cnt += 1
                     xerr(f"任务失败 {fail_cnt}/{max_fail_cnt}， input：", original_input)
                     traceback.print_exception(type(e), e, e.__traceback__, file=sys.stderr)
-                    failed_tasks.append([original_input, e])
+                    failed_tasks.append((original_input, e))
+                    if fail_cnt > max_fail_cnt:
+                        xerr("超过最大失败次数，终止处理。")
+                        output_failed_tasks(failed_tasks)
+                        raise
+                    # TODO:  yeild Exception
+                try:
+                    input = next(handler_inputs)
+                except StopIteration:
+                    continue
+                new_future = executor.submit(proc_func, *input)
+                futures[new_future] = input
 
-                if fail_cnt > max_fail_cnt:
-                    xerr("超过最大失败次数，终止处理。")
-                    output_failed_tasks(failed_tasks)
-                    raise
-
-                yield original_input, result
-            for input in itertools.islice(handler_inputs, len(done)):
-                fut = executor.submit(proc_func, input)
-                futures[fut] = input
+            # for input in itertools.islice(handler_inputs, len(done)):
+            #     fut = executor.submit(proc_func, *input)
+            #     futures[fut] = input
         output_failed_tasks(failed_tasks)
         xerr(f"{suc_cnt + len(failed_tasks)} tasks done: suc [{suc_cnt}], fail [{len(failed_tasks)}]")
 
@@ -1139,13 +1158,7 @@ def parallel_process_items_threads(
             yield it
 
 
-def parallel_run_helper(func, ll: list, *args, **kws):  # noqa: ANN001, ANN002, ANN003, ANN201
-    """helper"""
-    ret = func(*args, **kws)
-    return ll, ret
-
-
-def starmap_func(func, ll: list, *args, **kws):  # noqa: ANN001, ANN002, ANN003, ANN201
+def parallel_run_helper(func: Callable[P, R], ll: T, *args: P.args, **kws: P.kwargs) -> tuple[T, R]:
     """helper"""
     ret = func(*args, **kws)
     return ll, ret
@@ -1186,7 +1199,13 @@ def join_with_delim(s1: str, s2: str, delim: str = ".") -> str:
     return f"{s1}{s2}"
 
 
-def new_filename(fpath: str | None, *, prefix: str = "", suffix: str = "", force: bool = False) -> None:
+def new_filename(
+    fpath: str | None,
+    *,
+    prefix: str = "",
+    suffix: str = "",
+    force: bool = False,
+) -> str | None:
     """新文件名
 
     >>> new_filename("1.tsv", prefix="2", suffix="3")
@@ -1277,10 +1296,7 @@ class TermMatcher:
             yield original_term, (start_index, end_index, matched_term)
 
 
-AnyType: TypeAlias = Any
-
-
-def jpath(js: dict, path: str, default: AnyType = None) -> list | AnyType:
+def jpath(js: dict, path: str, default: Any = None) -> list | Any:
     """从json中抽取value, 如 $.Result[*].DisplayData"""
     from jsonpath_ng import jsonpath, parse
 
@@ -1292,24 +1308,22 @@ def jpath(js: dict, path: str, default: AnyType = None) -> list | AnyType:
     return ret
 
 
-__IGNORE_CNT = collections.defaultdict(int)
+__IGNORE_CNT: dict[Any, int] = collections.defaultdict(int)
 
 
 def ignore(
     errors: Exception | tuple[Exception, ...] = Exception,
-    default: object = None,
+    default: T | None = None,
     max_error_cnt: int = 3,
-) -> Callable:
+) -> Callable[[Callable[P, R]], Callable[P, R | T]]:
     """specify errors to catch and default to return in case of error caught
 
     errors can either be exception class or a tuple of them.
     """
 
-    # global __IGNORE_CNT
-
-    def decorator(func):  # noqa: ANN001, ANN202
+    def decorator(func: Callable[P, R]) -> Callable[P, R | T]:
         @functools.wraps(func)
-        def wrapper(*args, **kwargs):  # noqa: ANN002, ANN003, ANN202
+        def wrapper(*args: P.args, **kwargs: P.kwargs) -> R | T:
             try:
                 return func(*args, **kwargs)
             except errors:
@@ -1324,8 +1338,8 @@ def ignore(
 
 
 @funcy.decorator
-def with_ofname(  # noqa: ANN201
-    call,  # noqa: ANN001
+def with_ofname(
+    call: Callable,
     *,
     ofname: str | None = None,
     prefix: str = "",
@@ -1398,7 +1412,7 @@ def doctest() -> None:
     doctest.testmod(verbose=False)
 
 
-def urlencode_params(**params: dict[str, any]) -> str:
+def urlencode_params(**params: dict[str, Any]) -> str:
     """返回 URLencode后的参数"""
     return urlencode(params)
 
@@ -1412,7 +1426,7 @@ def md5(input_string: str) -> str:
 
 def fcache(
     cache_dir: str, ignore_empty_result: bool = True, *args: object, **kwargs: object
-) -> Callable[[Callable[..., T]], Callable[..., T]]:
+) -> Callable[[Callable[P, T]], Callable[P, T]]:
     """diskcache for function
 
     https://grantjenks.com/docs/diskcache/api.html#diskcache.FanoutCache.memoize
@@ -1431,11 +1445,11 @@ def fcache(
 
         atexit.register(cache.close)
 
-        def decorator(func: Callable[..., T]) -> Callable[..., T]:
+        def decorator(func: Callable[P, T]) -> Callable[P, T]:
             memoized_func = cache.memoize(*args, **kwargs)(func)
 
             @functools.wraps(func)
-            def wrapper(*func_args: object, **func_kwargs: object) -> T:
+            def wrapper(*func_args: P.args, **func_kwargs: P.kwargs) -> T:
                 result: T = memoized_func(*func_args, **func_kwargs)
 
                 # Check if we should ignore caching for empty results
@@ -1457,7 +1471,7 @@ def fcache_op(
     op: Literal["clear", "check", "get", "set", "pop", "len", "peekitem"],
     *args: str,
     **kwargs: Any,
-) -> Any:  # noqa: ANN401
+) -> Any:
     """操作fcache对应
 
     https://grantjenks.com/docs/diskcache/api.html#diskcache.Cache.peekitem
@@ -1494,12 +1508,28 @@ def b64decode(s: str, *, encoding: str = "utf8", ignore_exception: bool = False)
         raise
 
 
-def may_from_stdin(arg: str) -> Callable:
-    """如果arg为None，读取stdin的输入作为其值"""
+def may_from_stdin(arg: str) -> Callable[[Callable[P, R]], Callable[P, R]]:
+    """
+    如果指定的参数为None，则从标准输入读取其值。
 
-    def decorate(f: Callable) -> Callable:
+    参数:
+        arg (str): 需要检查的参数名称。
+
+    返回:
+        Callable: 包装后的装饰器函数。
+
+
+    @may_from_stdin('username')
+    def greet(username: str) -> None:
+        print(f"Hello, {username}!")
+
+    # 如果调用时未提供 `username` 参数，将会从标准输入读取
+    greet()
+    """
+
+    def decorate(f: Callable[P, R]) -> Callable[P, R]:
         @wraps(f)
-        def wrapped(*args, **kwargs: str) -> Callable:  # noqa: ANN002
+        def wrapped(*args: P.args, **kwargs: P.kwargs) -> R:
             # 获取函数的参数信息
             sig = inspect.signature(f)
             bound_args = sig.bind(*args, **kwargs)
@@ -1552,7 +1582,7 @@ def fetch_url(
     # Determine which proxy to use
     proxies = None
     if proxy:
-        if "," in proxy:
+        if isinstance(proxy, str) and "," in proxy:
             proxy = proxy.split(",")
         selected_proxy = random.choice(proxy) if isinstance(proxy, list) else proxy
 
@@ -1561,7 +1591,7 @@ def fetch_url(
     for attempt in range(retry_cnt):
         try:
             if method == "get":
-                response = requests.get(url, timeout=timeout, proxies=proxies, params=params, **kwargs)
+                response = requests.get(url, timeout=timeout, proxies=proxies, params=params, verify=False, **kwargs)
             elif method == "post":
                 response = requests.post(
                     url,
@@ -1584,7 +1614,7 @@ def fetch_url(
                 h = html2text.HTML2Text()
                 return h.handle(response.text)
 
-        except (RequestException, ValueError) as e:  # noqa: PERF203
+        except (requests.exceptions.RequestException, ValueError) as e:  # noqa: PERF203
             xerr(f"Attempt {attempt + 1} failed: {e}")
             if attempt < retry_cnt - 1:
                 time.sleep(2**attempt)  # Exponential backoff
@@ -1604,9 +1634,9 @@ def retry(
     :param backoff: backoff multiplier e.g. value of 2 will double the delay each retry
     """
 
-    def deco_retry(f: Callable) -> Callable:
+    def deco_retry(f: Callable[P, R]) -> Callable[P, R]:
         @functools.wraps(f)
-        def f_retry(*args: object, **kwargs: object):
+        def f_retry(*args: P.args, **kwargs: P.kwargs) -> R:
             mtries, mdelay = tries, delay
             while mtries > 0:
                 try:
@@ -1621,6 +1651,22 @@ def retry(
         return f_retry  # true decorator
 
     return deco_retry
+
+
+def get_defaultdict(depth: int = 1, default_factory: Callable[[], T] = int) -> collections.defaultdict:
+    """创建多层级的defaultdict.
+
+    :param depth: 要创建的嵌套defaultdict的层数
+    :param default_factory: 最底层defaultdict的默认工厂函数，默认为int
+    :return: 嵌套的defaultdict
+    """
+    if depth < 1:
+        raise ValueError("depth必须是一个正整数")
+
+    if depth == 1:
+        return collections.defaultdict(default_factory)
+    else:
+        return collections.defaultdict(lambda: get_defaultdict(depth - 1, default_factory))
 
 
 if __name__ == "__main__":

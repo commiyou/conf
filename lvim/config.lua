@@ -199,26 +199,45 @@ require("nvim-treesitter.install").prefer_git = true
 
 -- ---remove a server from the skipped list, e.g. eslint, or emmet_ls. !!Requires `:LvimCacheReset` to take effect!!
 -- ---`:LvimInfo` lists which server(s) are skiipped for the current filetype
--- vim.tbl_map(function(server)
---   return server ~= "emmet_ls"
--- end, lvim.lsp.automatic_configuration.skipped_servers)
+vim.list_extend(lvim.lsp.automatic_configuration.skipped_servers, { "pyright" })
 
--- -- you can set a custom on_attach function that will be used for all the language servers
--- -- See <https://github.com/neovim/nvim-lspconfig#keybindings-and-completion>
--- lvim.lsp.on_attach_callback = function(client, bufnr)
---   local function buf_set_option(...)
---     vim.api.nvim_buf_set_option(bufnr, ...)
---   end
---   --Enable completion triggered by <c-x><c-o>
---   buf_set_option("omnifunc", "v:lua.vim.lsp.omnifunc")
--- end
 
---local linters = require "lvim.lsp.null-ls.linters"
---linters.setup { { command = "pyright", filetypes = { "python" } } }
---
+local pyright_opts = {
+  single_file_support = true,
+  settings = {
+    pyright = {
+      disableLanguageServices = false,
+      disableOrganizeImports = false
+    },
+    python = {
+      analysis = {
+        autoImportCompletions = true,
+        autoSearchPaths = true,
+        diagnosticMode = "openFilesOnly", -- openFilesOnly, workspace
+        typeCheckingMode = "off",         -- off, basic, strict
+        useLibraryCodeForTypes = true
+      }
+    }
+  },
+}
+
+require("lvim.lsp.manager").setup("pyright", pyright_opts)
+
+local linters = require "lvim.lsp.null-ls.linters"
+linters.setup {
+  { command = "mypy", extra_args = { "--ignore-missing-imports", "--follow-imports", "silent", }, filetypes = { "python" } },
+}
 require("null-ls").setup({
   debug = false,
 })
+
+
+-- local formatters = require "lvim.lsp.null-ls.formatters"
+-- formatters.setup {
+--   { name = "ruff", extra_args = { "check", "--fix" }, filetypes = { "python" } },
+--   --{ name = "black" },
+-- }
+
 
 -- :LvimCacheReset
 -- vim.list_extend(lvim.lsp.automatic_configuration.skipped_servers, { "pyright" })
@@ -1171,6 +1190,59 @@ lvim.plugins = {
       },
 
     },
+    config = function()
+      -- copy from https://github.com/yetone/avante.nvim/wiki/Recipe-and-Tricks
+      local prefill_edit_window = function(request)
+        require('avante.api').edit()
+        local code_bufnr = vim.api.nvim_get_current_buf()
+        local code_winid = vim.api.nvim_get_current_win()
+        if code_bufnr == nil or code_winid == nil then
+          return
+        end
+        vim.api.nvim_buf_set_lines(code_bufnr, 0, -1, false, { request })
+        -- Optionally set the cursor position to the end of the input
+        vim.api.nvim_win_set_cursor(code_winid, { 1, #request + 1 })
+        -- Simulate Ctrl+S keypress to submit
+        vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes('<C-s>', true, true, true), 'v', true)
+      end
+      local avante_code_readability_analysis = [[
+  You must identify any readability issues in the code snippet.
+  Some readability issues to consider:
+  - Unclear naming
+  - Unclear purpose
+  - Redundant or obvious comments
+  - Lack of comments
+  - Long or complex one liners
+  - Too much nesting
+  - Long variable names
+  - Inconsistent naming and code style.
+  - Code repetition
+  You may identify additional problems. The user submits a small section of code from a larger file.
+  Only list lines with readability issues, in the format <line_num>|<issue and proposed solution>
+  If there's no issues with code respond with only: <OK>
+]]
+      local avante_optimize_code = 'Optimize the following code'
+      local avante_explain_code = 'Explain the following code'
+      local avante_complete_code = 'Complete the following codes written in ' .. vim.bo.filetype
+      local avante_add_docstring = 'Add docstring to the following codes'
+      local avante_fix_bugs = 'Fix the bugs inside the following codes if any'
+      local avante_add_tests = 'Implement tests for the following code'
+      lvim.builtin.which_key.mappings["a"] = {
+        name = "Avante", -- Group name
+        l = { function() require('avante.api').ask { question = avante_code_readability_analysis } end, "Code Readability Analysis(ask)" },
+        o = { function() require('avante.api').ask { question = avante_optimize_code } end, "Optimize Code(ask)" },
+        x = { function() require('avante.api').ask { question = avante_explain_code } end, "Explain Code(ask)" },
+        c = { function() require('avante.api').ask { question = avante_complete_code } end, "Complete Code(ask)" },
+        d = { function() require('avante.api').ask { question = avante_add_docstring } end, "Docstring(ask)" },
+        b = { function() require('avante.api').ask { question = avante_fix_bugs } end, "Fix Bugs(ask)" },
+        u = { function() require('avante.api').ask { question = avante_add_tests } end, "Add Tests(ask)" },
+        O = { function() prefill_edit_window(avante_optimize_code) end, "Optimize Code(edit)" },
+        C = { function() prefill_edit_window(avante_complete_code) end, "Complete Code(edit)" },
+        D = { function() prefill_edit_window(avante_add_docstring) end, "Docstring(edit)" },
+        B = { function() prefill_edit_window(avante_fix_bugs) end, "Fix Bugs(edit)" },
+        U = { function() prefill_edit_window(avante_add_tests) end, "Add Tests(edit)" },
+      }
+    end,
     keys = function(_, keys)
       ---@type avante.Config
       local opts =
@@ -1206,6 +1278,7 @@ lvim.plugins = {
       "nvim-treesitter/nvim-treesitter",
       "stevearc/dressing.nvim",
       "nvim-lua/plenary.nvim",
+      "folke/which-key.nvim",
       "MunifTanjim/nui.nvim",
       --- The below dependencies are optional,
       "nvim-tree/nvim-web-devicons", -- or echasnovski/mini.icons

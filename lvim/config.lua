@@ -9,21 +9,6 @@ lvim.use_icons = false
 
 -- keymappings [view all the defaults by pressing <leader>Lk]
 lvim.leader = "space"
--- add your own keymapping
-lvim.keys.normal_mode["H"] = ":BufferLineCyclePrev<cr>"
-lvim.keys.normal_mode["L"] = ":BufferLineCycleNext<cr>"
-lvim.keys.normal_mode["<C-s>"] = ":w<cr>"
-lvim.keys.normal_mode["<C-b>"] = "<left>"
-lvim.keys.normal_mode["<C-f>"] = "<right>"
-
-lvim.keys.normal_mode["<c-g>"] = "1<c-g>"
-lvim.keys.normal_mode["0"] = "^"
--- :h cmdline-editing,  <c-f>
-vim.cmd([[
-nnoremap <expr> n  'Nn'[v:searchforward]
-nnoremap <expr> N  'nN'[v:searchforward]
-]])
-
 
 lvim.builtin.telescope.defaults.layout_config.width = 0.7
 lvim.builtin.telescope.defaults.layout_config.preview_cutoff = 75
@@ -344,13 +329,13 @@ lvim.plugins = {
     'nvim-pack/nvim-spectre', -- :Spectre, search and replace
     dependencies = { "nvim-lua/plenary.nvim" }
   },
-  {
-    'echasnovski/mini.ai', -- text obj,
-    version = false,
-    config = function()
-      require('mini.ai').setup()
-    end
-  },
+  -- {
+  --   'echasnovski/mini.ai', -- text obj,
+  --   version = false,
+  --   config = function()
+  --     require('mini.ai').setup()
+  --   end
+  -- },
   {
     "whiteinge/diffconflicts",
   }, -- :DiffConflicts
@@ -456,6 +441,8 @@ lvim.plugins = {
   },
   {
     "smjonas/inc-rename.nvim",
+    commit = '8ba77017ca468f3029bf88ef409c2d20476ea66b',
+    event = 'VeryLazy',
     config = function()
       require("inc_rename").setup({
         input_buffer_type = "dressing",
@@ -489,6 +476,8 @@ lvim.plugins = {
     -- dependencies = { 'kkharji/sqlite.lua' }
     config = function()
       require('legendary').setup({ extensions = { lazy_nvim = true } })
+      lvim.builtin.which_key.mappings["C"] = { "<cmd>lua require('legendary').find('commands')<cr>", " Command Palette" }
+      lvim.keys.normal_mode["<c-P>"] = "<cmd>lua require('legendary').find()<cr>"
     end
   },
   {
@@ -580,6 +569,14 @@ lvim.plugins = {
           }
         }
       })
+
+      lvim.builtin.which_key.mappings["n"] = {
+        name = " Neogen",
+        c = { "<cmd>lua require('neogen').generate({ type = 'class'})<CR>", "Class Documentation" },
+        f = { "<cmd>lua require('neogen').generate({ type = 'func'})<CR>", "Function Documentation" },
+        t = { "<cmd>lua require('neogen').generate({ type = 'type'})<CR>", "Type Documentation" },
+        F = { "<cmd>lua require('neogen').generate({ type = 'file'})<CR>", "File Documentation" },
+      }
     end
   },
   { "ConradIrwin/vim-bracketed-paste" }, -- automatic `:set paste`
@@ -950,7 +947,34 @@ lvim.plugins = {
 
   {
     "sindrets/diffview.nvim",
-    dependencies = "nvim-lua/plenary.nvim"
+    dependencies = "nvim-lua/plenary.nvim",
+    config = function()
+      local status_ok, diff = pcall(require, "diffview")
+      if not status_ok then
+        return
+      end
+
+      lvim.builtin.which_key.mappings["gd"] = { "<cmd>DiffviewOpen<cr>", "diffview: diff HEAD" }
+      lvim.builtin.which_key.mappings["gh"] = { "<cmd>DiffviewFileHistory<cr>", "diffview: filehistory" }
+      diff.setup {
+        default_args = {
+          DiffviewFileHistory = { "%" },
+        },
+        hooks = {
+          diff_buf_read = function()
+            vim.wo.wrap = false
+            vim.wo.list = false
+            vim.wo.colorcolumn = ""
+          end,
+        },
+        enhanced_diff_hl = true,
+        keymaps = {
+          view = { q = "<Cmd>DiffviewClose<CR>" },
+          file_panel = { q = "<Cmd>DiffviewClose<CR>" },
+          file_history_panel = { q = "<Cmd>DiffviewClose<CR>" },
+        },
+      }
+    end
   },
   -- {
   --   -- https://github.com/sQVe/sort.nvim
@@ -1193,125 +1217,72 @@ lvim.plugins = {
         temperature = 0,
         max_tokens = 4096,
       },
-      mappings = {
-        -- :checkhealth which-key
-        -- https://github.com/yetone/avante.nvim/blob/main/lua/avante/config.lua
-        ask = "<leader>aa",
-        edit = "<leader>ae",
-        refresh = "<leader>ar",
-        focus = "<leader>af",
-        toggle = {
-          default = "<leader>at",
-          debug = "<leader>ad",
-          hint = "<leader>ah",
-          suggestion = "<leader>as",
-          repomap = "<leader>aR",
-        },
-        sidebar = {
-          apply_all = "gA",
-          apply_cursor = "ga",
-          switch_windows = "<Tab>",
-          reverse_switch_windows = "<S-Tab>",
-        },
-        suggestion = {
-          accept = "<M-l>",
-          next = "<M-]>",
-          prev = "<M-[>",
-          dismiss = "<C-]>",
-        },
-      },
-      diff = {
-        ours = "co",
-        theirs = "ct",
-        all_theirs = "ca",
-        both = "cb",
-        cursor = "cc",
-        next = "]x",
-        prev = "[x",
-      },
+      -- mappings = {
+      --   -- :checkhealth which-key
+      --   -- https://github.com/yetone/avante.nvim/blob/main/lua/avante/config.lua
+      --   ask = "<leader>aa",
+      --   edit = "<leader>ae",
+      --   refresh = "<leader>ar",
+      --   focus = "<leader>af",
+      --   toggle = {
+      --     default = "<leader>at",
+      --     debug = "<leader>ad",
+      --     hint = "<leader>ah",
+      --     suggestion = "<leader>as",
+      --     repomap = "<leader>aR",
+      --   },
+      --   sidebar = {
+      --     apply_all = "gA",
+      --     apply_cursor = "ga",
+      --     switch_windows = "<Tab>",
+      --     reverse_switch_windows = "<S-Tab>",
+      --   },
+      --   suggestion = {
+      --     accept = "<M-l>",
+      --     next = "<M-]>",
+      --     prev = "<M-[>",
+      --     dismiss = "<C-]>",
+      --   },
+      -- },
+      -- diff = {
+      --   ours = "co",
+      --   theirs = "ct",
+      --   all_theirs = "ca",
+      --   both = "cb",
+      --   cursor = "cc",
+      --   next = "]x",
+      --   prev = "[x",
+      -- },
 
     },
-    config = function()
-      -- copy from https://github.com/yetone/avante.nvim/wiki/Recipe-and-Tricks
-      local prefill_edit_window = function(request)
-        require('avante.api').edit()
-        local code_bufnr = vim.api.nvim_get_current_buf()
-        local code_winid = vim.api.nvim_get_current_win()
-        if code_bufnr == nil or code_winid == nil then
-          return
-        end
-        vim.api.nvim_buf_set_lines(code_bufnr, 0, -1, false, { request })
-        -- Optionally set the cursor position to the end of the input
-        vim.api.nvim_win_set_cursor(code_winid, { 1, #request + 1 })
-        -- Simulate Ctrl+S keypress to submit
-        vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes('<C-s>', true, true, true), 'v', true)
-      end
-      local avante_code_readability_analysis = [[
-  You must identify any readability issues in the code snippet.
-  Some readability issues to consider:
-  - Unclear naming
-  - Unclear purpose
-  - Redundant or obvious comments
-  - Lack of comments
-  - Long or complex one liners
-  - Too much nesting
-  - Long variable names
-  - Inconsistent naming and code style.
-  - Code repetition
-  You may identify additional problems. The user submits a small section of code from a larger file.
-  Only list lines with readability issues, in the format <line_num>|<issue and proposed solution>
-  If there's no issues with code respond with only: <OK>
-]]
-      local avante_optimize_code = 'Optimize the following code'
-      local avante_explain_code = 'Explain the following code'
-      local avante_complete_code = 'Complete the following codes written in ' .. vim.bo.filetype
-      local avante_add_docstring = 'Add docstring to the following codes'
-      local avante_fix_bugs = 'Fix the bugs inside the following codes if any'
-      local avante_add_tests = 'Implement tests for the following code'
-      lvim.builtin.which_key.mappings["a"] = {
-        name = "Avante", -- Group name
-        l = { function() require('avante.api').ask { question = avante_code_readability_analysis } end, "Code Readability Analysis(ask)" },
-        o = { function() require('avante.api').ask { question = avante_optimize_code } end, "Optimize Code(ask)" },
-        x = { function() require('avante.api').ask { question = avante_explain_code } end, "Explain Code(ask)" },
-        c = { function() require('avante.api').ask { question = avante_complete_code } end, "Complete Code(ask)" },
-        d = { function() require('avante.api').ask { question = avante_add_docstring } end, "Docstring(ask)" },
-        b = { function() require('avante.api').ask { question = avante_fix_bugs } end, "Fix Bugs(ask)" },
-        u = { function() require('avante.api').ask { question = avante_add_tests } end, "Add Tests(ask)" },
-        O = { function() prefill_edit_window(avante_optimize_code) end, "Optimize Code(edit)" },
-        C = { function() prefill_edit_window(avante_complete_code) end, "Complete Code(edit)" },
-        D = { function() prefill_edit_window(avante_add_docstring) end, "Docstring(edit)" },
-        B = { function() prefill_edit_window(avante_fix_bugs) end, "Fix Bugs(edit)" },
-        U = { function() prefill_edit_window(avante_add_tests) end, "Add Tests(edit)" },
-      }
-    end,
-    keys = function(_, keys)
-      ---@type avante.Config
-      local opts =
-          require("lazy.core.plugin").values(require("lazy.core.config").spec.plugins["avante.nvim"], "opts", false)
+    -- keys = function(_, keys)
+    --   ---@type avante.Config
+    --   local opts =
+    --       require("lazy.core.plugin").values(require("lazy.core.config").spec.plugins["avante.nvim"], "opts", false)
 
-      local mappings = {
-        {
-          opts.mappings.ask,
-          function() require("avante.api").ask() end,
-          desc = "avante: ask",
-          mode = { "n", "v" },
-        },
-        {
-          opts.mappings.refresh,
-          function() require("avante.api").refresh() end,
-          desc = "avante: refresh",
-          mode = "v",
-        },
-        {
-          opts.mappings.edit,
-          function() require("avante.api").edit() end,
-          desc = "avante: edit",
-          mode = { "n", "v" },
-        },
-      }
-      mappings = vim.tbl_filter(function(m) return m[1] and #m[1] > 0 end, mappings)
-      return vim.list_extend(mappings, keys)
-    end,
+    --   local mappings = {
+    --     {
+    --       opts.mappings.ask,
+    --       function() require("avante.api").ask() end,
+    --       desc = "avante: ask",
+    --       mode = { "n", "v" },
+    --     },
+    --     {
+    --       opts.mappings.refresh,
+    --       function() require("avante.api").refresh() end,
+    --       desc = "avante: refresh",
+    --       mode = "v",
+    --     },
+    --     {
+    --       opts.mappings.edit,
+    --       function() require("avante.api").edit() end,
+    --       desc = "avante: edit",
+    --       mode = { "n", "v" },
+    --     },
+    --   }
+    --   mappings = vim.tbl_filter(function(m) return m[1] and #m[1] > 0 end, mappings)
+    --   return vim.list_extend(mappings, keys)
+    -- end,
     -- if you want to build from source then do `make BUILD_FROM_SOURCE=true`
     build = "make",
     -- build = "powershell -ExecutionPolicy Bypass -File Build.ps1 -BuildFromSource false" -- for windows
@@ -1864,3 +1835,58 @@ vim.api.nvim_set_keymap('x', 'gq', ':s/\\v(\\w+)/"\\1"/<cr>', { noremap = true, 
 --   end
 --   vim.api.nvim_buf_set_lines(0, start_row - 1, end_row, false, lines)
 -- end
+--
+
+-- copy from https://github.com/yetone/avante.nvim/wiki/Recipe-and-Tricks
+local prefill_edit_window = function(request)
+  require('avante.api').edit()
+  local code_bufnr = vim.api.nvim_get_current_buf()
+  local code_winid = vim.api.nvim_get_current_win()
+  if code_bufnr == nil or code_winid == nil then
+    return
+  end
+  vim.api.nvim_buf_set_lines(code_bufnr, 0, -1, false, { request })
+  -- Optionally set the cursor position to the end of the input
+  vim.api.nvim_win_set_cursor(code_winid, { 1, #request + 1 })
+  -- Simulate Ctrl+S keypress to submit
+  vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes('<C-s>', true, true, true), 'v', true)
+end
+local avante_code_readability_analysis = [[
+You must identify any readability issues in the code snippet.
+Some readability issues to consider:
+- Unclear naming
+- Unclear purpose
+- Redundant or obvious comments
+- Lack of comments
+- Long or complex one liners
+- Too much nesting
+- Long variable names
+- Inconsistent naming and code style.
+- Code repetition
+You may identify additional problems. The user submits a small section of code from a larger file.
+Only list lines with readability issues, in the format <line_num>|<issue and proposed solution>
+If there's no issues with code respond with only: <OK>
+]]
+local avante_optimize_code = 'Optimize the following code'
+local avante_explain_code = 'Explain the following code'
+local avante_complete_code = 'Complete the following codes written in ' .. vim.bo.filetype
+local avante_add_docstring = 'Add docstring to the following codes'
+local avante_fix_bugs = 'Fix the bugs inside the following codes if any'
+local avante_add_tests = 'Implement tests for the following code'
+lvim.builtin.which_key.mappings["a"] = {
+  name = "Avante", -- Group name
+  l = { function() require('avante.api').ask { question = avante_code_readability_analysis } end, "Code Readability Analysis(ask)" },
+  o = { function() require('avante.api').ask { question = avante_optimize_code } end, "Optimize Code(ask)" },
+  x = { function() require('avante.api').ask { question = avante_explain_code } end, "Explain Code(ask)" },
+  c = { function() require('avante.api').ask { question = avante_complete_code } end, "Complete Code(ask)" },
+  d = { function() require('avante.api').ask { question = avante_add_docstring } end, "Docstring(ask)" },
+  b = { function() require('avante.api').ask { question = avante_fix_bugs } end, "Fix Bugs(ask)" },
+  u = { function() require('avante.api').ask { question = avante_add_tests } end, "Add Tests(ask)" },
+  O = { function() prefill_edit_window(avante_optimize_code) end, "Optimize Code(edit)" },
+  C = { function() prefill_edit_window(avante_complete_code) end, "Complete Code(edit)" },
+  D = { function() prefill_edit_window(avante_add_docstring) end, "Docstring(edit)" },
+  B = { function() prefill_edit_window(avante_fix_bugs) end, "Fix Bugs(edit)" },
+  U = { function() prefill_edit_window(avante_add_tests) end, "Add Tests(edit)" },
+}
+
+require("user.keybindings").config()

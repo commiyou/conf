@@ -23,9 +23,10 @@ import sys
 import threading
 import time
 import traceback
-from collections.abc import Iterable, Iterator, Mapping, Sequence
+import types
+from collections.abc import Hashable, Iterable, Mapping, Sequence
 from collections.abc import Set as AbstractSet
-from contextlib import ExitStack
+from contextlib import ExitStack, contextmanager, nullcontext
 from functools import partial, wraps
 from operator import itemgetter
 from pathlib import Path
@@ -34,6 +35,9 @@ from typing import (
     Any,
     Callable,
     Concatenate,
+    ContextManager,
+    Generator,
+    Iterator,
     Literal,
     NewType,
     Optional,
@@ -57,6 +61,7 @@ R = TypeVar("R")
 Ts = TypeVarTuple("Ts")
 P = ParamSpec("P")
 Char = NewType("Char", str)
+KeyType: TypeAlias = int | slice | Sequence | Mapping | AbstractSet | Callable[..., Any]
 
 
 with contextlib.suppress(Exception):
@@ -89,6 +94,7 @@ def make_str(value: Any) -> str:
     >>> make_str((1, 2, 3))
     '[1, 2, 3]'
     >>> make_str("你好")
+    '你好'
     """
     if isinstance(value, bytes):
         return value.decode()
@@ -111,7 +117,15 @@ def xprint(
     output_flag: bool = True,
     color: Literal["red", "blue", "green"] | None = None,
 ) -> None:
-    """print with default sep and suffix and encoding"""
+    r"""print with default sep and suffix and encoding
+
+    >>> import tempfile
+    >>> with tempfile.NamedTemporaryFile("w+", delete=False) as tmp_file:
+    ...     with redirect_stdout_to_file(tmp_file.name):
+    ...         xprint(1, 2, 3)
+    ...     tmp_file.read().strip()
+    '1\t2\t3'
+    """
     if not output_flag:
         return
     if file is None:
@@ -120,7 +134,10 @@ def xprint(
     values_str = [make_str(value) for value in values]
     out = sep.join(values_str) + end
     out = color_text_if_atty(out, color)
-    file.buffer.write(out.encode(encoding))
+    if hasattr(file, "buffer"):
+        file.buffer.write(out.encode(encoding))
+    else:
+        file.write(out)
     if flush:
         file.flush()
 
@@ -449,7 +466,7 @@ def read_file(  # noqa: C901, PLR0912
     skip_notexists: bool = False,
     filter_func: Callable[[list[str]], bool] | None = None,
     norm: bool = True,  # 是否替换掉bad char， 如chr(160) 不间断空格
-) -> Iterator[list[str]]:
+) -> Generator[list[str], None, None]:
     """Read the file line by line with a specified encoding and return iterator of list after splitting by sep.
 
     input_: file name/path or io; excel时，返回的每一列都是str
@@ -511,9 +528,6 @@ def read_file(  # noqa: C901, PLR0912
             yield ll
 
 
-KeyType: TypeAlias = int | slice | Sequence | Mapping | AbstractSet | Callable[..., Any]
-
-
 def make_key_func(
     f: KeyType,
 ) -> Callable:
@@ -559,7 +573,7 @@ def group_file_by_key(
     encoding: str = "utf-8",
     maxsplit: int = -1,
     decode_error_tolerance_count: int = 10,
-) -> Iterator:
+) -> Generator:
     """read file line by line and split by sep and group by key, return like itertools.groupby"""
     key_func = make_key_func(key)
     f = read_file(
@@ -716,109 +730,83 @@ def get_set_bits(recall_src: str | int) -> set[int]:
     return {i for i, v in enumerate(list(bin(int(recall_src))[::-1])) if v == "1"}
 
 
-class RedirectStdoutToFile(contextlib.ContextDecorator):
-    """redirect_stdout_to_file
-
-    >>> with redirect_stdout_to_file("test", "w"):
-    ...     print(123)
+@contextmanager
+def redirect_stdout_to_file(
+    fname: str | None = None, mode: str = "w+", **kwargs: object
+) -> Generator[IO[Any], None, None]:
     """
+    Redirect `sys.stdout` to a file or revert to original stdout.
 
-    def __init__(self, fname: str | Path | None, mode: str = "w", tpl: str | None = None) -> None:
-        """file name and write mode"""
-        if tpl is None:
-            tpl = "{}"
-        self.fname = tpl.format(fname) if fname else None
-        self.mode = mode
+    Args:
+        fname (str | Path | None): The name or path of the file to redirect stdout to.
+                                   If `None`, stdout is not redirected.
+        mode (str): The mode in which the file is opened. Default is "w+".
 
-    def __enter__(self) -> IO[Any]:
-        """enter"""
-        if self.fname is not None:
-            self.file = open(self.fname, self.mode)
-        else:
-            self.file = sys.stdout
+    Yields:
+        IO[Any]: The file object being written to, or `sys.stdout` if `fname` is `None`.
 
-        self.old_stdout = sys.stdout
-        sys.stdout = self.file
-        return self.file
+    Example:
+        >>> import tempfile
+        >>> with tempfile.NamedTemporaryFile("w+", delete=True) as tmp_file:
+        ...     with redirect_stdout_to_file(tmp_file.name) as f:
+        ...         print(123)
+        ...     tmp_file.read().strip()
+        '123'
+    """
+    if fname is None:
+        with nullcontext(sys.stdout) as f:
+            yield f
+    else:
+        ofname = new_filename(fname, **kwargs) if kwargs else fname
 
-    def __exit__(self, *_: object):
-        """exit"""
-        sys.stdout = self.old_stdout
-        self.file.close()
+        with open(ofname, mode) as f, contextlib.redirect_stdout(f):
+            yield f
 
 
-redirect_stdout_to_file = RedirectStdoutToFile
-
-
-class RedirectStderrToFile(contextlib.ContextDecorator):
+@contextmanager
+def redirect_stderr_to_file(
+    fname: str | None = None, mode: str = "w+", **kwargs: object
+) -> Generator[IO[Any], None, None]:
     """redirect_stderr_to_file
 
-    >>> with redirect_stderr_to_file("test", "w"):
-    ...     print(123, file=sys.stderr)
+    >>> import tempfile
+    >>> with tempfile.NamedTemporaryFile("w+", delete=True) as tmp_file:
+    ...     with redirect_stderr_to_file(tmp_file.name) as f:
+    ...         print(123, file=sys.stderr)
+    ...     tmp_file.read().strip()
+    '123'
     """
-
-    def __init__(self, fname: str | None, mode: str = "w", tpl: str | None = None):
-        """file name and write mode"""
-        if tpl is None:
-            tpl = "{}"
-        self.fname = tpl.format(fname) if fname else None
-        self.mode = mode
-
-    def __enter__(self):
-        """enter"""
-        if self.fname is not None:
-            self.file = open(self.fname, self.mode)
-        else:
-            self.file = sys.stderr
-
-        self.old_stderr = sys.stderr
-        sys.stderr = self.file
-        return self.file
-
-    def __exit__(self, *_: object):
-        """exit"""
-        sys.stderr = self.old_stderr
-        self.file.close()
+    if fname is None:
+        with nullcontext(sys.stderr) as f:
+            yield f
+    else:
+        ofname = new_filename(fname, **kwargs) if kwargs else fname
+        with open(ofname, mode) as f, contextlib.redirect_stderr(f):
+            yield f
 
 
-redirect_stderr_to_file = RedirectStderrToFile
+@contextmanager
+def redirect_stdout_stderr_to_file(
+    fname: str | None = None, mode: str = "w+", **kwargs: object
+) -> Generator[IO[Any], None, None]:
+    r"""redirect_stderr_to_file
 
-
-class RedirectStdoutStderrToFile(contextlib.ContextDecorator):
-    """redirect_stdout_stderr_to_file
-
-    >>> with redirect_stdout_stderr_to_file("test", "w"):
-    ...     print(123, file=sys.stderr)
+    >>> import tempfile
+    >>> with tempfile.NamedTemporaryFile("w+", delete=True) as tmp_file:
+    ...     with redirect_stdout_stderr_to_file(tmp_file.name) as f:
+    ...         print(123)
+    ...         print(456, file=sys.stderr)
+    ...     tmp_file.read().strip()
+    '123\n456'
     """
-
-    def __init__(self, fname: str | None, mode: str = "w", tpl: str | None = None):
-        """file name and write mode"""
-        if tpl is None:
-            tpl = "{}"
-        self.fname = tpl.format(fname) if fname else None
-        self.mode = mode
-
-    def __enter__(self):
-        """enter"""
-        self.old_stderr = sys.stderr
-        self.old_stdout = sys.stdout
-        if self.fname is not None:
-            self.file = open(self.fname, self.mode)
-            sys.stderr = self.file
-            sys.stdout = self.file
-        else:
-            self.file = None
-        return self.file
-
-    def __exit__(self, *_: object):
-        """exit"""
-        sys.stderr = self.old_stderr
-        sys.stdout = self.old_stdout
-        if self.file:
-            self.file.close()
-
-
-redirect_stdout_stderr_to_file = RedirectStdoutStderrToFile
+    if fname is None:
+        with nullcontext(sys.stderr) as f:
+            yield f
+    else:
+        ofname = new_filename(fname, **kwargs) if kwargs else fname
+        with open(ofname, mode) as f:  # noqa: SIM117
+            with contextlib.redirect_stderr(f), contextlib.redirect_stdout(f):
+                yield f
 
 
 def sample(
@@ -959,7 +947,7 @@ def parallel_process_items_processes(
     total: int | None = None,
     timeout: float | None = None,
     max_fail_cnt: int = 1,
-) -> Iterator[T]:
+) -> Generator[T, None, None]:
     """Returns an iterator over the outputs of proc_func."""
     xerr(f"pcnt {process_cnt}")
     if process_cnt == 1:
@@ -1019,7 +1007,7 @@ def parallel_process_items_processes_new(
     total: int | None = None,
     timeout: int | None = None,
     max_fail_cnt: int = 20,
-) -> Iterator[tuple[tuple[*Ts], T]]:
+) -> Generator[tuple[tuple[*Ts], T], None, None]:
     """
     并行处理输入项并返回结果的迭代器。
 
@@ -1288,7 +1276,13 @@ class TermMatcher:
 
         self.automaton.make_automaton()
 
-    def match(self, q: str) -> Iterator[tuple[str, tuple[int, int, str]]]:
+    def match(
+        self, q: str
+    ) -> Generator[
+        tuple[str, tuple[int, int, str]],
+        None,
+        None,
+    ]:
         """返回查到的term: original_term, (start_index, end_index, matched_term)"""
         # iter(string, [start, [end]]),  Return an iterator of tuples (end_index, value)  for keys found in string.
         for end_index, (matched_term, original_term) in self.automaton.iter(q):
@@ -1667,6 +1661,133 @@ def get_defaultdict(depth: int = 1, default_factory: Callable[[], T] = int) -> c
         return collections.defaultdict(default_factory)
     else:
         return collections.defaultdict(lambda: get_defaultdict(depth - 1, default_factory))
+
+
+def split_by_multiple_seps(s: str, seps: str | list[Char]) -> list[str]:
+    """使用seps里的每个字符去给str分段
+
+    >>> split_by_multiple_seps("a,b;c.d", ",;.")
+    ['a', 'b', 'c', 'd']
+    >>> split_by_multiple_seps("hello world! this is a test.", " !.")
+    ['hello', 'world', 'this', 'is', 'a', 'test']
+    >>> split_by_multiple_seps("one|two|three", "|")
+    ['one', 'two', 'three']
+    >>> split_by_multiple_seps("apple-orange-banana", "-")
+    ['apple', 'orange', 'banana']
+    >>> split_by_multiple_seps("no-separators", "")
+    ['no-separators']
+    """
+    if not seps:
+        return [s]
+    if isinstance(seps, str):
+        seps = list(seps)
+    # Create a regex pattern that matches any of the separators
+    pattern = f"[{''.join(map(re.escape, seps))}]"
+    # Split the string using the pattern
+    return [x for x in re.split(pattern, s) if x]
+
+
+class StatCounter(contextlib.ContextDecorator):
+    """统计次数
+
+    使用嵌套的defaultdict来存储各维度的计数
+    """
+
+    def __init__(self):
+        """使用嵌套的defaultdict来存储各维度的计数"""
+        self.data = collections.defaultdict(lambda: collections.defaultdict(int))
+
+    def increment(self, dimension: Hashable, key: Hashable, n: int = 1):
+        """增加指定维度下key的计数"""
+        self.data[dimension][key] += n
+
+    def __enter__(self) -> Self:
+        """enter"""
+        # 进入上下文时返回自身以便使用
+        return self
+
+    def __exit__(self, *_: object):
+        """exit"""
+        # 程序结束时自动输出统计结果
+        self.print_stats()
+
+    def print_stats(self):
+        """输出统计"""
+        for dimension, counter in self.data.items():
+            total = sum(counter.values())
+            xerr(f"===维度:{dimension}")
+            for idx, (key, cnt) in enumerate(sorted(counter.items(), key=itemgetter(1), reverse=True), 1):
+                percent = safe_divide(cnt, total, percentage=True)
+                xerr(f"{idx}. {key} : {cnt} ({percent})")
+            xerr()
+
+
+stat_counter = StatCounter
+
+
+@contextmanager
+def write_file(fname: str | None = None, mode: str = "w+") -> Generator[IO, None, None]:
+    """
+    A context manager wrapper for the open function.
+
+    If fname is None, it yields sys.stdout and does not close it upon exiting.
+    Otherwise, it opens the specified file with the given mode and ensures it is closed upon exit.
+
+    :param fname: The name of the file to open. If None, sys.stdout is used.
+    :param mode: The mode in which to open the file. Defaults to "w+".
+    :yield: A file-like object to write to.
+    """
+    if fname is None:
+        # 当fname为None时，使用sys.stdout，不进行关闭
+        with nullcontext(sys.stdout) as f:
+            yield f
+    else:
+        # 否则，打开指定的文件，并确保在退出时关闭
+        with open(fname, mode) as f:
+            yield f
+
+
+def run_with_file(
+    fname: str | None = None, ofname: str | None = None, keys: list[KeyType] | None = None, expand_result: bool = True
+) -> Callable:
+    r"""
+    装饰器，用于从文件中读取数据，处理后将结果写入输出文件。
+
+    参数:
+    - fname: 输入文件名
+    - ofname: 输出文件名
+    - keys: 从每行数据中提取关键字的函数列表
+    - expand_result 是否展开结果（为list/tuple/Iterator时）
+    >>> def double(arg):
+    ...     return arg * 2
+    >>> import tempfile
+    >>> with tempfile.NamedTemporaryFile("w+", delete=True) as tmp_file, tempfile.NamedTemporaryFile(
+    ...     "w+", delete=True
+    ... ) as tmp_file2:
+    ...     with redirect_stdout_to_file(tmp_file.name):
+    ...         print(123)
+    ...     with redirect_stdout_to_file(tmp_file2.name):
+    ...         run_with_file(tmp_file.name)(double)
+    ...     tmp_file2.read().strip()
+    '123\t123123'
+    """
+    if keys is None:
+        keys = [0]
+
+    def actual_decorator(func: Callable[P, R]) -> None:
+        with write_file(ofname) as of:
+            for ll in read_file(fname):
+                real_keys = [make_key_func(key)(ll) for key in keys]
+                result = func(*real_keys)
+                if isinstance(result, (Generator, Iterator)):
+                    result = list(result)
+
+                if expand_result:
+                    xprint(*ll, *result, file=of)
+                else:
+                    xprint(*ll, result, file=of)
+
+    return actual_decorator
 
 
 if __name__ == "__main__":

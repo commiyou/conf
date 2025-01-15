@@ -3,6 +3,9 @@
 
 import ast
 import base64
+import traceback
+
+import string
 import collections
 import contextlib
 import dataclasses
@@ -261,7 +264,9 @@ def xvar(
                 value_info.append(val_str)
             else:
                 # For non-literal types, append the name, value, and type
-                value_info.append(f"{color_text_if_atty(name, 'red', attrs=['bold'])}:{type(val).__name__}={val_str}")
+                value_info.append(
+                    f"{color_text_if_atty(name, 'red', attrs=['bold'])}:{type(val).__name__}={val_str}"
+                )
 
         output = f"{prefix}: " + sep.join(value_info)
     else:
@@ -471,7 +476,11 @@ def read_file(  # noqa: C901, PLR0912
 
     input_: file name/path or io; excel时，返回的每一列都是str
     """
-    if isinstance(input_, (str, Path)) and skip_notexists and not os.path.exists(input_):
+    if (
+        isinstance(input_, (str, Path))
+        and skip_notexists
+        and not os.path.exists(input_)
+    ):
         yield []
         return
 
@@ -490,13 +499,19 @@ def read_file(  # noqa: C901, PLR0912
     if tqdm is None and sys.stderr.isatty():
         tqdm = str(f"proc file {input_}") if isinstance(input_, (str, Path)) else True
 
-    cm = open(input_, "rb") if isinstance(input_, (str, Path)) else contextlib.nullcontext(input_)  # noqa: SIM115
+    cm = (
+        open(input_, "rb")
+        if isinstance(input_, (str, Path))
+        else contextlib.nullcontext(input_)
+    )  # noqa: SIM115
 
     with cm as input_:
         if skip_header:
             input_ = funcy.rest(input_)  # type:ignore  # noqa: PLW2901
         if tqdm:
-            input_ = tqdm_.tqdm(input_, total=total, desc=tqdm if isinstance(tqdm, str) else None)  # noqa: PLW2901
+            input_ = tqdm_.tqdm(
+                input_, total=total, desc=tqdm if isinstance(tqdm, str) else None
+            )  # noqa: PLW2901
 
         for i, line in enumerate(input_):  # type:ignore
             if not isinstance(line, str):
@@ -653,7 +668,9 @@ def xprint_json(obj: object, indent: int = 4) -> None:
     xprint(json.dumps(obj, ensure_ascii=False, indent=indent, cls=JsonCustomEncoder))
 
 
-def safe_divide(p1: float, p2: float, *, digits: int = 2, percentage: bool = False) -> str:
+def safe_divide(
+    p1: float, p2: float, *, digits: int = 2, percentage: bool = False
+) -> str:
     """return n/a if divide 0 else value with str type
 
     >>> safe_divide(1, 0)
@@ -670,7 +687,9 @@ def safe_divide(p1: float, p2: float, *, digits: int = 2, percentage: bool = Fal
     return f"{{:.{digits}f}}".format(p1 / p2)
 
 
-def safe_diff(p1: float | str, p2: float | str, *, digits: int = 2, percentage: bool = True) -> str | float:
+def safe_diff(
+    p1: float | str, p2: float | str, *, digits: int = 2, percentage: bool = True
+) -> str | float:
     """return n/a if divide 0 else value with str type
 
     >>> safe_diff(1, 0)
@@ -1046,7 +1065,9 @@ def parallel_process_items_processes_new(
 
     max_concurrency = slice_cnt or process_cnt
     if max_concurrency < process_cnt:
-        xerr(f"slice cnt[{max_concurrency}] < process cnt[{process_cnt}]!, using {process_cnt}")
+        xerr(
+            f"slice cnt[{max_concurrency}] < process cnt[{process_cnt}]!, using {process_cnt}"
+        )
         max_concurrency = process_cnt
 
     desc = tqdm if isinstance(tqdm, str) else None
@@ -1069,11 +1090,14 @@ def parallel_process_items_processes_new(
         ),  # fix hang  https://pythonspeed.com/articles/python-multiprocessing/
     ) as executor, tqdm_.tqdm(total=total, desc=desc) as pbar:
         futures = {
-            executor.submit(proc_func, *input): input for input in itertools.islice(handler_inputs, max_concurrency)
+            executor.submit(proc_func, *input): input
+            for input in itertools.islice(handler_inputs, max_concurrency)
         }
 
         while futures:
-            done, _ = concurrent.futures.wait(futures, return_when=concurrent.futures.FIRST_COMPLETED)
+            done, _ = concurrent.futures.wait(
+                futures, return_when=concurrent.futures.FIRST_COMPLETED
+            )
             for fut in done:
                 original_input = futures.pop(fut)
                 pbar.update(1)
@@ -1085,15 +1109,22 @@ def parallel_process_items_processes_new(
                 except TimeoutError as e:
                     fail_cnt += 1
                     failed_tasks.append((original_input, e))
-                    xerr(f"任务超时，已达到 {fail_cnt}/{max_fail_cnt} 次失败。input: ", original_input)
+                    xerr(
+                        f"任务超时，已达到 {fail_cnt}/{max_fail_cnt} 次失败。input: ",
+                        original_input,
+                    )
                     if fail_cnt > max_fail_cnt:
                         xerr("超过最大失败次数，终止处理。")
                         output_failed_tasks(failed_tasks)
                         raise
                 except Exception as e:
                     fail_cnt += 1
-                    xerr(f"任务失败 {fail_cnt}/{max_fail_cnt}， input：", original_input)
-                    traceback.print_exception(type(e), e, e.__traceback__, file=sys.stderr)
+                    xerr(
+                        f"任务失败 {fail_cnt}/{max_fail_cnt}， input：", original_input
+                    )
+                    traceback.print_exception(
+                        type(e), e, e.__traceback__, file=sys.stderr
+                    )
                     failed_tasks.append((original_input, e))
                     if fail_cnt > max_fail_cnt:
                         xerr("超过最大失败次数，终止处理。")
@@ -1111,7 +1142,9 @@ def parallel_process_items_processes_new(
             #     fut = executor.submit(proc_func, *input)
             #     futures[fut] = input
         output_failed_tasks(failed_tasks)
-        xerr(f"{suc_cnt + len(failed_tasks)} tasks done: suc [{suc_cnt}], fail [{len(failed_tasks)}]")
+        xerr(
+            f"{suc_cnt + len(failed_tasks)} tasks done: suc [{suc_cnt}], fail [{len(failed_tasks)}]"
+        )
 
 
 def parallel_process_items_threads(
@@ -1146,7 +1179,9 @@ def parallel_process_items_threads(
             yield it
 
 
-def parallel_run_helper(func: Callable[P, R], ll: T, *args: P.args, **kws: P.kwargs) -> tuple[T, R]:
+def parallel_run_helper(
+    func: Callable[P, R], ll: T, *args: P.args, **kws: P.kwargs
+) -> tuple[T, R]:
     """helper"""
     ret = func(*args, **kws)
     return ll, ret
@@ -1162,6 +1197,7 @@ VALID_FILE_SUFFIX = (
     ".jpg",
     ".png",
     ".jpeg",
+    ".html",
 )
 
 
@@ -1399,6 +1435,10 @@ def crawl_parse(url: str, **css_selectors: str) -> dict[str, str | dict[str, Any
     return results
 
 
+def print_tb():
+    xerr(traceback.format_exc())
+
+
 def doctest() -> None:
     """test"""
     import doctest
@@ -1447,7 +1487,9 @@ def fcache(
                 result: T = memoized_func(*func_args, **func_kwargs)
 
                 # Check if we should ignore caching for empty results
-                if ignore_empty_result and (not result or (isinstance(result, str) and not result.strip())):
+                if ignore_empty_result and (
+                    not result or (isinstance(result, str) and not result.strip())
+                ):
                     # Manually remove the result from cache if it was just stored
                     key = memoized_func.__cache_key__(*func_args, **func_kwargs)
                     if key in cache:
@@ -1585,7 +1627,14 @@ def fetch_url(
     for attempt in range(retry_cnt):
         try:
             if method == "get":
-                response = requests.get(url, timeout=timeout, proxies=proxies, params=params, verify=False, **kwargs)
+                response = requests.get(
+                    url,
+                    timeout=timeout,
+                    proxies=proxies,
+                    params=params,
+                    verify=False,
+                    **kwargs,
+                )
             elif method == "post":
                 response = requests.post(
                     url,
@@ -1618,7 +1667,10 @@ def fetch_url(
 
 
 def retry(
-    exception_to_check: type[Exception] | tuple[Exception, ...], tries: int = 3, delay: int = 1, backoff: int = 2
+    exception_to_check: type[Exception] | tuple[Exception, ...],
+    tries: int = 3,
+    delay: int = 1,
+    backoff: int = 2,
 ) -> Callable:
     """Retry calling the decorated function using an exponential backoff.
 
@@ -1647,7 +1699,9 @@ def retry(
     return deco_retry
 
 
-def get_defaultdict(depth: int = 1, default_factory: Callable[[], T] = int) -> collections.defaultdict:
+def get_defaultdict(
+    depth: int = 1, default_factory: Callable[[], T] = int
+) -> collections.defaultdict:
     """创建多层级的defaultdict.
 
     :param depth: 要创建的嵌套defaultdict的层数
@@ -1660,7 +1714,9 @@ def get_defaultdict(depth: int = 1, default_factory: Callable[[], T] = int) -> c
     if depth == 1:
         return collections.defaultdict(default_factory)
     else:
-        return collections.defaultdict(lambda: get_defaultdict(depth - 1, default_factory))
+        return collections.defaultdict(
+            lambda: get_defaultdict(depth - 1, default_factory)
+        )
 
 
 def split_by_multiple_seps(s: str, seps: str | list[Char]) -> list[str]:
@@ -1716,7 +1772,9 @@ class StatCounter(contextlib.ContextDecorator):
         for dimension, counter in self.data.items():
             total = sum(counter.values())
             xerr(f"===维度:{dimension}")
-            for idx, (key, cnt) in enumerate(sorted(counter.items(), key=itemgetter(1), reverse=True), 1):
+            for idx, (key, cnt) in enumerate(
+                sorted(counter.items(), key=itemgetter(1), reverse=True), 1
+            ):
                 percent = safe_divide(cnt, total, percentage=True)
                 xerr(f"{idx}. {key} : {cnt} ({percent})")
             xerr()
@@ -1748,7 +1806,10 @@ def write_file(fname: str | None = None, mode: str = "w+") -> Generator[IO, None
 
 
 def run_with_file(
-    fname: str | None = None, ofname: str | None = None, keys: list[KeyType] | None = None, expand_result: bool = True
+    fname: str | None = None,
+    ofname: str | None = None,
+    keys: list[KeyType] | None = None,
+    expand_result: bool = True,
 ) -> Callable:
     r"""
     装饰器，用于从文件中读取数据，处理后将结果写入输出文件。
@@ -1788,6 +1849,110 @@ def run_with_file(
                     xprint(*ll, result, file=of)
 
     return actual_decorator
+
+
+def echart(
+    fname: str, chart: Literal["snakey", "funnel", "pie"], total: int | None = None
+):
+    """
+    Generate a chart (funnel, sankey, or pie) using pyecharts based on a TSV file.
+
+    https://gallery.pyecharts.org/#/Sankey/sankey_vertical
+
+    file format:
+        snakey: source\ttarget\tvalue
+        pie/funnel:source\tvalue
+
+    Args:
+        fname (str): Path to the TSV file.
+        chart (str): Type of chart to generate ('funnel', 'sankey', 'pie').
+        total (int | None): Total value for normalizing percentages (optional).
+    """
+    from pyecharts import options as opts
+    from pyecharts.charts import Funnel, Sankey, Pie
+    import pandas as pd
+
+    ofname = new_filename(fname, suffix=f"{chart}.html")
+    # Read TSV file into a DataFrame without header
+    df = pd.read_csv(fname, sep="\t", header=None)
+
+    # Assign default column names based on chart type
+    if chart in ["funnel", "pie"]:
+        df.columns = ["name", "value"]
+    elif chart == "sankey":
+        df.columns = ["source", "target", "value"]
+    else:
+        raise ValueError(
+            "Unsupported chart type. Choose from 'funnel', 'sankey', or 'pie'."
+        )
+
+    # Normalize value column if total is provided
+    if total is not None:
+        df["value"] = (df["value"] * 100 / total).round().astype(int)
+
+    # Generate the specified chart
+    if chart == "funnel":
+        funnel = (
+            Funnel()
+            .add(
+                "",
+                [list(z) for z in zip(df["name"], df["value"])],
+                label_opts=opts.LabelOpts(position="inside"),
+            )
+            .set_global_opts(title_opts=opts.TitleOpts(title=fname))
+        )
+        funnel.render(ofname)
+
+    elif chart == "sankey":
+        nodes = list({"name": x} for x in set(df["source"]).union(set(df["target"])))
+        links = df[["source", "target", "value"]].to_dict(orient="records")
+        sankey = (
+            Sankey()
+            .add(
+                "",
+                nodes,
+                links,
+                layout_iterations=100,
+                linestyle_opt=opts.LineStyleOpts(
+                    opacity=0.2, curve=0.5, color="source"
+                ),
+                label_opts=opts.LabelOpts(
+                    position="right",
+                    formatter="{b}: {c}",
+                    overflow="break",
+                    color="auto",
+                ),
+            )
+            .set_global_opts(title_opts=opts.TitleOpts(title=fname))
+        )
+        sankey.render(ofname)
+
+    elif chart == "pie":
+        pie = (
+            Pie()
+            .add(
+                "",
+                [list(z) for z in zip(df["name"], df["value"])],
+                radius=["40%", "70%"],
+            )
+            .set_global_opts(
+                title_opts=opts.TitleOpts(title=fname),
+                legend_opts=opts.LegendOpts(
+                    orient="vertical", pos_top="15%", pos_right="10%"
+                ),
+            )
+            .set_series_opts(label_opts=opts.LabelOpts(formatter="{b}: {d}%"))
+        )
+        pie.render(ofname)
+
+    else:
+        raise ValueError(
+            "Unsupported chart type. Choose from 'funnel', 'sankey', or 'pie'."
+        )
+
+    xerr(
+        f"{chart.capitalize()} chart has been rendered and saved as an HTML file: {ofname}"
+    )
 
 
 if __name__ == "__main__":

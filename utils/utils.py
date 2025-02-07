@@ -977,10 +977,13 @@ def parallel_process_items_processes(
     # if timeout:
     #     proc_func = stopit_after_timeout(timeout)(proc_func)
 
-    with Pool(processes=process_cnt) as pool, tqdm_.tqdm(
-        total=total,
-        desc=tqdm if isinstance(tqdm, str) else None,
-    ) as pbar:
+    with (
+        Pool(processes=process_cnt) as pool,
+        tqdm_.tqdm(
+            total=total,
+            desc=tqdm if isinstance(tqdm, str) else None,
+        ) as pbar,
+    ):
         it = iter(pool.imap(proc_func, inputs))
         fail_cnt = 0
         while True:
@@ -1062,12 +1065,15 @@ def parallel_process_items_processes_new(
 
     failed_tasks = []
     suc_cnt = 0
-    with concurrent.futures.ProcessPoolExecutor(
-        max_workers=process_cnt,
-        mp_context=multiprocessing.get_context(
-            "spawn"
-        ),  # fix hang  https://pythonspeed.com/articles/python-multiprocessing/
-    ) as executor, tqdm_.tqdm(total=total, desc=desc) as pbar:
+    with (
+        concurrent.futures.ProcessPoolExecutor(
+            max_workers=process_cnt,
+            mp_context=multiprocessing.get_context(
+                "spawn"
+            ),  # fix hang  https://pythonspeed.com/articles/python-multiprocessing/
+        ) as executor,
+        tqdm_.tqdm(total=total, desc=desc) as pbar,
+    ):
         futures = {
             executor.submit(proc_func, *input): input for input in itertools.islice(handler_inputs, max_concurrency)
         }
@@ -1460,8 +1466,8 @@ def fcache(
                 if ignore_empty_result and (not result or (isinstance(result, str) and not result.strip())):
                     # Manually remove the result from cache if it was just stored
                     key = memoized_func.__cache_key__(*func_args, **func_kwargs)
-                    if key in cache:
-                        cache.pop(key, None)
+                    cache.pop(key, None)
+                    # xdebug(f"pop {key=}")
 
                 return result
 
@@ -1472,7 +1478,7 @@ def fcache(
 
 def fcache_op(
     cache_dir: str,
-    op: Literal["clear", "check", "get", "set", "pop", "len", "peekitem"],
+    op: Literal["clear", "check", "get", "set", "pop", "len", "peekitem", "peek", "poplast"],
     *args: str,
     **kwargs: Any,
 ) -> Any:
@@ -1494,9 +1500,13 @@ def fcache_op(
         args = [tuple(args)]
 
     cache = Cache(cache_dir)
+    if op == "poplast":
+        k, _ = cache.peekitem()
+        op = "pop"
+        args = [k]
     func = getattr(cache, op)
     ret = func(*args, **kwargs)
-    xerr(args, kwargs, ret)
+    xdebug(args, kwargs, ret)
     cache.close()
     return ret
 
@@ -1888,9 +1898,10 @@ def run_with_file(
     >>> def double(arg):
     ...     return arg * 2
     >>> import tempfile
-    >>> with tempfile.NamedTemporaryFile("w+", delete=True) as tmp_file, tempfile.NamedTemporaryFile(
-    ...     "w+", delete=True
-    ... ) as tmp_file2:
+    >>> with (
+    ...     tempfile.NamedTemporaryFile("w+", delete=True) as tmp_file,
+    ...     tempfile.NamedTemporaryFile("w+", delete=True) as tmp_file2,
+    ... ):
     ...     with redirect_stdout_to_file(tmp_file.name):
     ...         print(123)
     ...     with redirect_stdout_to_file(tmp_file2.name):

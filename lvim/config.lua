@@ -1200,6 +1200,8 @@ lvim.plugins = {
       -- add any opts here
       debug = false,
 
+      behaviour = { auto_suggestions = true },
+
       provider = "openai",
       auto_suggestions_provider = "gemini",
       openai = {
@@ -1282,8 +1284,8 @@ lvim.plugins = {
       "nvim-treesitter/nvim-treesitter",
       "stevearc/dressing.nvim",
       "nvim-lua/plenary.nvim",
-      "folke/which-key.nvim",
       "MunifTanjim/nui.nvim",
+      "folke/which-key.nvim",
       --- The below dependencies are optional,
       "nvim-tree/nvim-web-devicons", -- or echasnovski/mini.icons
       "zbirenbaum/copilot.lua",      -- for providers='copilot'

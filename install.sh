@@ -121,7 +121,7 @@ install_ubuntu_pkgs() {
   apt_install lua5.3 && sudo ln -sf /usr/bin/lua5.3 $BIN_DIR/lua 
   apt_install unzip
   apt_install subversion svn
-  apt_install git git ppa:git-core/ppa
+  apt_install git git ppa:git-core/ppa chafa
   # cmd="sudo add-apt-repository ppa:git-core/ppa; sudo apt update; sudo apt install -y lua5.3 git subversion unzip; sudo ln -s /usr/bin/lua5.3 /usr/bin/lua"
   # echo_green "$cmd"
   # eval $cmd

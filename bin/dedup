@@ -1,58 +1,104 @@
 #!/usr/bin/env python3
 import argparse
-import csv
 import sys
 from collections import defaultdict
 
-csv.field_size_limit(sys.maxsize)
-
 
 def dedup(args):
-    if args.file:
-        input_data = open(args.file, 'r')
+    # 打开输入文件或使用标准输入
+    if args.input:
+        try:
+            input_data = open(args.input, "r")
+        except IOError as e:
+            print(f"无法打开输入文件: {e}", file=sys.stderr)
+            sys.exit(1)
     else:
         input_data = sys.stdin
 
-    reader = csv.reader(input_data, delimiter=args.delim)
+    # 打开输出文件或使用标准输出
+    if args.output:
+        try:
+            output_data = open(args.output, "w", newline="")
+        except IOError as e:
+            print(f"无法打开输出文件: {e}", file=sys.stderr)
+            if args.input:
+                input_data.close()
+            sys.exit(1)
+    else:
+        output_data = sys.stdout
+
     key_count = defaultdict(int)
 
+    # 解析用于去重的键
     if args.keys:
         key_indices = []
         if "-" in args.keys:
-            start, end = args.keys.split("-")
-            start = int(start) if start else 0
-            end = int(end) if end else -1
-            key_indices = list(range(start, end+1))
+            parts = args.keys.split("-")
+            if len(parts) != 2:
+                print(f"键范围格式错误: {args.keys}", file=sys.stderr)
+                sys.exit(1)
+            start_str, end_str = parts
+            start = int(start_str) if start_str else 0
+            end = int(end_str) if end_str else None  # None 表示直到最后
+            if end is not None:
+                key_indices = list(range(start, end + 1))
+            else:
+                # 如果 end 为 None，则包括从 start 到最后的所有列
+                key_indices = list(range(start, sys.maxsize))
         else:
-            key_indices = [int(x) for x in args.keys.split(",")]
-
+            try:
+                key_indices = [int(x) for x in args.keys.split(",")]
+            except ValueError:
+                print(f"键索引必须是整数，用逗号分隔: {args.keys}", file=sys.stderr)
+                sys.exit(1)
     else:
         key_indices = None
 
-    output_data = sys.stdout if args.file is None else open(args.file, 'w', newline='')
-    writer = csv.writer(output_data, delimiter=args.delim)
-
-    for row in reader:
-        if key_indices is None:
-            key = tuple(row)
+    # 处理每一行
+    for line_number, line in enumerate(input_data, 1):
+        line = line.rstrip("\n")  # 去除行尾换行符
+        if args.delim:
+            parts = line.split(args.delim)
         else:
-            key = tuple(row[i] for i in key_indices)
+            parts = [line]
 
+        # 根据指定的索引生成键
+        if key_indices is None:
+            key = tuple(parts)
+        else:
+            try:
+                key = tuple(parts[i] for i in key_indices)
+            except IndexError:
+                print(f"错误: 第 {line_number} 行没有足够的列。", file=sys.stderr)
+                continue  # 跳过列数不足的行
+
+        # 检查键出现的次数是否低于允许的最大值
         if key_count[key] < args.num:
-            writer.writerow(row)
+            print(line, file=output_data, flush=True)
             key_count[key] += 1
 
-    input_data.close()
-    output_data.close()
+    # 关闭文件
+    if args.input:
+        input_data.close()
+    if args.output:
+        output_data.close()
+
 
 def main():
-    parser = argparse.ArgumentParser(description='Remove duplicates from a csv file.')
-    parser.add_argument('-k', '--keys', help='The columns to use for duplicate detection. Default is None, meaning the entire row is used for duplicate detection.')
-    parser.add_argument('-n', '--num', type=int, default=1, help='The maximum number of duplicates to keep. Default is 1.')
-    parser.add_argument('-d', '--delim', default='\t', help='The delimiter. Default is tab.')
-    parser.add_argument('file', nargs='?', help='The csv file to modify. If not specified, input is read from stdin.')
+    parser = argparse.ArgumentParser(description="从文本文件中移除重复行。")
+    parser.add_argument(
+        "-k",
+        "--keys",
+        help='用于检测重复项的列索引。使用逗号分隔，例如 "0,2,4" 或范围 "1-3"。默认是 None，表示使用整行进行去重。',
+    )
+    parser.add_argument("-n", "--num", type=int, default=1, help="保留的重复项的最大数量。默认是 1。")
+    parser.add_argument("-d", "--delim", default="\t", help="用于分割列的分隔符。默认是制表符。")
+    parser.add_argument("-i", "--input", help="要读取的输入文件。如果未指定，则从标准输入读取。")
+    parser.add_argument("-o", "--output", help="要写入的输出文件。如果未指定，则写入标准输出。")
     args = parser.parse_args()
 
     dedup(args)
+
+
 if __name__ == "__main__":
     main()

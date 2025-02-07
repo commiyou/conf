@@ -107,7 +107,9 @@ zt wait binary from"gh-r" for \
   id-as'fzf-bin' lman lbin \
   if'[[ -z "$commands[fzf]" ]]' junegunn/fzf \
   id-as'cheat-bin' lman lbin"**/cheat* -> cheat" \
-  cheat/cheat 
+  cheat/cheat
+
+zinit wait lucid light-mode for from'gh-r' as'program' id-as'navi' pick'navi' denisidoro/navi
 
 
 # # Always starting with insert mode for each command line
@@ -202,6 +204,13 @@ zt wait'[[ -n $WORK_ENV ]]' id-as for \
 zt wait for \
   blockf as'completion' atpull'zinit creinstall -q .' id-as'commiyou-completions'\
   $XDG_CONFIG_HOME/zsh/completions
+
+
+# 使用 zinit 处理特定的补全脚本
+for completion in "$ZDOTDIR/completions"/_*; do
+  [ -f "$completion" ] && zinit ice as"completion"
+  [ -f "$completion" ] && zinit snippet "$completion"
+done
 
 #zinit ice $lightmode wait lucid pick'roszsh' id-as'roszsh'
 #zinit snippet https://raw.githubusercontent.com/ros/ros/melodic-devel/tools/rosbash/roszsh

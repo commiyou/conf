@@ -1,11 +1,11 @@
 -- general
 lvim.log.level = "warn"
-lvim.format_on_save.enabled = true
+lvim.format_on_save.enabled = true -- :LvimToggleFormatOnSave
 lvim.format_on_save.timeout = 2000
 lvim.format_on_save.pattern = { "*.sh", "*.py", "*.lua" }
 
 -- to disable icons and use a minimalist setup, uncomment the following
-lvim.use_icons = false
+lvim.use_icons = true
 
 -- keymappings [view all the defaults by pressing <leader>Lk]
 lvim.leader = "space"
@@ -644,18 +644,18 @@ lvim.plugins = {
   -- { 'echasnovski/mini.move',   version = false, config = true }, -- <M-h/j/k/l> move line; TODO:
 
   --{"romainl/vim-cool"}, -- no hlserach
-  {
-    'echasnovski/mini.fuzzy', -- fuzzy for telescope
-    version = false,
-    opts = function()
-      require("mini.fuzzy").setup()
-      require('telescope').setup({
-        defaults = {
-          generic_sorter = require('mini.fuzzy').get_telescope_sorter
-        }
-      })
-    end,
-  },
+  -- {
+  --   'echasnovski/mini.fuzzy', -- fuzzy for telescope
+  --   version = false,
+  --   opts = function()
+  --     require("mini.fuzzy").setup()
+  --     require('telescope').setup({
+  --       defaults = {
+  --         generic_sorter = require('mini.fuzzy').get_telescope_sorter
+  --       }
+  --     })
+  --   end,
+  -- },
   -- {
   --   "folke/trouble.nvim",
   --   cmd = "TroubleToggle",
@@ -1195,15 +1195,7 @@ lvim.plugins = {
     "yetone/avante.nvim",
     event = "VeryLazy",
     lazy = false,
-    version = false,           -- set this if you want to always pull the latest change
-    behaviour = {
-      auto_suggestions = true, -- Experimental stage
-      auto_set_highlight_group = true,
-      auto_set_keymaps = true,
-      auto_apply_diff_after_generation = false,
-      support_paste_from_clipboard = false,
-      minimize_diff = true,
-    },
+    version = false, -- set this if you want to always pull the latest change
     opts = {
       -- add any opts here
       debug = false,
@@ -1445,7 +1437,7 @@ lvim.plugins = {
             set_jumps = true, -- whether to set jumps in the jumplist
             goto_next_start = {
               ["]f"] = "@function.outer",
-              ["]]"] = { query = "@class.outer", desc = "Next class start" },
+              ["]c"] = { query = "@class.outer", desc = "Next class start" },
               --
               -- You can use regex matching (i.e. lua pattern) and/or pass a list in a "query" key to group multiple queries.
               ["]o"] = "@loop.*",
@@ -1458,15 +1450,15 @@ lvim.plugins = {
             },
             goto_next_end = {
               ["]F"] = "@function.outer",
-              ["]["] = "@class.outer",
+              ["]C"] = "@class.outer",
             },
             goto_previous_start = {
               ["[f"] = "@function.outer",
-              ["[["] = "@class.outer",
+              ["[c"] = "@class.outer",
             },
             goto_previous_end = {
               ["[F"] = "@function.outer",
-              ["[]"] = "@class.outer",
+              ["[C"] = "@class.outer",
             }, },
         },
       }
@@ -1504,16 +1496,20 @@ lvim.plugins = {
   },
   {
     "lukas-reineke/indent-blankline.nvim",
-    tag = "v2.20.8", -- Use v2
-    event = "BufReadPost",
-    config = function()
-      vim.opt.list = true
-      require("indent_blankline").setup {
-        space_char_blankline = " ",
-        show_current_context = true,
-        show_current_context_start = true,
-      }
-    end,
+    main = "ibl",
+    ---@module "ibl"
+    ---@type ibl.config
+    opts = {},
+    -- tag = "v2.20.8", -- Use v2
+    -- event = "BufReadPost",
+    -- config = function()
+    --   vim.opt.list = true
+    --   require("indent_blankline").setup {
+    --     space_char_blankline = " ",
+    --     show_current_context = true,
+    --     show_current_context_start = true,
+    --   }
+    -- end,
   },
   -- {
   --   "yioneko/nvim-yati", -- indent
@@ -1729,49 +1725,6 @@ function! ExtendVisualString ()
     let rmatch = searchpos(rdelim, 'W')
     normal! v
     call cursor(lline, lcol)
-endfunction
-
-
-" Make v<motions>Y act like an incremental v<motion>y
-vnoremap <silent>       Y  <ESC>:silent let @y = @"<CR>gv"Yy:silent let @" = @y<CR>
-
-" Make Y<motion> act like an incremental y<motion>
-nnoremap <silent><expr> Y  Incremental_Y()
-
-function! Incremental_Y ()
-    " After the Y operator, read in the associated motion
-    let motion = nr2char(getchar())
-
-    " If it's a (slowly typed) YY, do the optimized version instead (see below)
-    if motion == 'Y'
-        call Incremental_YY()
-        return
-
-    " If it's a text object, read in the associated motion
-    elseif motion =~ '[ia]'
-        let motion .= nr2char(getchar())
-    endif
-
-    " If it's a search, read in the associated pattern
-    elseif motion =~ '[/?]'
-        let motion .= input(motion) . "\<CR>"
-    endif
-
-    " Copy the current contents of the default register into the 'y register
-    let @y = @"
-
-    " Return a command sequence that yanks into the 'Y register,
-    " then assigns that cumulative yank back to the default register
-    return '"Yy' . motion . ':let @" = @y' . "\<CR>"
-endfunction
-
-
-" Make YY act like an incremental yy
-nnoremap <silent>  YY  :call Incremental_YY()<CR>
-
-function! Incremental_YY () range
-    " Grab all specified lines and append them to the default register
-    let @" .= join(getline(a:firstline, a:lastline), "\n") . "\n"
 endfunction
 
 ]])

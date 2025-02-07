@@ -5,6 +5,8 @@ typeset -U path
 [ -r ${HOME}/.path ] && path=(${(f)"$(<${HOME}/.path)"} $path)
 path=("$HOME/bin" "$HOME/.local/bin" "$XDG_CONFIG_HOME/bin/" $path)
 
+fpath=($ZDOTDIR/completions $fpath)
+
 typeset -aU ld_library_path
 ld_library_path=(${(s.:.)LD_LIBRARY_PATH})
 [ -r ${ZDOTDIR:-$HOME}/.ld.path ] && ld_library_path=(${(f)"$(<${ZDOTDIR:-$HOME}/.ld.path)"} $ld_library_path)

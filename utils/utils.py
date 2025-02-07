@@ -3,9 +3,6 @@
 
 import ast
 import base64
-import traceback
-
-import string
 import collections
 import contextlib
 import dataclasses
@@ -264,9 +261,7 @@ def xvar(
                 value_info.append(val_str)
             else:
                 # For non-literal types, append the name, value, and type
-                value_info.append(
-                    f"{color_text_if_atty(name, 'red', attrs=['bold'])}:{type(val).__name__}={val_str}"
-                )
+                value_info.append(f"{color_text_if_atty(name, 'red', attrs=['bold'])}:{type(val).__name__}={val_str}")
 
         output = f"{prefix}: " + sep.join(value_info)
     else:
@@ -476,12 +471,7 @@ def read_file(  # noqa: C901, PLR0912
 
     input_: file name/path or io; excel时，返回的每一列都是str
     """
-    if (
-        isinstance(input_, (str, Path))
-        and skip_notexists
-        and not os.path.exists(input_)
-    ):
-        yield []
+    if isinstance(input_, (str, Path)) and skip_notexists and not os.path.exists(input_):
         return
 
     if isinstance(input_, str) and input_.endswith(".xlsx"):
@@ -499,19 +489,13 @@ def read_file(  # noqa: C901, PLR0912
     if tqdm is None and sys.stderr.isatty():
         tqdm = str(f"proc file {input_}") if isinstance(input_, (str, Path)) else True
 
-    cm = (
-        open(input_, "rb")
-        if isinstance(input_, (str, Path))
-        else contextlib.nullcontext(input_)
-    )  # noqa: SIM115
+    cm = open(input_, "rb") if isinstance(input_, (str, Path)) else contextlib.nullcontext(input_)  # noqa: SIM115
 
     with cm as input_:
         if skip_header:
             input_ = funcy.rest(input_)  # type:ignore  # noqa: PLW2901
         if tqdm:
-            input_ = tqdm_.tqdm(
-                input_, total=total, desc=tqdm if isinstance(tqdm, str) else None
-            )  # noqa: PLW2901
+            input_ = tqdm_.tqdm(input_, total=total, desc=tqdm if isinstance(tqdm, str) else None)  # noqa: PLW2901
 
         for i, line in enumerate(input_):  # type:ignore
             if not isinstance(line, str):
@@ -668,9 +652,7 @@ def xprint_json(obj: object, indent: int = 4) -> None:
     xprint(json.dumps(obj, ensure_ascii=False, indent=indent, cls=JsonCustomEncoder))
 
 
-def safe_divide(
-    p1: float, p2: float, *, digits: int = 2, percentage: bool = False
-) -> str:
+def safe_divide(p1: float, p2: float, *, digits: int = 2, percentage: bool = False) -> str:
     """return n/a if divide 0 else value with str type
 
     >>> safe_divide(1, 0)
@@ -687,9 +669,7 @@ def safe_divide(
     return f"{{:.{digits}f}}".format(p1 / p2)
 
 
-def safe_diff(
-    p1: float | str, p2: float | str, *, digits: int = 2, percentage: bool = True
-) -> str | float:
+def safe_diff(p1: float | str, p2: float | str, *, digits: int = 2, percentage: bool = True) -> str | float:
     """return n/a if divide 0 else value with str type
 
     >>> safe_diff(1, 0)
@@ -976,6 +956,7 @@ def parallel_process_items_processes(
     if not total and isinstance(inputs, (list, tuple, set, dict)):
         total = len(inputs)
 
+    import multiprocessing
     from multiprocessing import Pool
 
     # INFO:  fork will hung for lock
@@ -1065,9 +1046,7 @@ def parallel_process_items_processes_new(
 
     max_concurrency = slice_cnt or process_cnt
     if max_concurrency < process_cnt:
-        xerr(
-            f"slice cnt[{max_concurrency}] < process cnt[{process_cnt}]!, using {process_cnt}"
-        )
+        xerr(f"slice cnt[{max_concurrency}] < process cnt[{process_cnt}]!, using {process_cnt}")
         max_concurrency = process_cnt
 
     desc = tqdm if isinstance(tqdm, str) else None
@@ -1090,14 +1069,11 @@ def parallel_process_items_processes_new(
         ),  # fix hang  https://pythonspeed.com/articles/python-multiprocessing/
     ) as executor, tqdm_.tqdm(total=total, desc=desc) as pbar:
         futures = {
-            executor.submit(proc_func, *input): input
-            for input in itertools.islice(handler_inputs, max_concurrency)
+            executor.submit(proc_func, *input): input for input in itertools.islice(handler_inputs, max_concurrency)
         }
 
         while futures:
-            done, _ = concurrent.futures.wait(
-                futures, return_when=concurrent.futures.FIRST_COMPLETED
-            )
+            done, _ = concurrent.futures.wait(futures, return_when=concurrent.futures.FIRST_COMPLETED)
             for fut in done:
                 original_input = futures.pop(fut)
                 pbar.update(1)
@@ -1109,22 +1085,15 @@ def parallel_process_items_processes_new(
                 except TimeoutError as e:
                     fail_cnt += 1
                     failed_tasks.append((original_input, e))
-                    xerr(
-                        f"任务超时，已达到 {fail_cnt}/{max_fail_cnt} 次失败。input: ",
-                        original_input,
-                    )
+                    xerr(f"任务超时，已达到 {fail_cnt}/{max_fail_cnt} 次失败。input: ", original_input)
                     if fail_cnt > max_fail_cnt:
                         xerr("超过最大失败次数，终止处理。")
                         output_failed_tasks(failed_tasks)
                         raise
                 except Exception as e:
                     fail_cnt += 1
-                    xerr(
-                        f"任务失败 {fail_cnt}/{max_fail_cnt}， input：", original_input
-                    )
-                    traceback.print_exception(
-                        type(e), e, e.__traceback__, file=sys.stderr
-                    )
+                    xerr(f"任务失败 {fail_cnt}/{max_fail_cnt}， input：", original_input)
+                    traceback.print_exception(type(e), e, e.__traceback__, file=sys.stderr)
                     failed_tasks.append((original_input, e))
                     if fail_cnt > max_fail_cnt:
                         xerr("超过最大失败次数，终止处理。")
@@ -1142,9 +1111,7 @@ def parallel_process_items_processes_new(
             #     fut = executor.submit(proc_func, *input)
             #     futures[fut] = input
         output_failed_tasks(failed_tasks)
-        xerr(
-            f"{suc_cnt + len(failed_tasks)} tasks done: suc [{suc_cnt}], fail [{len(failed_tasks)}]"
-        )
+        xerr(f"{suc_cnt + len(failed_tasks)} tasks done: suc [{suc_cnt}], fail [{len(failed_tasks)}]")
 
 
 def parallel_process_items_threads(
@@ -1179,9 +1146,7 @@ def parallel_process_items_threads(
             yield it
 
 
-def parallel_run_helper(
-    func: Callable[P, R], ll: T, *args: P.args, **kws: P.kwargs
-) -> tuple[T, R]:
+def parallel_run_helper(func: Callable[P, R], ll: T, *args: P.args, **kws: P.kwargs) -> tuple[T, R]:
     """helper"""
     ret = func(*args, **kws)
     return ll, ret
@@ -1446,7 +1411,7 @@ def doctest() -> None:
     doctest.testmod(verbose=False)
 
 
-def urlencode_params(**params: dict[str, Any]) -> str:
+def urlencode_params(**params: object) -> str:
     """返回 URLencode后的参数"""
     return urlencode(params)
 
@@ -1484,12 +1449,15 @@ def fcache(
 
             @functools.wraps(func)
             def wrapper(*func_args: P.args, **func_kwargs: P.kwargs) -> T:
-                result: T = memoized_func(*func_args, **func_kwargs)
+                try:
+                    result: T = memoized_func(*func_args, **func_kwargs)
+                except RecursionError:
+                    # 如果存入value是 `{}` 好像会raise exception，
+                    xerr("disk cache failed", func_args, func_kwargs, sep="\n")
+                    raise
 
                 # Check if we should ignore caching for empty results
-                if ignore_empty_result and (
-                    not result or (isinstance(result, str) and not result.strip())
-                ):
+                if ignore_empty_result and (not result or (isinstance(result, str) and not result.strip())):
                     # Manually remove the result from cache if it was just stored
                     key = memoized_func.__cache_key__(*func_args, **func_kwargs)
                     if key in cache:
@@ -1595,7 +1563,7 @@ def fetch_url(
     timeout: int = 10,
     proxy: str | list[str] | None = None,
     **kwargs: object,
-) -> str | None:
+) -> dict | str | None:
     """A function to fetch a URL with retry logic, random proxy selection, and format the response.
 
     :param url: URL to request.
@@ -1649,6 +1617,9 @@ def fetch_url(
 
             if return_format == "json":
                 return response.json()  # Return JSON data
+
+            # 使用charset检测编码
+            response.encoding = response.apparent_encoding
             if return_format == "html":
                 return response.text  # Return HTML content
             if return_format == "markdown":
@@ -1699,9 +1670,7 @@ def retry(
     return deco_retry
 
 
-def get_defaultdict(
-    depth: int = 1, default_factory: Callable[[], T] = int
-) -> collections.defaultdict:
+def get_defaultdict(depth: int = 1, default_factory: Callable[[], T] = int) -> collections.defaultdict:
     """创建多层级的defaultdict.
 
     :param depth: 要创建的嵌套defaultdict的层数
@@ -1714,9 +1683,7 @@ def get_defaultdict(
     if depth == 1:
         return collections.defaultdict(default_factory)
     else:
-        return collections.defaultdict(
-            lambda: get_defaultdict(depth - 1, default_factory)
-        )
+        return collections.defaultdict(lambda: get_defaultdict(depth - 1, default_factory))
 
 
 def split_by_multiple_seps(s: str, seps: str | list[Char]) -> list[str]:
@@ -1746,37 +1713,139 @@ def split_by_multiple_seps(s: str, seps: str | list[Char]) -> list[str]:
 class StatCounter(contextlib.ContextDecorator):
     """统计次数
 
-    使用嵌套的defaultdict来存储各维度的计数
+    使用嵌套的defaultdict来存储各维度的计数，线程安全
     """
 
-    def __init__(self):
-        """使用嵌套的defaultdict来存储各维度的计数"""
-        self.data = collections.defaultdict(lambda: collections.defaultdict(int))
+    def __init__(self, depth: int = 1, dimension: int = 0):
+        """初始化 StatCounter。
 
-    def increment(self, dimension: Hashable, key: Hashable, n: int = 1):
-        """增加指定维度下key的计数"""
-        self.data[dimension][key] += n
+        Args:
+            depth (int, optional): 统计时key的层级(dimension也会算上)。默认为 1。
+            dimension (int, optional): 前多少个key作为分维度输出的依据。默认为0。
+        """
+        self.depth = depth
+        self.dimension = dimension
+        assert self.depth > self.dimension
+        self.data = get_defaultdict(depth=depth, default_factory=int)
+        self.lock = threading.Lock()
+
+    def inc(self, *args: Any, n: int = 1, **log_kwargs: Any) -> None:
+        """增加指定维度下 key 的计数，并记录日志。
+
+        Args:
+            *args (Any):
+                前 `depth` 个参数为统计键。
+                剩余的参数为用于日志记录的额外消息。
+            n (int, optional): 增加的数量。默认为 1。
+            **log_kwargs (Any): 传递给日志记录的额外关键字参数。
+
+        Raises:
+            ValueError: 如果提供的参数数量少于 `depth`。
+        """
+        if len(args) < self.depth:
+            msg = f"Number of arguments ({len(args)}) is less than the defined depth ({self.depth})"
+            raise ValueError(msg)
+
+        # 提取前 `depth` 个参数作为统计键
+        keys: tuple[Hashable, ...] = args[: self.depth]
+        extra_args: tuple[Any, ...] = args[self.depth :]
+
+        with self.lock:
+            # 导航到嵌套的 defaultdict
+            current_level: Any = self.data
+            path = []
+            for key in keys[:-1]:
+                current_level = current_level[key]
+                path.append(str(key))
+            final_key = keys[-1]
+            current_level[final_key] += n
+            path.append(str(final_key))
+
+            # 获取当前计数
+            count = current_level[final_key]
+
+        path_str = "->".join(path)
+
+        # 记录日志
+        debug_message = f"{path_str}: count={count}"
+        xdebug(debug_message, *extra_args, **log_kwargs)
 
     def __enter__(self) -> Self:
         """enter"""
         # 进入上下文时返回自身以便使用
         return self
 
-    def __exit__(self, *_: object):
+    def __exit__(self, *_: object) -> None:
         """exit"""
         # 程序结束时自动输出统计结果
         self.print_stats()
 
     def print_stats(self):
-        """输出统计"""
-        for dimension, counter in self.data.items():
-            total = sum(counter.values())
-            xerr(f"===维度:{dimension}")
-            for idx, (key, cnt) in enumerate(
-                sorted(counter.items(), key=itemgetter(1), reverse=True), 1
-            ):
+        """分维度输出统计"""
+
+        # 维度输出是 ===维度： xxxx, total cnt : xxx
+        # 每一项的输出是 除了维度key之后 剩余的key 及其个数 和在此维度的百分比
+
+        def traverse(data: dict, current_keys: list, limit: int) -> Generator[tuple[Any, dict], None, None]:
+            """遍历dict到dimension
+
+            >>> list(traverse({1: {2: 3}, "a": {"b": 4}}, [], 1))
+            [(1, {2: 3}), ("a", {"b": 4})]
+            """
+            # xerr("tranr in", current_keys)
+            if len(current_keys) == limit:
+                yield (tuple(current_keys), data)
+                return
+            # xerr("trans", current_keys)
+            for key, sub in data.items():
+                yield from traverse(sub, [*current_keys, key], limit)
+
+        # 如果 dimension 为0，表示不按任何维度分组
+        if self.dimension == 0:
+            total = sum(self.data.values())
+            xerr(f"=== 总计: total cnt : {total}")
+            for idx, (key, cnt) in enumerate(sorted(self.data.items(), key=itemgetter(1), reverse=True), 1):
                 percent = safe_divide(cnt, total, percentage=True)
-                xerr(f"{idx}. {key} : {cnt} ({percent})")
+                xerr(f"{idx}. {key} : {cnt} ({percent}%)")
+            xerr()
+            return
+
+        # 计算当前维度下所有计数的总和
+        def sum_counter(d: collections.defaultdict | int) -> int:
+            if isinstance(d, collections.defaultdict):
+                return sum(sum_counter(v) for v in d.values())
+            return d
+
+        # xerr("@@@@", list(traverse({1: {2: 3}, "a": {"b": 4}}, [], 1)))
+        # 按照指定的维度分组
+        total_all = sum_counter(self.data)
+        xerr(f"=== 总计: total cnt : {total_all}")
+        for dimension_keys, counter in traverse(self.data, [], self.dimension):
+            # xerr("loop", dimension_keys, counter)
+            if not isinstance(counter, collections.defaultdict):
+                # 不足深度，跳过
+                xerr("counter skip for not dict")
+                continue
+
+            total = sum_counter(counter)
+            dimension_percent = safe_divide(total, total_all, percentage=True)
+            dimension_str = "->".join(map(str, dimension_keys))
+            xerr(f"=== 维度: {dimension_str}, total cnt : {total} ({dimension_percent})")
+            # 收集所有叶子节点的计数
+            leaf_counts = {}
+
+            def collect_leaves(d: collections.defaultdict, prefix: list = []) -> None:  # noqa: B006
+                if isinstance(d, collections.defaultdict):
+                    for k, v in d.items():
+                        collect_leaves(v, [*prefix, k])
+                else:
+                    key_str = "->".join(map(str, prefix))
+                    leaf_counts[key_str] = d
+
+            collect_leaves(counter)
+            for idx, (key, cnt) in enumerate(sorted(leaf_counts.items(), key=itemgetter(1), reverse=True), 1):
+                percent = safe_divide(cnt, total, percentage=True)
+                xerr(f"{idx}. {key} : {cnt} ({percent}%)")
             xerr()
 
 
@@ -1806,10 +1875,7 @@ def write_file(fname: str | None = None, mode: str = "w+") -> Generator[IO, None
 
 
 def run_with_file(
-    fname: str | None = None,
-    ofname: str | None = None,
-    keys: list[KeyType] | None = None,
-    expand_result: bool = True,
+    fname: str | None = None, ofname: str | None = None, keys: list[KeyType] | None = None, expand_result: bool = False
 ) -> Callable:
     r"""
     装饰器，用于从文件中读取数据，处理后将结果写入输出文件。
@@ -1851,9 +1917,7 @@ def run_with_file(
     return actual_decorator
 
 
-def echart(
-    fname: str, chart: Literal["snakey", "funnel", "pie"], total: int | None = None
-):
+def echart(fname: str, chart: Literal["snakey", "funnel", "pie"], total: int | None = None):
     """
     Generate a chart (funnel, sankey, or pie) using pyecharts based on a TSV file.
 
@@ -1882,9 +1946,7 @@ def echart(
     elif chart == "sankey":
         df.columns = ["source", "target", "value"]
     else:
-        raise ValueError(
-            "Unsupported chart type. Choose from 'funnel', 'sankey', or 'pie'."
-        )
+        raise ValueError("Unsupported chart type. Choose from 'funnel', 'sankey', or 'pie'.")
 
     # Normalize value column if total is provided
     if total is not None:
@@ -1913,9 +1975,7 @@ def echart(
                 nodes,
                 links,
                 layout_iterations=100,
-                linestyle_opt=opts.LineStyleOpts(
-                    opacity=0.2, curve=0.5, color="source"
-                ),
+                linestyle_opt=opts.LineStyleOpts(opacity=0.2, curve=0.5, color="source"),
                 label_opts=opts.LabelOpts(
                     position="right",
                     formatter="{b}: {c}",
@@ -1937,22 +1997,16 @@ def echart(
             )
             .set_global_opts(
                 title_opts=opts.TitleOpts(title=fname),
-                legend_opts=opts.LegendOpts(
-                    orient="vertical", pos_top="15%", pos_right="10%"
-                ),
+                legend_opts=opts.LegendOpts(orient="vertical", pos_top="15%", pos_right="10%"),
             )
             .set_series_opts(label_opts=opts.LabelOpts(formatter="{b}: {d}%"))
         )
         pie.render(ofname)
 
     else:
-        raise ValueError(
-            "Unsupported chart type. Choose from 'funnel', 'sankey', or 'pie'."
-        )
+        raise ValueError("Unsupported chart type. Choose from 'funnel', 'sankey', or 'pie'.")
 
-    xerr(
-        f"{chart.capitalize()} chart has been rendered and saved as an HTML file: {ofname}"
-    )
+    xerr(f"{chart.capitalize()} chart has been rendered and saved as an HTML file: {ofname}")
 
 
 if __name__ == "__main__":

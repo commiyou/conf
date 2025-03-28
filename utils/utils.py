@@ -43,6 +43,7 @@ from typing import (
     Optional,
     ParamSpec,
     Self,
+    TextIO,
     TypeAlias,
     TypeVar,
     TypeVarTuple,
@@ -56,6 +57,8 @@ import tqdm as tqdm_
 from bs4 import BeautifulSoup
 from termcolor import colored
 
+requests.packages.urllib3.disable_warnings()
+
 T = TypeVar("T")
 R = TypeVar("R")
 Ts = TypeVarTuple("Ts")
@@ -63,6 +66,8 @@ P = ParamSpec("P")
 Char = NewType("Char", str)
 KeyType: TypeAlias = int | slice | Sequence | Mapping | AbstractSet | Callable[..., Any]
 
+
+devnull = open(os.devnull, "w")
 
 with contextlib.suppress(Exception):
     from traceback_with_variables import activate_by_import
@@ -130,6 +135,7 @@ def xprint(
         return
     if file is None:
         file = sys.stdout
+    # print(f"{len(values)=}, {values=}", file=sys.stderr)
     end = suffix + "\n"
     values_str = [make_str(value) for value in values]
     out = sep.join(values_str) + end
@@ -150,6 +156,7 @@ def xerr(
     debug: bool = True,
     output_flag: bool = True,
     color: Literal["red", "blue", "green"] | None = None,
+    file: "IO|None" = sys.stderr,
 ) -> None:
     """print to stderr with default sep and suffix and encoding"""
     if not debug:
@@ -160,7 +167,7 @@ def xerr(
         *values,
         suffix=suffix,
         sep=sep,
-        file=sys.stderr,  # type:ignore
+        file=file,  # type:ignore
         color=color,
         encoding="unicode_escape" if is_mr() else encoding,
     )
@@ -284,6 +291,7 @@ def xdebug(
     encoding: str = "utf8",
     color: Literal["red", "blue", "green"] | None = None,
     force_debug: bool = False,
+    file: "IO|None" = sys.stderr,
 ) -> None:
     """处于debug模式时，输出"""
     if not force_debug and not in_debug():
@@ -291,7 +299,7 @@ def xdebug(
     caller_frame = sys._getframe(1)  # noqa: SLF001
     function_name = caller_frame.f_code.co_name
     prefix = f"DEBUG: {function_name}"
-    if sys.stdout.isatty() and not color:
+    if not file or (file.isatty() and not color):
         prefix = colored(prefix, "green")
 
     xerr(
@@ -301,6 +309,7 @@ def xdebug(
         sep=sep,
         color=color,
         encoding="unicode_escape" if is_mr() else encoding,
+        file=file,
     )
 
 
@@ -452,6 +461,23 @@ def is_large_file(file_path: str | Path, size_limit: int = 1024 * 1024 * 400) ->
     return file_size > size_limit
 
 
+def remove_invalid_char(s: str) -> str:
+    """去除非法字符"""
+    if not isinstance(s, str):
+        return s
+
+    # 一个特殊的Unicode字符，表示零宽不连字符（Zero Width Non-Joiner，ZWNJ）
+    s = s.replace(chr(160), " ")
+    s = s.replace("‌", "")
+    s = s.replace("\u200b", "")
+    return s
+
+
+def is_valid_value(value: Any) -> bool:
+    """是否是有效值"""
+    return bool(value is not None and not pd.isna(value))
+
+
 def read_file(  # noqa: C901, PLR0912
     input_: str | Path | IO | None = sys.stdin.buffer,
     *,
@@ -476,7 +502,14 @@ def read_file(  # noqa: C901, PLR0912
 
     if isinstance(input_, str) and input_.endswith(".xlsx"):
         df = pd.read_excel(input_, dtype=str)
-        yield from (row for row in df.itertuples(index=False))
+        it = df.itertuples(index=False)
+        if norm:
+            it = (tuple(remove_invalid_char(cell) if isinstance(cell, str) else cell for cell in row) for row in it)
+
+        it = (tuple(cell if is_valid_value(cell) else None for cell in row) for row in it)
+        it = (tuple(cell.strip() if isinstance(cell, str) else cell for cell in row) for row in it)
+
+        yield from tqdm_.tqdm(it, total=len(df))
         return
 
     if isinstance(input_, (str, Path)) and not is_large_file(input_):
@@ -511,20 +544,63 @@ def read_file(  # noqa: C901, PLR0912
             else:
                 uline = line
 
-            if norm:
-                # chr(160)是一个不可见的空白字符
-                uline = uline.replace(chr(160), " ")
-                uline = uline.replace("‌", "")
             ll = split_str(uline, sep=sep, maxsplit=maxsplit)
             if norm:
-                # 一个特殊的Unicode字符，表示零宽不连字符（Zero Width Non-Joiner，ZWNJ）
-                # ll = funcy.lmap(lambda x: x.strip("‌"), ll)
-                pass
+                ll = funcy.lmap(remove_invalid_char, ll)
 
             if filter_func is not None and not filter_func(ll):
                 continue
 
             yield ll
+
+
+def read_kv(
+    input_: str | Path | IO | None = sys.stdin.buffer,
+    key: KeyType = 0,
+    value: KeyType = None,
+    filter: Callable = None,
+    value_accumulate_func: Callable = None,
+    *args,
+    **kwargs,
+) -> set | dict:
+    key_func = make_key_func(key)
+    if value is None:
+        value_func = None
+        result = set()
+        value_accumulate_func = None
+    else:
+        value_func = make_key_func(value)
+        result = collections.defaultdict(list)
+    max_try_cnt = 5
+    # value_accumulate_func = make_key_func(value_accumulate)
+    for i, ll in enumerate(read_file(input_, *args, **kwargs)):
+        if filter and not filter(ll):
+            continue
+        try:
+            k = key_func(ll)
+        except Exception:
+            xerr(f"key or value failed! #{i}:", *ll)
+            max_try_cnt -= 1
+            if max_try_cnt < 0:
+                raise
+            continue
+        if value_func:
+            try:
+                v = value_func(ll)
+            except Exception:
+                xerr(f"key or value failed! #{i}:", *ll)
+                max_try_cnt -= 1
+                if max_try_cnt < 0:
+                    raise
+                continue
+
+            result[k].append(v)
+        else:
+            result.add(k)
+
+    if value_accumulate_func:
+        return funcy.walk_values(value_accumulate_func, result)
+    return result
 
 
 def make_key_func(
@@ -1466,8 +1542,8 @@ def fcache(
                 if ignore_empty_result and (not result or (isinstance(result, str) and not result.strip())):
                     # Manually remove the result from cache if it was just stored
                     key = memoized_func.__cache_key__(*func_args, **func_kwargs)
-                    cache.pop(key, None)
-                    # xdebug(f"pop {key=}")
+                    if key in cache:
+                        cache.pop(key, None)
 
                 return result
 
@@ -1692,8 +1768,7 @@ def get_defaultdict(depth: int = 1, default_factory: Callable[[], T] = int) -> c
 
     if depth == 1:
         return collections.defaultdict(default_factory)
-    else:
-        return collections.defaultdict(lambda: get_defaultdict(depth - 1, default_factory))
+    return collections.defaultdict(lambda: get_defaultdict(depth - 1, default_factory))
 
 
 def split_by_multiple_seps(s: str, seps: str | list[Char]) -> list[str]:
@@ -1726,7 +1801,7 @@ class StatCounter(contextlib.ContextDecorator):
     使用嵌套的defaultdict来存储各维度的计数，线程安全
     """
 
-    def __init__(self, depth: int = 1, dimension: int = 0):
+    def __init__(self, depth: int = 1, dimension: int = 0, of: str | TextIO | None = None, mode: str = "w+"):
         """初始化 StatCounter。
 
         Args:
@@ -1738,6 +1813,14 @@ class StatCounter(contextlib.ContextDecorator):
         assert self.depth > self.dimension
         self.data = get_defaultdict(depth=depth, default_factory=int)
         self.lock = threading.Lock()
+
+        self.of = None
+        self.of_need_close = False
+        if isinstance(of, str):
+            self.of = open(of, mode)
+            self.of_need_close = True
+        elif of is not None:
+            self.of = of
 
     def inc(self, *args: Any, n: int = 1, **log_kwargs: Any) -> None:
         """增加指定维度下 key 的计数，并记录日志。
@@ -1778,7 +1861,10 @@ class StatCounter(contextlib.ContextDecorator):
 
         # 记录日志
         debug_message = f"{path_str}: count={count}"
-        xdebug(debug_message, *extra_args, **log_kwargs)
+        if "file" in log_kwargs:
+            xdebug(debug_message, *extra_args, **log_kwargs)
+        else:
+            xdebug(debug_message, *extra_args, file=self.of, **log_kwargs)
 
     def __enter__(self) -> Self:
         """enter"""
@@ -1789,6 +1875,9 @@ class StatCounter(contextlib.ContextDecorator):
         """exit"""
         # 程序结束时自动输出统计结果
         self.print_stats()
+        if self.of_need_close:
+            with contextlib.suppress(Exception):
+                self.of.close()
 
     def print_stats(self):
         """分维度输出统计"""
@@ -1943,9 +2032,9 @@ def echart(fname: str, chart: Literal["snakey", "funnel", "pie"], total: int | N
         chart (str): Type of chart to generate ('funnel', 'sankey', 'pie').
         total (int | None): Total value for normalizing percentages (optional).
     """
-    from pyecharts import options as opts
-    from pyecharts.charts import Funnel, Sankey, Pie
     import pandas as pd
+    from pyecharts import options as opts
+    from pyecharts.charts import Funnel, Pie, Sankey
 
     ofname = new_filename(fname, suffix=f"{chart}.html")
     # Read TSV file into a DataFrame without header

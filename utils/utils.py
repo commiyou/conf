@@ -603,6 +603,30 @@ def read_kv(
     return result
 
 
+def read_and_dedup(
+    fname: str,
+    func: Callable,
+    ofname: str | None = None,
+    ofname_suffix: str = "",
+    key: KeyType = 0,
+):
+    if not ofname:
+        ofname = fname
+
+    if ofname:
+        ofname = new_filename(ofname, suffix=ofname_suffix)
+
+    already_done = read_kv(ofname, key=key, skip_notexists=True)
+
+    xerr(f"{ofname} has done keys cnt {len(already_done)}")
+    with open(ofname, "a+") as of:
+        todos = []
+        for ll in read_file(fname):
+            real_args = yield ll
+            outs = func(*real_args)
+            yield outs, ll
+
+
 def make_key_func(
     f: KeyType,
 ) -> Callable:
@@ -921,7 +945,7 @@ def sample(
     if bad_pv_cnt > 0:
         xerr(f"skip bad line for pv, cnt: {bad_pv_cnt}")
 
-    for line_no in random.choices(population=population, weights=weights, k=n):
+    for line_no in random.choices(population=population, weights=weights, k=n) if n < len(data) else range(len(data)):
         xprint(*data[line_no])
 
 
@@ -1236,11 +1260,13 @@ def parallel_run_helper(func: Callable[P, R], ll: T, *args: P.args, **kws: P.kwa
 
 VALID_FILE_SUFFIX = (
     ".tsv",
+    ".csv",
     ".xlsx",
     ".txt",
     ".dat",
     ".data",
     ".json",
+    ".jsonl",
     ".jpg",
     ".png",
     ".jpeg",

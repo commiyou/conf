@@ -2,6 +2,7 @@
 """python3 utils"""
 
 import ast
+import atexit
 import base64
 import collections
 import contextlib
@@ -552,6 +553,32 @@ def read_file(  # noqa: C901, PLR0912
                 continue
 
             yield ll
+
+
+class AutoClosingFile:
+    """自动关闭文件的包装类"""
+
+    def __init__(self, filepath: str, mode: str = "w+", **kwargs):
+        """init"""
+        self.file = open(filepath, mode, **kwargs)
+        atexit.register(self.close)  # 注册到程序退出时自动关闭
+
+    def __getattr__(self, name: str):
+        """将所有未定义的方法委托给内部的文件对象"""
+        return getattr(self.file, name)
+
+    def close(self):
+        """close file"""
+        if not self.file.closed:
+            self.file.close()
+            xdebug(f"File '{self.file.name}' closed automatically.")
+
+
+def write_file_new(filepath: str, mode: str = "w+", suffix: str = "", **kwargs):
+    """返回自动关闭的文件对象"""
+    if suffix:
+        filepath = new_filename(filepath, suffix=suffix)
+    return AutoClosingFile(filepath, mode, **kwargs)
 
 
 def read_kv(
@@ -1848,6 +1875,9 @@ class StatCounter(contextlib.ContextDecorator):
         elif of is not None:
             self.of = of
 
+        self.do_exit = False
+        atexit.register(self.__exit__, None, None, None)
+
     def inc(self, *args: Any, n: int = 1, **log_kwargs: Any) -> None:
         """增加指定维度下 key 的计数，并记录日志。
 
@@ -1889,6 +1919,9 @@ class StatCounter(contextlib.ContextDecorator):
         debug_message = f"{path_str}: count={count}"
         if "file" in log_kwargs:
             xdebug(debug_message, *extra_args, **log_kwargs)
+            if log_kwargs["file"] is devnull:
+                log_kwargs.pop("file")
+                xonce(path_str, *extra_args, **log_kwargs)
         else:
             xdebug(debug_message, *extra_args, file=self.of, **log_kwargs)
 
@@ -1900,10 +1933,13 @@ class StatCounter(contextlib.ContextDecorator):
     def __exit__(self, *_: object) -> None:
         """exit"""
         # 程序结束时自动输出统计结果
+        if self.do_exit:
+            return
         self.print_stats()
         if self.of_need_close:
             with contextlib.suppress(Exception):
                 self.of.close()
+        self.do_exit = True
 
     def print_stats(self):
         """分维度输出统计"""

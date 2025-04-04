@@ -24,6 +24,7 @@ import threading
 import time
 import traceback
 import types
+import unicodedata
 from collections.abc import Hashable, Iterable, Mapping, Sequence
 from collections.abc import Set as AbstractSet
 from contextlib import ExitStack, contextmanager, nullcontext
@@ -135,7 +136,6 @@ def xprint(
         return
     if file is None:
         file = sys.stdout
-    # print(f"{len(values)=}, {values=}", file=sys.stderr)
     end = suffix + "\n"
     values_str = [make_str(value) for value in values]
     out = sep.join(values_str) + end
@@ -2133,6 +2133,13 @@ def echart(fname: str, chart: Literal["snakey", "funnel", "pie"], total: int | N
         raise ValueError("Unsupported chart type. Choose from 'funnel', 'sankey', or 'pie'.")
 
     xerr(f"{chart.capitalize()} chart has been rendered and saved as an HTML file: {ofname}")
+
+
+def strip_accents(s: str | None) -> str | None:
+    """去除unicode中的重读 兰蔻LANCÔM -> 兰蔻LANCOM"""
+    if not s:
+        return s
+    return "".join(c for c in unicodedata.normalize("NFD", s) if unicodedata.category(c) != "Mn")
 
 
 if __name__ == "__main__":

@@ -26,7 +26,7 @@ import time
 import traceback
 import types
 import unicodedata
-from collections.abc import Hashable, Iterable, Mapping, Sequence
+from collections.abc import Generator, Hashable, Iterable, Iterator, Mapping, Sequence
 from collections.abc import Set as AbstractSet
 from contextlib import ExitStack, contextmanager, nullcontext
 from functools import partial, wraps
@@ -36,10 +36,6 @@ from typing import (
     IO,
     Any,
     Callable,
-    Concatenate,
-    ContextManager,
-    Generator,
-    Iterator,
     Literal,
     NewType,
     Optional,
@@ -62,10 +58,11 @@ from termcolor import colored
 requests.packages.urllib3.disable_warnings()
 
 T = TypeVar("T")
+OptionalStr = TypeVar("OptionalStr", str, None)
+
 R = TypeVar("R")
 Ts = TypeVarTuple("Ts")
 P = ParamSpec("P")
-Char = NewType("Char", str)
 KeyType: TypeAlias = int | slice | Sequence | Mapping | AbstractSet | Callable[..., Any]
 
 
@@ -333,7 +330,7 @@ def xonce(key: str, *args: P.args, **kwargs: P.kwargs) -> None:
         xdebug(key, *args, **kwargs)
 
 
-def is_chinese_char(uchar: Char) -> bool:
+def is_chinese_char(uchar: str) -> bool:
     """char is chinese or alpha/number
 
     >>> is_chinese_char("你")
@@ -352,10 +349,10 @@ def is_chinese_char(uchar: Char) -> bool:
 
 def contain_chinese(s: str) -> bool:
     """是否包含中文字符，标点符号不算"""
-    return any(is_chinese_char(Char(ch)) for ch in s)
+    return any(is_chinese_char(ch) for ch in s)
 
 
-def is_chinese_or_alnum(uchar: Char) -> bool:
+def is_chinese_or_alnum(uchar: str) -> bool:
     """char is chinese or alpha/number
 
     >>> is_chinese_or_alnum("你")
@@ -388,15 +385,16 @@ trim_line = norm_line
 
 
 def nterm(
-    term: str,
+    term: OptionalStr,
     *,
     lower: bool = True,
     trim_whitespace: bool = False,
     remove_whitespace: bool = True,
     remove_punctions: bool = True,
+    remove_accounts: bool = True,
     strict: bool = False,
-    stop_chars: set[Char] | None = None,
-) -> str:
+    stop_chars: set[str] | None = None,
+) -> OptionalStr:
     """新版本norm_term， 默认小写、去空白符、去标点
 
     >>> nterm("手电筒‘ 0")
@@ -404,7 +402,11 @@ def nterm(
     >>> nterm("手电筒‘ 0", stop_chars={"0"})
     '手电筒'
     """
+    if term is None:
+        return None
 
+    if remove_accounts:
+        term = strip_accents(term)
     if lower:
         ret = term.lower()
     if trim_whitespace:
@@ -427,7 +429,7 @@ def norm_term(
     term: str,
     *,
     strict: bool = True,
-    stop_chars: set[Char] | None = None,
+    stop_chars: set[str] | None = None,
 ) -> str:
     """Convert the term to lowercase and remove whitespace characters
 
@@ -471,6 +473,8 @@ def remove_invalid_char(s: str) -> str:
     s = s.replace(chr(160), " ")
     s = s.replace("‌", "")
     s = s.replace("\u200b", "")
+    s = s.replace("\u2069", "")
+    s = s.replace("\u2060", "")
     return s
 
 
@@ -561,6 +565,8 @@ class AutoClosingFile:
     def __init__(self, filepath: str, mode: str = "w+", **kwargs):
         """init"""
         self.file = open(filepath, mode, **kwargs)
+        self.fname = filepath
+
         atexit.register(self.close)  # 注册到程序退出时自动关闭
 
     def __getattr__(self, name: str):
@@ -584,11 +590,11 @@ def write_file_new(filepath: str, mode: str = "w+", suffix: str = "", **kwargs):
 def read_kv(
     input_: str | Path | IO | None = sys.stdin.buffer,
     key: KeyType = 0,
-    value: KeyType = None,
-    filter: Callable = None,
-    value_accumulate_func: Callable = None,
-    *args,
-    **kwargs,
+    value: KeyType | None = None,
+    filter: Callable | None = None,
+    value_accumulate_func: Callable | None = funcy.first,
+    *args: P.args,
+    **kwargs: P.kwargs,
 ) -> set | dict:
     key_func = make_key_func(key)
     if value is None:
@@ -601,6 +607,7 @@ def read_kv(
     max_try_cnt = 5
     # value_accumulate_func = make_key_func(value_accumulate)
     for i, ll in enumerate(read_file(input_, *args, **kwargs)):
+        # xerr(i, *ll)
         if filter and not filter(ll):
             continue
         try:
@@ -1127,6 +1134,24 @@ def parallel_process_items_processes(
             pbar.update(1)
 
 
+def get_positional_param_count(func: Callable):
+    """获取函数的签名中位置参数的个数
+
+    >>> def example_func(a, b, c=2, *args, **kwargs):
+    ...     pass
+    >>> get_positional_param_count(example_func)
+    3
+    """
+    sig = inspect.signature(func)
+    # 遍历签名中的参数
+    positional_count = sum(
+        1
+        for param in sig.parameters.values()
+        if param.kind in {inspect.Parameter.POSITIONAL_ONLY, inspect.Parameter.POSITIONAL_OR_KEYWORD}
+    )
+    return positional_count
+
+
 def parallel_process_items_processes_new(
     inputs: Iterable[tuple[*Ts]],
     proc_func: Callable[[*Ts], T],
@@ -1137,6 +1162,7 @@ def parallel_process_items_processes_new(
     total: int | None = None,
     timeout: int | None = None,
     max_fail_cnt: int = 20,
+    func_arg_cnt: int | None = None,
 ) -> Generator[tuple[tuple[*Ts], T], None, None]:
     """
     并行处理输入项并返回结果的迭代器。
@@ -1163,8 +1189,10 @@ def parallel_process_items_processes_new(
         process_cnt = os.cpu_count() or 1
 
     xerr(f"pcnt {process_cnt}")
+    positional_param_count = func_arg_cnt or get_positional_param_count(proc_func)
+    assert positional_param_count > 0
     if process_cnt == 1:
-        yield from iter((ll, proc_func(*ll)) for ll in tqdm_.tqdm(inputs))
+        yield from iter((ll, proc_func(*ll[:positional_param_count])) for ll in tqdm_.tqdm(inputs))
         return
 
     if not total and isinstance(inputs, (list, tuple, set, dict)):
@@ -1192,6 +1220,7 @@ def parallel_process_items_processes_new(
 
     failed_tasks = []
     suc_cnt = 0
+
     with (
         concurrent.futures.ProcessPoolExecutor(
             max_workers=process_cnt,
@@ -1202,7 +1231,8 @@ def parallel_process_items_processes_new(
         tqdm_.tqdm(total=total, desc=desc) as pbar,
     ):
         futures = {
-            executor.submit(proc_func, *input): input for input in itertools.islice(handler_inputs, max_concurrency)
+            executor.submit(proc_func, *input_[:positional_param_count]): input_
+            for input_ in itertools.islice(handler_inputs, max_concurrency)
         }
 
         while futures:
@@ -1234,11 +1264,11 @@ def parallel_process_items_processes_new(
                         raise
                     # TODO:  yeild Exception
                 try:
-                    input = next(handler_inputs)
+                    input_ = next(handler_inputs)
                 except StopIteration:
                     continue
-                new_future = executor.submit(proc_func, *input)
-                futures[new_future] = input
+                new_future = executor.submit(proc_func, *input_[:positional_param_count])
+                futures[new_future] = input_
 
             # for input in itertools.islice(handler_inputs, len(done)):
             #     fut = executor.submit(proc_func, *input)
@@ -1324,12 +1354,12 @@ def join_with_delim(s1: str, s2: str, delim: str = ".") -> str:
 
 
 def new_filename(
-    fpath: str | None,
+    fpath: OptionalStr,
     *,
     prefix: str = "",
     suffix: str = "",
     force: bool = False,
-) -> str | None:
+) -> OptionalStr:
     """新文件名
 
     >>> new_filename("1.tsv", prefix="2", suffix="3")
@@ -1539,11 +1569,11 @@ def print_tb():
     xerr(traceback.format_exc())
 
 
-def doctest() -> None:
+def doctest(verbose: bool = False) -> None:
     """test"""
     import doctest
 
-    doctest.testmod(verbose=False)
+    doctest.testmod(verbose=verbose)
 
 
 def urlencode_params(**params: object) -> str:
@@ -1561,7 +1591,7 @@ def md5(input_string: str) -> str:
 def fcache(
     cache_dir: str, ignore_empty_result: bool = True, *args: object, **kwargs: object
 ) -> Callable[[Callable[P, T]], Callable[P, T]]:
-    """diskcache for function
+    """diskcache for function, expire=60*60*24*7
 
     https://grantjenks.com/docs/diskcache/api.html#diskcache.FanoutCache.memoize
     usage:
@@ -1824,7 +1854,7 @@ def get_defaultdict(depth: int = 1, default_factory: Callable[[], T] = int) -> c
     return collections.defaultdict(lambda: get_defaultdict(depth - 1, default_factory))
 
 
-def split_by_multiple_seps(s: str, seps: str | list[Char]) -> list[str]:
+def split_by_multiple_seps(s: str, seps: str | list[str]) -> list[str]:
     """使用seps里的每个字符去给str分段
 
     >>> split_by_multiple_seps("a,b;c.d", ",;.")
@@ -2171,11 +2201,30 @@ def echart(fname: str, chart: Literal["snakey", "funnel", "pie"], total: int | N
     xerr(f"{chart.capitalize()} chart has been rendered and saved as an HTML file: {ofname}")
 
 
-def strip_accents(s: str | None) -> str | None:
+def strip_accents(s: OptionalStr) -> OptionalStr:
     """去除unicode中的重读 兰蔻LANCÔM -> 兰蔻LANCOM"""
     if not s:
         return s
     return "".join(c for c in unicodedata.normalize("NFD", s) if unicodedata.category(c) != "Mn")
+
+
+def aggregate_by_key(
+    fname: str | None = None,
+    key: KeyType = 0,
+    value: KeyType = 1,
+    unpack: bool = False,
+    with_len: bool = False,
+    *args,
+    **kwargs,
+):
+    """指定key，聚合value
+
+    upack为True的话分成多列
+    """
+    for k, vs in read_kv(fname, *args, value_accumulate_func=None, key=key, value=value, **kwargs).items():
+        res = [k, len(vs)] if with_len else [k]
+        res = [*res, *vs] if unpack else [*res, vs]
+        xprint(*res)
 
 
 if __name__ == "__main__":

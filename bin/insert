@@ -1,118 +1,416 @@
 #!/usr/bin/env python3
-# -*- coding: gbk -*-
+# -*- coding: utf-8 -*-
 
 import sys
-import os
+import argparse
 import traceback
+from typing import List, Tuple, Dict, Optional, TextIO, Any
 
-def create_range_callback(option, opt, value, parser):
-    tmp = value.split(",")
+
+def parse_range(range_str: str) -> List[int]:
+    """
+    Parses a string representation of column ranges (e.g., "1,3-5,10")
+    into a list of integers.
+
+    Args:
+        range_str: The string containing comma-separated numbers and ranges.
+
+    Returns:
+        A list of integers representing the specified columns (0-based).
+
+    Raises:
+        ValueError: If the format is invalid or numbers are not integers.
+    """
     res = []
-    for e in tmp:
+    if not range_str:
+        return res
+    parts = range_str.split(",")
+    for part in parts:
+        part = part.strip()
+        if not part:
+            continue
         try:
-            i, j = list(map(int, e.split('-')))
-            res +=  list(range(i,j+1))
-        except:
-            res.append(int(e))
-    setattr(parser.values, option.dest, res)
+            if "-" in part:
+                start, end = map(int, part.split("-"))
+                if start > end:
+                    raise ValueError(f"Invalid range: start ({start}) > end ({end}) in '{part}'")
+                # Convert to 0-based index immediately
+                res.extend(list(range(start, end + 1)))
+            else:
+                # Convert to 0-based index immediately
+                res.append(int(part))
+        except ValueError as e:
+            raise ValueError(f"Invalid format in range string '{range_str}': Part '{part}'. Error: {e}") from e
+        except Exception as e:
+            raise ValueError(f"Unexpected error parsing range string '{range_str}': Part '{part}'. Error: {e}") from e
+    # Deduplicate and sort, although the original didn't explicitly do this
+    # return sorted(list(set(res)))
+    # Keep original order/duplicates if that was intended, but ranges make duplicates less likely
+    return res
+
+
+def read_key_value_file(
+    key_file_path: str, delimiter: str, key_cols_indices: List[int], value_cols_indices: Optional[List[int]]
+) -> Tuple[Dict[Tuple[str, ...], str], int]:
+    """
+    Reads the key-value file and builds a dictionary mapping keys to values.
+
+    Args:
+        key_file_path: Path to the key-value file.
+        delimiter: The delimiter used in the key-value file.
+        key_cols_indices: List of 0-based column indices for the key.
+        value_cols_indices: Optional list of 0-based column indices for the value.
+                           If None, values are taken from the column after the
+                           highest key column index to the end of the line.
+
+    Returns:
+        A tuple containing:
+        - A dictionary where keys are tuples of strings and values are
+          delimiter-joined strings.
+        - The number of value columns expected based on the specification.
+
+    Raises:
+        FileNotFoundError: If the key_file_path does not exist.
+        IndexError: If specified column indices are out of bounds for a line.
+        ValueError: If calculation leads to issues.
+    """
+    key_value_map: Dict[Tuple[str, ...], str] = {}
+    num_value_cols = 0
+    calculated_num_value_cols = False  # Flag to track if num_value_cols was determined
+
+    if not key_cols_indices:
+        raise ValueError("Key column indices cannot be empty.")
+
+    max_key_col = max(key_cols_indices) if key_cols_indices else -1
+
+    try:
+        with open(key_file_path, "r", encoding="utf-8") as f_key:
+            for line_num, line in enumerate(f_key):
+                line = line.rstrip("\n")
+                parts = line.split(delimiter)
+                num_parts = len(parts)
+
+                try:
+                    # Extract key
+                    key = tuple(parts[i] for i in key_cols_indices)
+
+                    # Determine and extract value
+                    current_line_value_parts: List[str] = []
+                    if value_cols_indices is not None:
+                        # Explicit value columns provided
+                        if not calculated_num_value_cols:
+                            num_value_cols = len(value_cols_indices)
+                            calculated_num_value_cols = True
+                        current_line_value_parts = [parts[i] for i in value_cols_indices]
+                    else:
+                        # Default: value columns are from max_key_col + 1 to end
+                        value_start_index = max_key_col + 1
+                        if value_start_index < num_parts:
+                            current_line_value_parts = parts[value_start_index:]
+                        else:
+                            current_line_value_parts = []  # No value columns found after key
+
+                        if not calculated_num_value_cols:
+                            num_value_cols = len(current_line_value_parts)
+                            # We determine num_value_cols from the first line in this mode
+                            # Assuming subsequent lines should ideally have the same structure
+                            calculated_num_value_cols = True
+
+                    value_str = delimiter.join(current_line_value_parts)
+                    key_value_map[key] = value_str
+
+                except IndexError:
+                    print(
+                        f"Warning: Skipping line {line_num + 1} in key file '{key_file_path}' due to insufficient columns: {line}",
+                        file=sys.stderr,
+                    )
+                except Exception as e:
+                    print(
+                        f"Error processing line {line_num + 1} in key file '{key_file_path}': {line}", file=sys.stderr
+                    )
+                    traceback.print_exc(file=sys.stderr)
+                    # Decide whether to skip or exit
+                    # exit(1) # Or continue processing other lines
+
+    except FileNotFoundError:
+        print(f"Error: Key file not found: '{key_file_path}'", file=sys.stderr)
+        raise
+    except Exception as e:
+        print(f"Error reading key file '{key_file_path}': {e}", file=sys.stderr)
+        raise
+
+    # If value_cols was explicitly provided, num_value_cols is fixed
+    if value_cols_indices is not None:
+        num_value_cols = len(value_cols_indices)
+    elif not calculated_num_value_cols:
+        # This happens if the key file was empty or all lines had errors/no value cols
+        num_value_cols = 0
+        print(
+            f"Warning: Could not determine the number of value columns from key file '{key_file_path}'. Assuming 0.",
+            file=sys.stderr,
+        )
+
+    return key_value_map, num_value_cols
+
+
+def process_input_file(
+    input_stream: TextIO,
+    delimiter: str,
+    insert_index: Optional[int],
+    key_value_map: Optional[Dict[Tuple[str, ...], str]],
+    input_key_cols_indices: Optional[List[int]],
+    const_value: Optional[str],
+    default_value_str: Optional[str],
+) -> None:
+    """
+    Processes lines from an input stream, inserting either a constant value
+    or a value looked up from the key_value_map.
+
+    Args:
+        input_stream: The input file stream (e.g., sys.stdin or opened file).
+        delimiter: The delimiter for splitting input lines.
+        insert_index: The 0-based index where the value should be inserted.
+                      If None, append to the end.
+        key_value_map: Dictionary for key-based lookup (used if const_value is None).
+        input_key_cols_indices: Column indices to form the key from the input line
+                                (used if const_value is None).
+        const_value: The constant value to insert (used if key_value_map is None).
+        default_value_str: The value to insert if a key is not found in key_value_map.
+                           If None, lines with missing keys are skipped.
+    """
+    for line_num, line in enumerate(input_stream):
+        line = line.rstrip("\n")
+        parts = line.split(delimiter)
+        num_parts = len(parts)
+
+        # Determine the actual index for insertion
+        # list.insert() handles negative indices relative to the end.
+        # If index is None, we want to append, which insert(len(parts), ...) does.
+        actual_insert_index = len(parts) if insert_index is None else insert_index
+
+        value_to_insert: Optional[str] = None
+
+        if const_value is not None:
+            # --- Constant Value Mode ---
+            value_to_insert = const_value
+        elif key_value_map is not None and input_key_cols_indices is not None:
+            # --- Key-Value Lookup Mode ---
+            try:
+                # Extract key from input line
+                input_key = tuple(parts[i] for i in input_key_cols_indices)
+
+                # Lookup value
+                value_to_insert = key_value_map.get(input_key)
+
+                if value_to_insert is None:
+                    # Key not found
+                    if default_value_str is None:
+                        # No default value provided, skip the line
+                        continue
+                    else:
+                        # Use the prepared default value string
+                        value_to_insert = default_value_str
+
+            except IndexError:
+                print(
+                    f"Warning: Skipping line {line_num + 1} in input file '{getattr(input_stream, 'name', '<stdin>')}' due to insufficient columns for key extraction: {line}",
+                    file=sys.stderr,
+                )
+                continue  # Skip this line
+            except Exception as e:
+                print(
+                    f"Error processing line {line_num + 1} in input file '{getattr(input_stream, 'name', '<stdin>')}': {line}",
+                    file=sys.stderr,
+                )
+                traceback.print_exc(file=sys.stderr)
+                continue  # Skip this line
+        else:
+            # Should not happen if argument parsing is correct
+            print("Internal Error: Invalid state for processing.", file=sys.stderr)
+            continue
+
+        # --- Insert the value ---
+        # Ensure index is within bounds for insertion (0 to len(parts))
+        if not (
+            0 <= actual_insert_index <= num_parts
+            or (actual_insert_index < 0 and abs(actual_insert_index) <= num_parts + 1)
+        ):
+            print(
+                f"Warning: Insert index {insert_index} is out of bounds for line {line_num + 1} with {num_parts} fields. Appending instead. Line: {line}",
+                file=sys.stderr,
+            )
+            actual_insert_index = num_parts  # Default to appending if index is invalid
+
+        try:
+            parts.insert(
+                actual_insert_index, value_to_insert if value_to_insert is not None else ""
+            )  # Insert empty string if value ended up None somehow
+        except IndexError:
+            # This might happen with large negative indices, fallback to append
+            print(
+                f"Warning: Corrected invalid insert index {insert_index} for line {line_num + 1}. Appending. Line: {line}",
+                file=sys.stderr,
+            )
+            parts.append(value_to_insert if value_to_insert is not None else "")
+
+        # --- Print the result ---
+        print(delimiter.join(parts))
+
+
+def main():
+    """Main function to parse arguments and orchestrate processing."""
+    parser = argparse.ArgumentParser(
+        description="Insert a column with either a constant value or a value looked up from a key file.",
+        usage="%(prog)s [options] [input_file...]",
+    )
+
+    # --- General Options ---
+    parser.add_argument("-d", "--delim", help="Delimiter for input, output, and key files. Default: tab", default="\t")
+    parser.add_argument(
+        "-i",
+        "--index",
+        help="The 0-based column index to insert the new value(s). "
+        "Negative indices count from the end. "
+        "Default: Append at the end (after the last column).",
+        type=int,
+        default=None,  # None signifies appending
+    )
+    parser.add_argument(
+        "input_files",
+        metavar="input_file",
+        nargs="*",  # 0 or more input files
+        type=argparse.FileType("r", encoding="utf-8"),
+        default=[sys.stdin],
+        help="Input file(s) to process. If omitted, reads from standard input.",
+    )
+
+    # --- Constant Value Mode Options ---
+    group_const = parser.add_argument_group("Constant Value Options", "Insert a fixed constant value.")
+    group_const.add_argument(
+        "-p", "--param", dest="const_value", help="The constant value to insert. Default: '-'", default="-"
+    )
+
+    # --- Key-Value Lookup Mode Options ---
+    group_key = parser.add_argument_group(
+        "Key-Value Lookup Options", "Insert values based on matching keys in a separate file."
+    )
+    group_key.add_argument(
+        "-f", "--key-file", dest="key_file_path", help="Path to the file containing key:value mappings.", default=None
+    )
+    group_key.add_argument(
+        "-k",
+        "--key-cols1",
+        dest="key_cols_keyfile",
+        help="0-based key column index/ranges in <key-file> (e.g., '0' or '1,3-5'). Default: '0' (first column).",
+        type=parse_range,
+        default=None,  # Processed later
+    )
+    group_key.add_argument(
+        "-v",
+        "--value-cols",
+        dest="value_cols_keyfile",
+        help="0-based value column index/ranges in <key-file> (e.g., '1' or '2-4'). "
+        "Default: Columns after the last key column.",
+        type=parse_range,
+        default=None,
+    )
+    group_key.add_argument(
+        "-K",
+        "--key-cols2",
+        dest="key_cols_input",
+        help="0-based key column index/ranges in <input_file> (e.g., '0' or '1,3-5'). "
+        "Default: Same as -k/--key-cols1.",
+        type=parse_range,
+        default=None,  # Processed later
+    )
+    group_key.add_argument(
+        "--dv",
+        "--default-value",
+        dest="default_value",
+        help="Default value to insert if an input key is not found in <key-file>. "
+        "If omitted, lines with missing keys are skipped.",
+        default=None,
+    )
+
+    args = parser.parse_args()
+
+    # --- Argument Validation and Post-processing ---
+
+    # Determine mode: If key_file_path is given, use Key-Value mode.
+    is_key_value_mode = args.key_file_path is not None
+
+    key_value_map = None
+    num_value_cols = 1  # Default for constant mode or if lookup fails
+    default_value_str = None  # The actual string to insert for defaults
+
+    if is_key_value_mode:
+        # -- Key-Value Mode Specific Validation --
+        if not args.key_cols_keyfile and not args.key_cols_input:
+            args.key_cols_keyfile = [0]  # Default to column 0
+            args.key_cols_input = [0]  # Default to column 0
+        elif not args.key_cols_input:
+            args.key_cols_input = args.key_cols_keyfile  # Default input keys to keyfile keys
+        elif not args.key_cols_keyfile:
+            args.key_cols_keyfile = args.key_cols_input  # Default keyfile keys to input keys
+
+        if not args.key_cols_keyfile or not args.key_cols_input:
+            parser.error("Internal error: Key columns could not be determined.")  # Should be caught by defaults
+
+        if len(args.key_cols_keyfile) != len(args.key_cols_input):
+            parser.error(
+                "The number of key columns specified for the key file (-k) "
+                "must match the number for the input file (-K)."
+            )
+
+        # -- Read Key-Value File --
+        try:
+            key_value_map, num_value_cols = read_key_value_file(
+                args.key_file_path, args.delim, args.key_cols_keyfile, args.value_cols_keyfile
+            )
+        except (FileNotFoundError, ValueError, IndexError) as e:
+            print(f"Error initializing from key file: {e}", file=sys.stderr)
+            sys.exit(1)
+        except Exception as e:
+            print(f"An unexpected error occurred while reading the key file: {e}", file=sys.stderr)
+            traceback.print_exc(file=sys.stderr)
+            sys.exit(1)
+
+        # -- Prepare Default Value String (BUG FIX) --
+        if args.default_value is not None:
+            # If a default value is specified, construct the string to insert.
+            # It needs to match the number of expected value columns.
+            if num_value_cols > 0:
+                default_parts = [args.default_value] * num_value_cols
+                default_value_str = args.delim.join(default_parts)
+            else:
+                # If num_value_cols is 0 (e.g., empty key file or no value cols found)
+                # Still provide the single default value if requested. Or maybe empty?
+                # Let's provide the single value as the original might have intended.
+                default_value_str = args.default_value
+                # Alternative: default_value_str = "" if num_value_cols == 0
+
+    # --- Process Input Files ---
+    for f_in in args.input_files:
+        try:
+            process_input_file(
+                input_stream=f_in,
+                delimiter=args.delim,
+                insert_index=args.index,
+                key_value_map=key_value_map,  # None in constant mode
+                input_key_cols_indices=args.key_cols_input if is_key_value_mode else None,
+                const_value=args.const_value if not is_key_value_mode else None,
+                default_value_str=default_value_str,  # Prepared default string
+            )
+        except Exception as e:
+            print(f"Error processing file '{getattr(f_in, 'name', '<stdin>')}': {e}", file=sys.stderr)
+            traceback.print_exc(file=sys.stderr)
+            # Decide if you want to stop on error or continue with next file
+            # sys.exit(1)
+        finally:
+            if f_in is not sys.stdin:
+                f_in.close()  # Close files opened by argparse
+
 
 if __name__ == "__main__":
-    from optparse import OptionParser, OptionGroup
-    parser = OptionParser(usage="usage:%prog [options] [file]")
-    parser.add_option("-d", dest="delim",help="delimeter, default tab",default="\t")
-    parser.add_option("-i", dest="index",help="the colom to put,start from 0, default NF (number of field) Note: this index can be -1 ", default=None)
-    # ==  only insert const "value"
-    group_const = OptionGroup(parser, "Const Value Options", "insert const value")
-    group_const.add_option("-p", dest="param",help="the value to be put, default '-' " , default='-')
-    parser.add_option_group(group_const)
-    # ==  insert value by key in a file
-    group_key = OptionGroup(parser, "Key Value Options", "insert value by key in a File")
-    group_key.add_option("-f", dest="key_file",help="the file contains key:value" ,default = None)
-    group_key.add_option("-k", dest="key_cols1",help="the key cols in <key_file>, default 0(the first col) Example: 1,3-5,10 (1,3,4,10)" , action = "callback", callback = create_range_callback, type = "string", default=None)
-    group_key.add_option("-v", dest="value_cols",help="the value cols in <key_file>, the lasted meet value sepcified by key will be store, default to the right remain of max col in key_cols" , action = "callback", callback = create_range_callback, type = "string", default=None)
-    group_key.add_option("-K", dest="key_cols2",help="the key cols in <input_file>" , action = "callback", callback = create_range_callback, type = "string", default=None)
-    group_key.add_option("--dv", dest="default_value",help="the default value if <input_file>'s key not in <key_file>, default skip" ,default= None)
-    parser.add_option_group(group_key)
-
-    (options,args) = parser.parse_args()
-
-
-    key_file = options.key_file
-    index = options.index
-    if index != None:
-        index = int(index)
-    delim = options.delim
-
-    # 遍历文件列表
-    fd_list = []
-    if not args:
-        fd_list.append(sys.stdin)
-    else:
-        for file in args:
-            fd_list.append(open(file))
-
-    # 是插入固定值
-    if key_file is None:
-        param = options.param
-
-        for fd in fd_list:
-            for line in fd:
-                line = line.rstrip('\n')
-                ll = line.split(delim)
-                if index is None:
-                    index = len(ll)
-                ll.insert(index,param)
-                print(delim.join(ll))
-    else:
-        key_cols1 = options.key_cols1
-        key_cols2 = options.key_cols2
-        value_cols = options.value_cols
-        if key_cols1 is None and key_cols2 is None:
-            key_cols1 = [0]
-            key_cols2 = [0]
-        elif key_cols2 is None:
-            key_cols2 = key_cols1
-        elif key_cols1 is None:
-            key_cols1 = key_cols2
-
-        if value_cols is None:
-            max_key_col = max(key_cols1)
-        if len(key_cols1) != len(key_cols2):
-            print("Error: the lens of two key_cols are not equal", file=sys.stderr)
-            exit(1)
-
-        # 读取key value
-        dd = {}
-        for line in open(key_file):
-            line = line.rstrip('\n')
-            ll = line.split(delim)
-            try:
-                key = tuple([ll[i] for i in key_cols1])
-            except:
-                traceback.print_exc()
-                print(line, file=sys.stderr)
-                exit(-1)
-            # 如果没有设置value 列数，默认使用key最右侧剩下的
-            if value_cols is None:
-                value =  ll[max_key_col+1:]
-            else:
-                value =  [ ll[i] for i in value_cols]
-            dd[key] = delim.join(value)
-
-        # 插入value
-        for fd in fd_list:
-            for line in fd:
-                line = line.rstrip('\n')
-                ll = line.split(delim)
-                if index is None:
-                    index = len(ll)
-                key = tuple([ll[i] for i in key_cols2])
-                    #print>>sys.stderr, "Error: the line skiped for key [%s] not found, \n %s" % ( delim.join(key), line)
-
-                value = dd.get(key,options.default_value)
-                if value is None:
-                    continue
-                ll.insert(index,value)
-                print(delim.join(ll))
-
+    main()
 

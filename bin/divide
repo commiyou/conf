@@ -1,14 +1,14 @@
-#!/usr/bin/env python2
-import sys
+#!/usr/bin/env python3
 import argparse
-try:
-    import cutil
-except:
-    pass
+import sys
+from typing import TextIO
 
 
-class valueGetter(object):
-    def __init__(self, e):
+class ValueGetter:
+    """get a value from a line"""
+
+    def __init__(self, e: str):
+        """initialize"""
         if e.startswith("v"):
             self.e = float(e[1:])
             self.get = self._value
@@ -16,14 +16,15 @@ class valueGetter(object):
             self.e = int(e)
             self.get = self._idx
 
-    def _idx(self, ll):
+    def _idx(self, ll: list[str]) -> str:
         return ll[self.e]
 
-    def _value(self, ll):
+    def _value(self, ll: list[str]) -> str:
         return self.e
 
 
-def safe_divide(e1, e2, default="N/A", percent=False):
+def safe_divide(e1: str, e2: str, default: str = "N/A", percent: bool = False) -> str:
+    """safe divide e1 by e2, return default if e2 is 0"""
     try:
         value = "%.6f" % (float(e1) / float(e2))
     except:
@@ -38,36 +39,194 @@ def safe_divide(e1, e2, default="N/A", percent=False):
         return value
 
 
-common_parser = argparse.ArgumentParser(description='divide num by indexs or values')
-common_parser.add_argument("-d", "--delim", nargs=1,
-                           required=False, default="\t")
-common_parser.add_argument("-D", "--DELIM", nargs=1,
-                           required=False, default="\t",
-                           help="output delim")
-common_parser.add_argument("-e", "--divide_exception_default",
-                           required=False, default="N/A", help="default N/A")
-common_parser.add_argument("-p", nargs="+", metavar="p1,p2", required=True,
-                           help="idx1,idx2 or idx1,v123 or v123,idx1")
-common_parser.add_argument("-P", "--percent", action="store_true", help="percent")
-common_parser.add_argument("files", nargs="*", type=argparse.FileType('r'))
+def calculate_column_totals(files: list[TextIO], delim: str, column_idx: int) -> float:
+    """calculate the total of a column"""
+    total = 0
+    for fd in files:
+        for line in fd:
+            line = line.rstrip("\n")
+            ll = [x.strip() for x in line.split(delim)]
+            try:
+                total += float(ll[column_idx])
+            except (ValueError, IndexError):
+                continue
+    return total
 
-args = common_parser.parse_args(sys.argv[1:])
 
-idxs = []
-for e in args.p:
-    e1, e2 = e.split(",")
-    idxs.append([valueGetter(e1), valueGetter(e2)])
+def parse_arguments() -> argparse.Namespace:
+    """parse arguments"""
+    parser = argparse.ArgumentParser(description="divide num by indexs or values")
+    parser.add_argument("-d", "--delim", nargs=1, required=False, default="\t")
+    parser.add_argument("-D", "--DELIM", nargs=1, required=False, default="\t", help="output delim")
+    parser.add_argument("-e", "--divide_exception_default", required=False, default="N/A", help="default N/A")
+    parser.add_argument(
+        "-p", nargs="+", metavar="p1[,p2]", help="idx1,idx2 or idx1,v123 or v123,idx1 or idx1 (uses column total)"
+    )
+    parser.add_argument("-P", "--percent", action="store_true", help="percent")
+    parser.add_argument("--test", action="store_true", help="run test cases")
+    parser.add_argument("files", nargs="*", type=argparse.FileType("r"))
+    args = parser.parse_args(sys.argv[1:])
 
-infiles = args.files
-if not infiles:
-    infiles = [sys.stdin]
-for fd in infiles:
-    for line in fd:
-        line = line.rstrip('\n')
-        ll = map(lambda x: x.strip(), line.split(args.delim))
-        for e1, e2 in idxs:
-            ll.append(safe_divide(e1.get(ll),
-                                  e2.get(ll),
-                                  default=args.divide_exception_default,
-                                  percent=args.percent))
-        print args.DELIM.join(ll)
+    # Make -p required only if --test is not specified
+    if not args.test and not args.p:
+        parser.error("the following arguments are required: -p")
+
+    return args
+
+
+def process_line(
+    line: str,
+    idxs: list[list[ValueGetter]],
+    column_totals: dict[str, float],
+    delim: str,
+    default_value: str,
+    percent: bool,
+) -> list[str]:
+    """process a line"""
+    line = line.rstrip("\n")
+    ll = [x.strip() for x in line.split(delim)]
+    for e1, e2 in idxs:
+        if e2 is None:
+            # Use column total as denominator
+            if isinstance(e1.e, str) and e1.e.startswith("v"):
+                denominator = float(e1.e[1:])
+            else:
+                denominator = column_totals[e1.e]
+            ll.append(safe_divide(e1.get(ll), denominator, default=default_value, percent=percent))
+        else:
+            ll.append(safe_divide(e1.get(ll), ValueGetter(e2).get(ll), default=default_value, percent=percent))
+    return ll
+
+
+def run_tests():
+    """run tests"""
+    test_cases = [
+        # Test case 1: Basic division
+        {"input": "1\t2\t3", "delim": "\t", "p": ["0,1"], "expected": ["1", "2", "3", "0.500000"]},
+        # Test case 2: Division by value
+        {"input": "1\t2\t3", "delim": "\t", "p": ["0,v2"], "expected": ["1", "2", "3", "0.500000"]},
+        # Test case 3: Percent calculation
+        {"input": "1\t2\t3", "delim": "\t", "p": ["0,1"], "percent": True, "expected": ["1", "2", "3", "50.00%"]},
+        # Test case 4: Division by zero
+        {"input": "1\t0\t3", "delim": "\t", "p": ["0,1"], "expected": ["1", "0", "3", "N/A"]},
+        # Test case 5: Multiple divisions
+        {
+            "input": "10\t2\t5",
+            "delim": "\t",
+            "p": ["0,1", "2,1"],
+            "expected": ["10", "2", "5", "5.000000", "2.500000"],
+        },
+        # Test case 6: Non-numeric values
+        {"input": "abc\tdef\tghi", "delim": "\t", "p": ["0,1"], "expected": ["abc", "def", "ghi", "N/A"]},
+        # Test case 7: Empty fields
+        {"input": "\t\t", "delim": "\t", "p": ["0,1"], "expected": ["", "", "", "N/A"]},
+        # Test case 8: Custom delimiter
+        {"input": "10,2,5", "delim": ",", "p": ["0,1"], "expected": ["10", "2", "5", "5.000000"]},
+        # Test case 9: Multiple percent calculations
+        {
+            "input": "10\t20\t30",
+            "delim": "\t",
+            "p": ["0,1", "2,1"],
+            "percent": True,
+            "expected": ["10", "20", "30", "50.00%", "150.00%"],
+        },
+        # Test case 10: Division with floating point numbers
+        {"input": "3.14\t2.0\t1.5", "delim": "\t", "p": ["0,1"], "expected": ["3.14", "2.0", "1.5", "1.570000"]},
+        # Test case 11: Division by column total
+        {"input": "10\t20\t30", "delim": "\t", "p": ["0"], "expected": ["10", "20", "30", "0.166667"]},
+        # Test case 12: Division with negative numbers
+        {
+            "input": "-10\t2\t-5",
+            "delim": "\t",
+            "p": ["0,1", "2,1"],
+            "expected": ["-10", "2", "-5", "-5.000000", "-2.500000"],
+        },
+        # Test case 13: Division with very small numbers
+        {
+            "input": "0.000001\t0.000002\t0.000003",
+            "delim": "\t",
+            "p": ["0,1"],
+            "expected": ["0.000001", "0.000002", "0.000003", "0.500000"],
+        },
+        # Test case 14: Division with very large numbers
+        {
+            "input": "1000000\t2000000\t3000000",
+            "delim": "\t",
+            "p": ["0,1"],
+            "expected": ["1000000", "2000000", "3000000", "0.500000"],
+        },
+    ]
+
+    for i, test in enumerate(test_cases, 1):
+        print(f"\nRunning test case {i}:")
+        print(f"Input: {test['input']}")
+        print(f"Parameters: p={test['p']}, percent={test.get('percent', False)}")
+
+        # Process the test case
+        line = test["input"]
+        idxs = []
+        for e in test["p"]:
+            parts = e.split(",")
+            e1 = parts[0]
+            e2 = parts[1] if len(parts) > 1 else None
+            idxs.append([ValueGetter(e1), e2])
+
+        # For column total tests, we need to simulate the total
+        column_totals = {}
+        if any(e2 is None for _, e2 in idxs):
+            # Simulate column totals for testing
+            column_totals = {0: 60}  # Example total for column 0
+
+        result = process_line(line, idxs, column_totals, test["delim"], "N/A", test.get("percent", False))
+        print(f"Result: {result}")
+        print(f"Expected: {test['expected']}")
+        print(f"Test {'passed' if result == test['expected'] else 'failed'}")
+
+
+def main():
+    """main"""
+    args = parse_arguments()
+
+    if args.test:
+        run_tests()
+        return
+
+    idxs = []
+    for e in args.p:
+        parts = e.split(",")
+        e1 = parts[0]
+        e2 = parts[1] if len(parts) > 1 else None
+        idxs.append([ValueGetter(e1), e2])
+
+    infiles = args.files
+    if not infiles:
+        infiles = [sys.stdin]
+
+    # Calculate column totals for empty p2 values
+    column_totals = {}
+    stored_lines = []
+    need_column_totals = any(e2 is None and not (isinstance(e1.e, str) and e1.e.startswith("v")) for e1, e2 in idxs)
+
+    if need_column_totals:
+        for fd in infiles:
+            for i, line in enumerate(fd):
+                stored_lines.append(line)
+                line = line.rstrip("\n")
+                ll = [x.strip() for x in line.split(args.delim)]
+                for e1, e2 in idxs:
+                    if e2 is None and not (isinstance(e1.e, str) and e1.e.startswith("v")):
+                        try:
+                            column_totals[e1.e] = column_totals.get(e1.e, 0) + float(ll[e1.e])
+                        except (ValueError, IndexError):
+                            print(f"Error: file {fd.name} line {i} column {e1.e} is not a number", file=sys.stderr)
+                            continue
+    else:
+        stored_lines = [line for fd in infiles for line in fd]
+
+    for line in stored_lines:
+        result = process_line(line, idxs, column_totals, args.delim, args.divide_exception_default, args.percent)
+        print(args.DELIM.join(result))
+
+
+if __name__ == "__main__":
+    main()

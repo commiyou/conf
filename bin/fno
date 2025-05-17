@@ -3,10 +3,6 @@ import random
 import sys
 import click
 import subprocess
-try:
-    import cutil
-except:
-    pass
 
 
 def try_decode_str(line, encodings=("utf8", "gb18030"), errors="strict"):

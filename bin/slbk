@@ -124,8 +124,8 @@ if __name__ == "__main__":
         for file in args:
             fd_list.append(open(file))
 
-    if options.key_file is None:
-        print("Error : must specify <key_file>", file=sys.stderr)
+    if options.key_file is None or options.key_file.strip() == "":
+        print("Error: A key file must be specified using the -f option.", file=sys.stderr)
         sys.exit(1)
 
     proc(fd_list, open(options.key_file), options.key_cols1, options.key_cols2, options.delim,

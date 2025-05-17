@@ -1,0 +1,44 @@
+#!/Users/youbin/miniconda3/bin/python3
+"""在“安全性与隐私”窗口中，选择“隐私”标签。 在左侧栏中，向下滚动并选择“屏幕录制”。"""
+import os
+import time
+from rapidocr_onnxruntime import RapidOCR
+import pyperclip
+
+
+def main():
+    # Define the screenshot file path
+    screenshot_file = "/tmp/screenshot.png"
+
+    # Remove the old screenshot file if it exists
+    if os.path.exists(screenshot_file):
+        os.remove(screenshot_file)
+
+    # Use macOS screenshot command to take a screenshot and save to a file in /tmp directory
+    os.system(f"screencapture -i {screenshot_file}")
+
+    # Polling to check if the screenshot file exists
+    timeout = 5  # seconds
+    start_time = time.time()
+
+    while not os.path.exists(screenshot_file):
+        if time.time() - start_time > timeout:
+            print("Screenshot file was not created within the timeout period.")
+            return
+        time.sleep(0.1)  # Sleep for a short time before checking again
+
+    # Use RapidOCR to extract text
+    engine = RapidOCR()
+    result, elapse = engine(screenshot_file)
+    # print(result)
+
+    # Extract text from result and join with spaces
+    text = " ".join([item[1] for item in result])
+    print(text)
+
+    # Output to clipboard
+    pyperclip.copy(text)
+
+
+if __name__ == "__main__":
+    main()

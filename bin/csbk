@@ -1,138 +1,279 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-# Last modified:
+"""csbk is a tool to sum up the value of the key in the file.
 
-"""docstring
+Usage:
+    csbk -k 1,3-5,10 -d "," -v 11,13-15,20 -s -i file.txt > output.txt
+
+Output:
+    The output is the sum of the value of the key in the file.
+
+Note:
+    -k is the key cols, default None, start from 0,Example: 1,3-5,10 (1,3,4,10)
+        Note: if key not specify, will sum up the value_cols(default 0)
+    -d is the delim, default tab
+    -v is the value cols to sum up, default None. Example: 1,3-5,10 (1,3,4,10)
+         Note: if value not sepcify, will count the value of  keys
+    -s is the file has been sorted or not, default False
+    -i is the ignore error lines
+    -h is the help
+    -v is the version
+    -V is the verbose
 """
 
-__revision__ = '0.1'
-
 import sys
+import unittest
+from io import StringIO
 from optparse import OptionParser
-try:
-    import cutil
-except:
-    pass
 
 
-def sum_haskey_hassum(fd_list, dem, key_cols, sum_cols, ignore):
+def sum_values(fd_list: list[str], dem: str, sum_cols: list[int], ignore: bool) -> tuple[list[float], int]:
+    """Sum up values from specified columns without keys."""
     err_cnt = 0
+    sum_value = [0.0] * len(sum_cols)
+
+    for ins in fd_list:
+        if len(fd_list) > 1:
+            print(f"==  {ins.name} : ", file=sys.stderr)
+        for line in ins:
+            try:
+                line = line.rstrip("\n")
+                ll = line.split(dem)
+                try:
+                    tmp = [ll[index] for index in sum_cols]
+                except Exception as e:
+                    err_cnt += 1
+                    if err_cnt > 5:
+                        raise e
+                    continue
+                sum_value = [float(x) + y for x, y in zip(tmp, sum_value)]
+            except:
+                print(line, file=sys.stderr)
+                err_cnt += 1
+                if not ignore:
+                    raise
+
+    return [int(x) if x.is_integer() else x for x in sum_value], err_cnt
+
+
+def count_by_keys(fd_list: list[str], dem: str, key_cols: list[int], ignore: bool) -> tuple[dict[tuple, int], int]:
+    """Count occurrences by keys."""
+    err_cnt = 0
+    result = {}
+
+    for ins in fd_list:
+        if len(fd_list) > 1:
+            print(f"==  {ins.name} : ", file=sys.stderr)
+        for line in ins:
+            try:
+                line = line.strip("\n")
+                ll = line.split(dem)
+                try:
+                    key = tuple([ll[index] for index in key_cols])
+                except Exception as e:
+                    err_cnt += 1
+                    if err_cnt > 5:
+                        raise e
+                    continue
+                if key not in result:
+                    result[key] = 0
+                result[key] += 1
+            except:
+                print(line, file=sys.stderr)
+                err_cnt += 1
+                if not ignore:
+                    raise
+
+    return result, err_cnt
+
+
+def sum_by_keys(
+    fd_list: list[str], dem: str, key_cols: list[int], sum_cols: list[int], ignore: bool
+) -> tuple[dict[tuple, list[float]], int]:
+    """Sum values by keys."""
+    err_cnt = 0
+    result = {}
+
+    for ins in fd_list:
+        if len(fd_list) > 1:
+            print(f"==  {ins.name} : ", file=sys.stderr)
+        for line in ins:
+            try:
+                line = line.strip("\n")
+                ll = line.split(dem)
+                try:
+                    key = tuple([ll[index] for index in key_cols])
+                except Exception as e:
+                    err_cnt += 1
+                    if err_cnt > 5:
+                        raise e
+                    continue
+                sum_value = [ll[index] for index in sum_cols]
+                if key not in result:
+                    result[key] = [0.0] * len(sum_cols)
+                result[key] = [float(x) + y for x, y in zip(sum_value, result[key])]
+            except:
+                print(line, file=sys.stderr)
+                err_cnt += 1
+                if not ignore:
+                    raise
+
+    # Convert to integers where possible
+    for key, value in result.items():
+        result[key] = [int(x) if x.is_integer() else x for x in value]
+
+    return result, err_cnt
+
+
+def sum_haskey_hassum(
+    fd_list: list[str], dem: str, key_cols: list[int], sum_cols: list[int], ignore: bool
+) -> tuple[dict | list, int]:
+    """Sum up the value of the key in the file."""
     if key_cols is None:
         if sum_cols is None:
             sum_cols = [0]
-        for ins in fd_list:
-            sum = [0.0] * len(sum_cols)
-            if len(fd_list) > 1:
-                print('==  %s : ' % (ins.name), file=sys.stderr)
-            for line in ins:
-                try:
-                    line = line.rstrip("\n")
-                    ll = line.split(dem)
-                    try:
-                        tmp = [ll[index] for index in sum_cols]
-                    except Exception as e:
-                        err_cnt += 1
-                        if err_cnt > 5:
-                            raise e
-                        continue
-                    sum = [float(x) + y for x, y in zip(tmp, sum)]
-                except:
-                    print(line, file=sys.stderr)
-                    if not ignore:
-                        raise
-            sum = [int(x) if x.is_integer() else x for x in sum]
-            print("\t".join(map(str, sum)))
+        result, err_cnt = sum_values(fd_list, dem, sum_cols, ignore)
+        print("\t".join(map(str, result)))
+        return result, err_cnt
+    if sum_cols is None:
+        result, err_cnt = count_by_keys(fd_list, dem, key_cols, ignore)
+        for key, value in result.items():
+            print("\t".join(map(str, [*list(key), value])))
+        return result, err_cnt
 
-    elif sum_cols is None:
-        for ins in fd_list:
-            result = {}
-            if len(fd_list) > 1:
-                print('==  %s : ' % (ins.name), file=sys.stderr)
-            for line in ins:
-                try:
-                    line = line.strip("\n")
-                    ll = line.split(dem)
-                    try:
-                        key = tuple([ll[index] for index in key_cols])
-                    except Exception as e:
-                        err_cnt += 1
-                        if err_cnt > 5:
-                            raise e
-                        continue
-                    if key not in result:
-                        result[key] = 0
-                    result[key] += 1
-                except:
-                    print(line, file=sys.stderr)
-                    if not ignore:
-                        raise
-            for key in result:
-                print("\t".join(map(str, list(key) + [result[key]])))
-    else:
-        for ins in fd_list:
-            result = {}
-            if len(fd_list) > 1:
-                print('==  %s : ' % (ins.name), file=sys.stderr)
-            for line in ins:
-                try:
-                    line = line.strip("\n")
-                    ll = line.split(dem)
-                    try:
-                        key = tuple([ll[index] for index in key_cols])
-                    except Exception as e:
-                        err_cnt += 1
-                        if err_cnt > 5:
-                            raise e
-                        continue
-                    sum = [ll[index] for index in sum_cols]
-                    if key not in result:
-                        result[key] = [0.0] * len(sum_cols)
-                    result[key] = [float(x) + y for x, y in zip(sum, result[key])]
-                except:
-                    print(line, file=sys.stderr)
-                    if not ignore:
-                        raise
-
-            for key in result:
-                value = result[key]
-                result[key] = [int(x) if x.is_integer() else x for x in value]
-                print("\t".join(map(str, list(key) + list(result[key]))))
-    return err_cnt
+    result, err_cnt = sum_by_keys(fd_list, dem, key_cols, sum_cols, ignore)
+    for key, value in result.items():
+        print("\t".join(map(str, [*list(key), *value])))
+    return result, err_cnt
 
 
-def create_range_callback(option, opt, value, parser):
+def create_range_callback(option: str, opt: str, value: str, parser: OptionParser) -> None:
+    """Create a range callback."""
     tmp = value.split(",")
     res = []
     for e in tmp:
         try:
-            i, j = list(map(int, e.split('-')))
+            i, j = list(map(int, e.split("-")))
             res += list(range(i, j + 1))
-        except:
+        except Exception:
             res.append(int(e))
     setattr(parser.values, option.dest, res)
 
 
-if __name__ == "__main__":
-    parser = OptionParser(usage="usage:%prog [options] [file]")
-    parser.add_option("-k", dest="key_cols", help="the key cols, default None, start from 0,Example: 1,3-5,10 (1,3,4,10) Note: if key not specify, will sum up the value_cols(default 0)",
-                      action="callback", callback=create_range_callback, type="string", default=None)
-    parser.add_option("-d", dest="delim", help="delimeter,default tab", default="\t")
-    parser.add_option("-v", dest="value_cols", help="the value cols to sum up, default None. Example: 1,3-5,10 (1,3,4,10) Note: if value not sepcify, will count the value of  keys",
-                      action="callback", callback=create_range_callback, type="string", default=None)
-    parser.add_option("-s", dest="sorted", help="the file has been sorted or not, default False",
-                      action="store_true",  default=False)
-    parser.add_option("-i", dest="ignore", help="ignore error lines",
-                      action="store_true",  default=False)
-    (options, args) = parser.parse_args()
-    # print options,args
+class TestCsbk(unittest.TestCase):
+    """Test the csbk module"""
 
-    fd_list = []
-    if not args:
-        fd_list.append(sys.stdin)
+    def test_create_range_callback(self):
+        """Test the create_range_callback function"""
+
+        class MockParser:
+            def __init__(self):
+                self.values = type("Values", (), {})()
+
+        parser = MockParser()
+        option = type("Option", (), {"dest": "test_cols"})()
+
+        # Test single number
+        create_range_callback(option, None, "1", parser)
+        assert parser.values.test_cols == [1]
+
+        # Test range
+        create_range_callback(option, None, "1-3", parser)
+        assert parser.values.test_cols == [1, 2, 3]
+
+        # Test mixed format
+        create_range_callback(option, None, "1,3-5,7", parser)
+        assert parser.values.test_cols == [1, 3, 4, 5, 7]
+
+    def test_sum_haskey_hassum(self):
+        """Test the sum_haskey_hassum function"""
+        # Test case 1: Simple sum without keys
+        input_data = StringIO("1\t2\t3\n4\t5\t6\n")
+        result, err_cnt = sum_haskey_hassum([input_data], "\t", None, [0, 1], False)
+        assert result == [5, 7]  # Sum of first two columns
+        assert err_cnt == 0
+
+        # Test case 2: Sum with keys
+        input_data = StringIO("A\t1\t2\nA\t3\t4\nB\t5\t6\n")
+        result, err_cnt = sum_haskey_hassum([input_data], "\t", [0], [1, 2], False)
+        expected = {
+            ("A",): [4, 6],  # Sum of values for key 'A'
+            ("B",): [5, 6],  # Values for key 'B'
+        }
+        assert result == expected
+        assert err_cnt == 0
+
+        # Test case 3: Count with keys (no sum columns)
+        input_data = StringIO("A\t1\t2\nA\t3\t4\nB\t5\t6\n")
+        result, err_cnt = sum_haskey_hassum([input_data], "\t", [0], None, False)
+        expected = {
+            ("A",): 2,  # Count of key 'A'
+            ("B",): 1,  # Count of key 'B'
+        }
+        assert result == expected
+        assert err_cnt == 0
+
+    def test_error_handling(self):
+        """Test error handling in sum_haskey_hassum"""
+        # Test with invalid data that will definitely cause an error
+        input_data = StringIO("A\tinvalid\t2\nA\t3\t4\n")
+        # Using index 1 which contains 'invalid' that can't be converted to float
+        result, err_cnt = sum_haskey_hassum([input_data], "\t", [0], [1], True)
+        assert err_cnt > 0  # Should have some errors but continue due to ignore=True
+
+        # Test with out of range index
+        input_data = StringIO("A\t1\t2\n")
+        result, err_cnt = sum_haskey_hassum([input_data], "\t", [0], [5], True)  # Using index 5 which doesn't exist
+        assert err_cnt > 0  # Should have some errors but continue due to ignore=True
+
+
+if __name__ == "__main__":
+    if len(sys.argv) > 1 and sys.argv[1] == "--test":
+        unittest.main(argv=["first-arg-is-ignored"])
     else:
-        for file in args:
-            fd_list.append(open(file))
-    err_cnt = sum_haskey_hassum(fd_list, options.delim, options.key_cols,
-                                options.value_cols, options.ignore)
-    if err_cnt != 0:
-        print("line err cnt %d" % err_cnt, file=sys.stderr)
+        parser = OptionParser(usage="usage:%prog [options] [file]")
+        parser.add_option(
+            "-k",
+            dest="key_cols",
+            help=(
+                "the key cols, default None, start from 0,Example: 1,3-5,10 (1,3,4,10) ."
+                "Note: if key not specify, will sum up the value_cols(default 0)"
+            ),
+            action="callback",
+            callback=create_range_callback,
+            type="string",
+            default=None,
+        )
+        parser.add_option("-d", dest="delim", help="delimeter,default tab", default="\t")
+        parser.add_option(
+            "-v",
+            dest="value_cols",
+            help=(
+                "the value cols to sum up, default None. Example: 1,3-5,10 (1,3,4,10)."
+                "Note: if value not sepcify, will count the value of  keys"
+            ),
+            action="callback",
+            callback=create_range_callback,
+            type="string",
+            default=None,
+        )
+        parser.add_option(
+            "-s",
+            dest="sorted",
+            help="the file has been sorted or not, default False",
+            action="store_true",
+            default=False,
+        )
+        parser.add_option("-i", dest="ignore", help="ignore error lines", action="store_true", default=False)
+        (options, args) = parser.parse_args()
+        # print options,args
+
+        fd_list = []
+        if not args:
+            fd_list.append(sys.stdin)
+        else:
+            fd_list = [open(file) for file in args]
+        result, err_cnt = sum_haskey_hassum(
+            fd_list, options.delim, options.key_cols, options.value_cols, options.ignore
+        )
+        if err_cnt != 0:
+            print(f"line err cnt {err_cnt}", file=sys.stderr)

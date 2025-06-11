@@ -1202,15 +1202,23 @@ lvim.plugins = {
 
       behaviour = { auto_suggestions = true },
 
+      providers = {
+
+        openai = {
+          endpoint = "http://10.12.215.17:8000/v1",
+          model = "gpt-4o",
+          timeout = 30000, -- Timeout in milliseconds
+          -- temperature = 0,
+          -- max_tokens = 4096,
+          extra_request_body = {
+            temperature = 0,
+            max_completion_tokens = 8192, -- Increase this to include reasoning tokens (for reasoning models)
+            reasoning_effort = "medium", -- low|medium|high, only used for reasoning models
+          }
+        }
+      },
       provider = "openai",
       auto_suggestions_provider = "gemini",
-      openai = {
-        endpoint = "http://10.12.215.17:8000/v1",
-        model = "gpt-4o",
-        timeout = 30000, -- Timeout in milliseconds
-        temperature = 0,
-        max_tokens = 4096,
-      },
       -- mappings = {
       --   -- :checkhealth which-key
       --   -- https://github.com/yetone/avante.nvim/blob/main/lua/avante/config.lua

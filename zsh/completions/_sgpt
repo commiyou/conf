@@ -1,0 +1,43 @@
+#compdef sgpt
+
+_arguments -C \
+  '1:prompt:The prompt to generate completions for' \
+  '--model[Large language model to use]:model:(gpt-4o gpt-3.5)' \
+  '--temperature[Randomness of generated output]:temperature:(0.0 0.5 1.0 1.5 2.0)' \
+  '--top-p[Limits highest probable tokens]:top-p:(0.0 0.25 0.5 0.75 1.0)' \
+  '--md[Prettify markdown output]' \
+  '--no-md[Do not prettify markdown output]' \
+  '--editor[Open $EDITOR to provide a prompt]' \
+  '--no-editor[Do not open $EDITOR to provide a prompt]' \
+  '--cache[Cache completion results]' \
+  '--no-cache[Do not cache completion results]' \
+  '--version[Show version]' \
+  '--help[Show help message]' \
+  '--shell[Generate and execute shell commands]' \
+  '--interaction[Interactive mode for --shell option]' \
+  '--no-interaction[Non-interactive mode for --shell option]' \
+  '--describe-shell[Describe a shell command]' \
+  '--code[Generate only code]' \
+  '--functions[Allow function calls]' \
+  '--no-functions[Do not allow function calls]' \
+  '--chat[Follow conversation with id]:chat-id:->chats' \
+  '--repl[Start a REPL session]:repl-id:' \
+  '--show-chat[Show all messages from provided chat id]:chat-id:->chats' \
+  '--list-chats[List all existing chat ids]' \
+  '--role[System role for GPT model]:role:->roles' \
+  '--create-role[Create role]:role:' \
+  '--show-role[Show role]:role:->roles' \
+  '--list-roles[List roles]' \
+  '*:: :->args'
+
+case $state in
+  chats)
+    _values 'chat id' $(sgpt --list-chats 2>/dev/null)
+    ;;
+  roles)
+    _values 'role' $(sgpt --list-roles 2>/dev/null |  while read line; do  basename "$line" .json; done)
+    ;;
+  args)
+    _message 'sgpt command arguments'
+    ;;
+esac

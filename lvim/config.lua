@@ -1001,23 +1001,23 @@ lvim.plugins = {
   --     require("sort").setup({})
   --   end,
   -- },
-  {
-    "smoka7/multicursors.nvim",
-    event = "VeryLazy",
-    dependencies = {
-      'smoka7/hydra.nvim',
-    },
-    opts = {},
-    cmd = { 'MCstart', 'MCvisual', 'MCclear', 'MCpattern', 'MCvisualPattern', 'MCunderCursor' },
-    keys = {
-      {
-        mode = { 'v', 'n' },
-        '<Leader>ee',
-        '<cmd>MCstart<cr>',
-        desc = 'Create a selection for selected text or word under the cursor',
-      },
-    },
-  },
+  -- {
+  --   "smoka7/multicursors.nvim",
+  --   event = "VeryLazy",
+  --   dependencies = {
+  --     'smoka7/hydra.nvim',
+  --   },
+  --   opts = {},
+  --   cmd = { 'MCstart', 'MCvisual', 'MCclear', 'MCpattern', 'MCvisualPattern', 'MCunderCursor' },
+  --   keys = {
+  --     {
+  --       mode = { 'v', 'n' },
+  --       '<Leader>ee',
+  --       '<cmd>MCstart<cr>',
+  --       desc = 'Create a selection for selected text or word under the cursor',
+  --     },
+  --   },
+  -- },
   {
     "szw/vim-maximizer",
     config = function()
@@ -1213,12 +1213,12 @@ lvim.plugins = {
           extra_request_body = {
             temperature = 0,
             max_completion_tokens = 8192, -- Increase this to include reasoning tokens (for reasoning models)
-            reasoning_effort = "medium", -- low|medium|high, only used for reasoning models
+            reasoning_effort = "medium",  -- low|medium|high, only used for reasoning models
           }
         }
       },
       provider = "openai",
-      auto_suggestions_provider = "gemini",
+      --auto_suggestions_provider = "gemini",
       -- mappings = {
       --   -- :checkhealth which-key
       --   -- https://github.com/yetone/avante.nvim/blob/main/lua/avante/config.lua

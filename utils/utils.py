@@ -26,7 +26,15 @@ import time
 import traceback
 import types
 import unicodedata
-from collections.abc import Generator, Hashable, Iterable, Iterator, Mapping, Sequence
+from collections.abc import (
+    Callable,
+    Generator,
+    Hashable,
+    Iterable,
+    Iterator,
+    Mapping,
+    Sequence,
+)
 from collections.abc import Set as AbstractSet
 from contextlib import ExitStack, contextmanager, nullcontext
 from functools import partial, wraps
@@ -35,7 +43,6 @@ from pathlib import Path
 from typing import (
     IO,
     Any,
-    Callable,
     Literal,
     NewType,
     Optional,
@@ -53,6 +60,7 @@ import pandas as pd
 import requests
 import tqdm as tqdm_
 from bs4 import BeautifulSoup
+from diskcache import Cache
 from termcolor import colored
 
 requests.packages.urllib3.disable_warnings()
@@ -252,12 +260,12 @@ def xvar(
             try:
                 source = executor.source.asttokens().get_text(value)
                 value_names.append(source)
-            except Exception:  # noqa:  PERF203
+            except Exception:
                 value_names.append("<unknown>")
 
         # Combine names with values
         value_info = []
-        for name, val in zip(value_names, values):
+        for name, val in zip(value_names, values, strict=False):
             import pprint
 
             val_str = pprint.pformat(val, width=119)
@@ -266,9 +274,7 @@ def xvar(
                 value_info.append(val_str)
             else:
                 # For non-literal types, append the name, value, and type
-                value_info.append(
-                    f"{color_text_if_atty(name, 'red', attrs=['bold'])}:{type(val).__name__}={val_str}"
-                )
+                value_info.append(f"{color_text_if_atty(name, 'red', attrs=['bold'])}:{type(val).__name__}={val_str}")
 
         output = f"{prefix}: " + sep.join(value_info)
     else:
@@ -504,32 +510,17 @@ def read_file(  # noqa: C901, PLR0912
 
     input_: file name/path or io; excel时，返回的每一列都是str
     """
-    if (
-        isinstance(input_, (str, Path))
-        and skip_notexists
-        and not os.path.exists(input_)
-    ):
+    if isinstance(input_, (str, Path)) and skip_notexists and not os.path.exists(input_):
         return
 
     if isinstance(input_, str) and input_.endswith(".xlsx"):
         df = pd.read_excel(input_, dtype=str)
         it = df.itertuples(index=False)
         if norm:
-            it = (
-                tuple(
-                    remove_invalid_char(cell) if isinstance(cell, str) else cell
-                    for cell in row
-                )
-                for row in it
-            )
+            it = (tuple(remove_invalid_char(cell) if isinstance(cell, str) else cell for cell in row) for row in it)
 
-        it = (
-            tuple(cell if is_valid_value(cell) else None for cell in row) for row in it
-        )
-        it = (
-            tuple(cell.strip() if isinstance(cell, str) else cell for cell in row)
-            for row in it
-        )
+        it = (tuple(cell if is_valid_value(cell) else None for cell in row) for row in it)
+        it = (tuple(cell.strip() if isinstance(cell, str) else cell for cell in row) for row in it)
 
         yield from tqdm_.tqdm(it, total=len(df))
         return
@@ -544,19 +535,13 @@ def read_file(  # noqa: C901, PLR0912
     if tqdm is None and sys.stderr.isatty():
         tqdm = str(f"proc file {input_}") if isinstance(input_, (str, Path)) else True
 
-    cm = (
-        open(input_, "rb")
-        if isinstance(input_, (str, Path))
-        else contextlib.nullcontext(input_)
-    )  # noqa: SIM115
+    cm = open(input_, "rb") if isinstance(input_, (str, Path)) else contextlib.nullcontext(input_)
 
     with cm as input_:
         if skip_header:
             input_ = funcy.rest(input_)  # type:ignore  # noqa: PLW2901
         if tqdm:
-            input_ = tqdm_.tqdm(
-                input_, total=total, desc=tqdm if isinstance(tqdm, str) else None
-            )  # noqa: PLW2901
+            input_ = tqdm_.tqdm(input_, total=total, desc=tqdm if isinstance(tqdm, str) else None)
 
         for i, line in enumerate(input_):  # type:ignore
             if not isinstance(line, str):
@@ -674,9 +659,7 @@ def read_and_filter_by_key(
     if not ofname and ofname_suffix:
         ofname = new_filename(fname, suffix=ofname_suffix)
 
-    already_done = (
-        read_kv(ofname, key=ofname_key, skip_notexists=True) if ofname else set()
-    )
+    already_done = read_kv(ofname, key=ofname_key, skip_notexists=True) if ofname else set()
 
     xerr(f"{ofname} has done keys cnt {len(already_done)}")
     todos = []
@@ -823,9 +806,7 @@ def xprint_json(obj: object, indent: int = 4) -> None:
     xprint(json.dumps(obj, ensure_ascii=False, indent=indent, cls=JsonCustomEncoder))
 
 
-def safe_divide(
-    p1: float, p2: float, *, digits: int = 2, percentage: bool = False
-) -> str:
+def safe_divide(p1: float, p2: float, *, digits: int = 2, percentage: bool = False) -> str:
     """return n/a if divide 0 else value with str type
 
     >>> safe_divide(1, 0)
@@ -842,9 +823,7 @@ def safe_divide(
     return f"{{:.{digits}f}}".format(p1 / p2)
 
 
-def safe_diff(
-    p1: float | str, p2: float | str, *, digits: int = 2, percentage: bool = True
-) -> str | float:
+def safe_diff(p1: float | str, p2: float | str, *, digits: int = 2, percentage: bool = True) -> str | float:
     """return n/a if divide 0 else value with str type
 
     >>> safe_diff(1, 0)
@@ -1020,11 +999,7 @@ def sample(
     if bad_pv_cnt > 0:
         xerr(f"skip bad line for pv, cnt: {bad_pv_cnt}")
 
-    for line_no in (
-        random.choices(population=population, weights=weights, k=n)
-        if n < len(data)
-        else range(len(data))
-    ):
+    for line_no in random.choices(population=population, weights=weights, k=n) if n < len(data) else range(len(data)):
         xprint(*data[line_no])
 
 
@@ -1108,7 +1083,7 @@ def parallel_process_items_processes(
 
     # INFO:  fork will hung for lock
     # https://pythonspeed.com/articles/python-multiprocessing/
-    multiprocessing.set_start_method("spawn")
+    # multiprocessing.set_start_method("spawn")
 
     # with Pool(processes=process_cnt) as pool:
     #     yield from tqdm_.tqdm(
@@ -1160,8 +1135,7 @@ def get_positional_param_count(func: Callable):
     positional_count = sum(
         1
         for param in sig.parameters.values()
-        if param.kind
-        in {inspect.Parameter.POSITIONAL_ONLY, inspect.Parameter.POSITIONAL_OR_KEYWORD}
+        if param.kind in {inspect.Parameter.POSITIONAL_ONLY, inspect.Parameter.POSITIONAL_OR_KEYWORD}
     )
     return positional_count
 
@@ -1206,9 +1180,7 @@ def parallel_process_items_processes_new(
     positional_param_count = func_arg_cnt or get_positional_param_count(proc_func)
     assert positional_param_count > 0
     if process_cnt == 1:
-        yield from iter(
-            (ll, proc_func(*ll[:positional_param_count])) for ll in tqdm_.tqdm(inputs)
-        )
+        yield from iter((ll, proc_func(*ll[:positional_param_count])) for ll in tqdm_.tqdm(inputs))
         return
 
     if not total and isinstance(inputs, (list, tuple, set, dict)):
@@ -1220,9 +1192,7 @@ def parallel_process_items_processes_new(
 
     max_concurrency = slice_cnt or process_cnt
     if max_concurrency < process_cnt:
-        xerr(
-            f"slice cnt[{max_concurrency}] < process cnt[{process_cnt}]!, using {process_cnt}"
-        )
+        xerr(f"slice cnt[{max_concurrency}] < process cnt[{process_cnt}]!, using {process_cnt}")
         max_concurrency = process_cnt
 
     desc = tqdm if isinstance(tqdm, str) else None
@@ -1254,9 +1224,7 @@ def parallel_process_items_processes_new(
         }
 
         while futures:
-            done, _ = concurrent.futures.wait(
-                futures, return_when=concurrent.futures.FIRST_COMPLETED
-            )
+            done, _ = concurrent.futures.wait(futures, return_when=concurrent.futures.FIRST_COMPLETED)
             for fut in done:
                 original_input = futures.pop(fut)
                 pbar.update(1)
@@ -1278,12 +1246,8 @@ def parallel_process_items_processes_new(
                         raise
                 except Exception as e:
                     fail_cnt += 1
-                    xerr(
-                        f"任务失败 {fail_cnt}/{max_fail_cnt}， input：", original_input
-                    )
-                    traceback.print_exception(
-                        type(e), e, e.__traceback__, file=sys.stderr
-                    )
+                    xerr(f"任务失败 {fail_cnt}/{max_fail_cnt}， input：", original_input)
+                    traceback.print_exception(type(e), e, e.__traceback__, file=sys.stderr)
                     failed_tasks.append((original_input, e))
                     if fail_cnt > max_fail_cnt:
                         xerr("超过最大失败次数，终止处理。")
@@ -1294,18 +1258,14 @@ def parallel_process_items_processes_new(
                     input_ = next(handler_inputs)
                 except StopIteration:
                     continue
-                new_future = executor.submit(
-                    proc_func, *input_[:positional_param_count]
-                )
+                new_future = executor.submit(proc_func, *input_[:positional_param_count])
                 futures[new_future] = input_
 
             # for input in itertools.islice(handler_inputs, len(done)):
             #     fut = executor.submit(proc_func, *input)
             #     futures[fut] = input
         output_failed_tasks(failed_tasks)
-        xerr(
-            f"{suc_cnt + len(failed_tasks)} tasks done: suc [{suc_cnt}], fail [{len(failed_tasks)}]"
-        )
+        xerr(f"{suc_cnt + len(failed_tasks)} tasks done: suc [{suc_cnt}], fail [{len(failed_tasks)}]")
 
 
 def parallel_process_items_threads(
@@ -1366,9 +1326,7 @@ def parallel_process_items_threads_new(
         yield from pool.imap(func_wrapper, inputs)
 
 
-def parallel_run_helper(
-    func: Callable[P, R], ll: T, *args: P.args, **kws: P.kwargs
-) -> tuple[T, R]:
+def parallel_run_helper(func: Callable[P, R], ll: T, *args: P.args, **kws: P.kwargs) -> tuple[T, R]:
     """helper"""
     ret = func(*args, **kws)
     return ll, ret
@@ -1647,6 +1605,10 @@ def md5(input_string: str) -> str:
     return md5.hexdigest()
 
 
+_FCACHE_INSTANCES: dict[str, Cache] = {}
+_FCACHE_LOCK = threading.Lock()
+
+
 def fcache(
     cache_dir: str, ignore_empty_result: bool = True, *args: object, **kwargs: object
 ) -> Callable[[Callable[P, T]], Callable[P, T]]:
@@ -1663,10 +1625,17 @@ def fcache(
         xerr("diskcache library not found")
         return lambda orig_func: orig_func
     else:
-        cache = Cache(cache_dir)
-        import atexit
+        # cache = Cache(cache_dir)
+        # import atexit
 
-        atexit.register(cache.close)
+        # atexit.register(cache.close)
+        with _FCACHE_LOCK:
+            if cache_dir not in _FCACHE_INSTANCES:
+                cache = Cache(cache_dir)
+                atexit.register(cache.close)
+                _FCACHE_INSTANCES[cache_dir] = cache
+            else:
+                cache = _FCACHE_INSTANCES[cache_dir]
 
         def decorator(func: Callable[P, T]) -> Callable[P, T]:
             memoized_func = cache.memoize(*args, **kwargs)(func)
@@ -1681,9 +1650,7 @@ def fcache(
                     raise
 
                 # Check if we should ignore caching for empty results
-                if ignore_empty_result and (
-                    not result or (isinstance(result, str) and not result.strip())
-                ):
+                if ignore_empty_result and (not result or (isinstance(result, str) and not result.strip())):
                     # Manually remove the result from cache if it was just stored
                     key = memoized_func.__cache_key__(*func_args, **func_kwargs)
                     if key in cache:
@@ -1698,9 +1665,7 @@ def fcache(
 
 def fcache_op(
     cache_dir: str,
-    op: Literal[
-        "clear", "check", "get", "set", "pop", "len", "peekitem", "peek", "poplast"
-    ],
+    op: Literal["clear", "check", "get", "set", "pop", "len", "peekitem", "peek", "poplast"],
     *args: str,
     **kwargs: Any,
 ) -> Any:
@@ -1860,7 +1825,7 @@ def fetch_url(
                 h = html2text.HTML2Text()
                 return h.handle(response.text)
 
-        except (requests.exceptions.RequestException, ValueError) as e:  # noqa: PERF203
+        except (requests.exceptions.RequestException, ValueError) as e:
             xerr(f"Attempt {attempt + 1} failed: {e}")
             if attempt < retry_cnt - 1:
                 time.sleep(2**attempt)  # Exponential backoff
@@ -1890,7 +1855,7 @@ def retry(
             while mtries > 0:
                 try:
                     return f(*args, **kwargs)
-                except exception_to_check as e:  # noqa: PERF203
+                except exception_to_check as e:
                     xerr(f"Exception: {e}, Retrying in {mdelay} seconds...")
                     time.sleep(mdelay)
                     mtries -= 1
@@ -1902,9 +1867,7 @@ def retry(
     return deco_retry
 
 
-def get_defaultdict(
-    depth: int = 1, default_factory: Callable[[], T] = int
-) -> collections.defaultdict:
+def get_defaultdict(depth: int = 1, default_factory: Callable[[], T] = int) -> collections.defaultdict:
     """创建多层级的defaultdict.
 
     :param depth: 要创建的嵌套defaultdict的层数
@@ -2048,9 +2011,7 @@ class StatCounter(contextlib.ContextDecorator):
         # 维度输出是 ===维度： xxxx, total cnt : xxx
         # 每一项的输出是 除了维度key之后 剩余的key 及其个数 和在此维度的百分比
 
-        def traverse(
-            data: dict, current_keys: list, limit: int
-        ) -> Generator[tuple[Any, dict], None, None]:
+        def traverse(data: dict, current_keys: list, limit: int) -> Generator[tuple[Any, dict], None, None]:
             """遍历dict到dimension
 
             >>> list(traverse({1: {2: 3}, "a": {"b": 4}}, [], 1))
@@ -2068,9 +2029,7 @@ class StatCounter(contextlib.ContextDecorator):
         if self.dimension == 0:
             total = sum(self.data.values())
             xerr(f"=== 总计: total cnt : {total}")
-            for idx, (key, cnt) in enumerate(
-                sorted(self.data.items(), key=itemgetter(1), reverse=True), 1
-            ):
+            for idx, (key, cnt) in enumerate(sorted(self.data.items(), key=itemgetter(1), reverse=True), 1):
                 percent = safe_divide(cnt, total, percentage=True)
                 xerr(f"{idx}. {key} : {cnt} ({percent}%)")
             xerr()
@@ -2096,9 +2055,7 @@ class StatCounter(contextlib.ContextDecorator):
             total = sum_counter(counter)
             dimension_percent = safe_divide(total, total_all, percentage=True)
             dimension_str = "->".join(map(str, dimension_keys))
-            xerr(
-                f"=== 维度: {dimension_str}, total cnt : {total} ({dimension_percent})"
-            )
+            xerr(f"=== 维度: {dimension_str}, total cnt : {total} ({dimension_percent})")
             # 收集所有叶子节点的计数
             leaf_counts = {}
 
@@ -2111,9 +2068,7 @@ class StatCounter(contextlib.ContextDecorator):
                     leaf_counts[key_str] = d
 
             collect_leaves(counter)
-            for idx, (key, cnt) in enumerate(
-                sorted(leaf_counts.items(), key=itemgetter(1), reverse=True), 1
-            ):
+            for idx, (key, cnt) in enumerate(sorted(leaf_counts.items(), key=itemgetter(1), reverse=True), 1):
                 percent = safe_divide(cnt, total, percentage=True)
                 xerr(f"{idx}. {key} : {cnt} ({percent}%)")
             xerr()
@@ -2191,9 +2146,7 @@ def run_with_file(
     return actual_decorator
 
 
-def echart(
-    fname: str, chart: Literal["snakey", "funnel", "pie"], total: int | None = None
-):
+def echart(fname: str, chart: Literal["snakey", "funnel", "pie"], total: int | None = None):
     r"""Generate a chart (funnel, sankey, or pie) using pyecharts based on a TSV file.
 
     https://gallery.pyecharts.org/#/Sankey/sankey_vertical
@@ -2221,9 +2174,7 @@ def echart(
     elif chart == "sankey":
         df.columns = ["source", "target", "value"]
     else:
-        raise ValueError(
-            "Unsupported chart type. Choose from 'funnel', 'sankey', or 'pie'."
-        )
+        raise ValueError("Unsupported chart type. Choose from 'funnel', 'sankey', or 'pie'.")
 
     # Normalize value column if total is provided
     if total is not None:
@@ -2235,7 +2186,7 @@ def echart(
             Funnel()
             .add(
                 "",
-                [list(z) for z in zip(df["name"], df["value"])],
+                [list(z) for z in zip(df["name"], df["value"], strict=False)],
                 label_opts=opts.LabelOpts(position="inside"),
             )
             .set_global_opts(title_opts=opts.TitleOpts(title=fname))
@@ -2252,9 +2203,7 @@ def echart(
                 nodes,
                 links,
                 layout_iterations=100,
-                linestyle_opt=opts.LineStyleOpts(
-                    opacity=0.2, curve=0.5, color="source"
-                ),
+                linestyle_opt=opts.LineStyleOpts(opacity=0.2, curve=0.5, color="source"),
                 label_opts=opts.LabelOpts(
                     position="right",
                     formatter="{b}: {c}",
@@ -2271,36 +2220,28 @@ def echart(
             Pie()
             .add(
                 "",
-                [list(z) for z in zip(df["name"], df["value"])],
+                [list(z) for z in zip(df["name"], df["value"], strict=False)],
                 radius=["40%", "70%"],
             )
             .set_global_opts(
                 title_opts=opts.TitleOpts(title=fname),
-                legend_opts=opts.LegendOpts(
-                    orient="vertical", pos_top="15%", pos_right="10%"
-                ),
+                legend_opts=opts.LegendOpts(orient="vertical", pos_top="15%", pos_right="10%"),
             )
             .set_series_opts(label_opts=opts.LabelOpts(formatter="{b}: {d}%"))
         )
         pie.render(ofname)
 
     else:
-        raise ValueError(
-            "Unsupported chart type. Choose from 'funnel', 'sankey', or 'pie'."
-        )
+        raise ValueError("Unsupported chart type. Choose from 'funnel', 'sankey', or 'pie'.")
 
-    xerr(
-        f"{chart.capitalize()} chart has been rendered and saved as an HTML file: {ofname}"
-    )
+    xerr(f"{chart.capitalize()} chart has been rendered and saved as an HTML file: {ofname}")
 
 
 def strip_accents(s: OptionalStr) -> OptionalStr:
     """去除unicode中的重读 兰蔻LANCÔM -> 兰蔻LANCOM"""
     if not s:
         return s
-    return "".join(
-        c for c in unicodedata.normalize("NFD", s) if unicodedata.category(c) != "Mn"
-    )
+    return "".join(c for c in unicodedata.normalize("NFD", s) if unicodedata.category(c) != "Mn")
 
 
 def aggregate_by_key(
@@ -2316,9 +2257,7 @@ def aggregate_by_key(
 
     upack为True的话分成多列
     """
-    for k, vs in read_kv(
-        fname, *args, value_accumulate_func=None, key=key, value=value, **kwargs
-    ).items():
+    for k, vs in read_kv(fname, *args, value_accumulate_func=None, key=key, value=value, **kwargs).items():
         res = [k, len(vs)] if with_len else [k]
         res = [*res, *vs] if unpack else [*res, vs]
         xprint(*res)

@@ -21,6 +21,7 @@ ignore = [
   "CPY001",
   "D202", #No blank lines allowed after function docstring
   "D400", # First line should end with a period
+  "D205",
   "D401",
   "D403", #First word of the first line should be capitalized
   "D407", # Missing dashed underline after section

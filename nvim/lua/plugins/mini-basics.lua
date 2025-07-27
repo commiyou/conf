@@ -1,0 +1,28 @@
+return {
+  {
+    --enable = false,
+    "echasnovski/mini.basics",
+    version = false,
+    event = "VeryLazy",
+    config = function()
+      require("mini.basics").setup {
+        options = {
+          basic = true,
+          --extra_ui = true,
+          --win_borders = "rounded",
+        },
+        mappings = {
+          basic = true,
+          option_toggle_prefix = [[yo]],
+          windows = true,
+          move_with_alt = true,
+        },
+        autocommands = {
+          basic = true,
+          relnum_in_visual_mode = false,
+        },
+        silent = true,
+      }
+    end,
+  },
+}

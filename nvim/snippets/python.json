@@ -1,0 +1,185 @@
+{
+  "read_file": {
+    "prefix": "read_file",
+    "body": [
+      "read_file(${1:input_}, ${2:sep='\\t'}, ${3:encoding='utf-8'}${4:, maxsplit=-1}${5:, skip_header=False}${6:, tqdm=None})"
+    ],
+    "description": "Read file line by line with specified encoding and return iterator of list after splitting by sep"
+  },
+  "read_and_filter_by_key": {
+    "prefix": "read_and_filter_by_key",
+    "body": [
+      "read_and_filter_by_key(",
+      "\t${1:fname},",
+      "\tkey=${2:0},",
+      "\twith_key=${3:True},",
+      "\tofname=${4:None},",
+      "\tofname_suffix=${5:None}",
+      ")"
+    ],
+    "description": "Read file and filter by key, return list of remain items"
+  },
+  "read_kv": {
+    "prefix": "read_kv",
+    "body": [
+      "read_kv(${1:input_}, key=${2:0}, value=${3:None}${4:, filter=None}${5:, value_accumulate_func=funcy.first})"
+    ],
+    "description": "Read key value from file"
+  },
+  "xprint": {
+    "prefix": "xprint",
+    "body": [
+      "xprint(${1:*values}${2:, suffix=''}${3:, sep='\\t'}${4:, flush=True})"
+    ],
+    "description": "Print with default sep and suffix and encoding"
+  },
+  "xerr": {
+    "prefix": "xerr",
+    "body": [
+      "xerr(${1:*values}${2:, suffix=''}${3:, sep='\\t'}${4:, debug=True})"
+    ],
+    "description": "Print to stderr with default sep and suffix and encoding"
+  },
+  "xdebug": {
+    "prefix": "xdebug",
+    "body": [
+      "xdebug(${1:*values}${2:, suffix=''}${3:, sep='\\t'}${4:, force_debug=False})"
+    ],
+    "description": "Output in debug mode"
+  },
+  "xvar": {
+    "prefix": "xvar",
+    "body": [
+      "xvar(${1:*values}${2:, force_debug=False})"
+    ],
+    "description": "Output var and var's name in debug mode"
+  },
+  "make_key_func": {
+    "prefix": "make_key_func",
+    "body": [
+      "make_key_func(${1:f})"
+    ],
+    "description": "Turn into key func - supports int, slice, sequence, mapping, set, callable"
+  },
+  "parallel_process_items_processes_new": {
+    "prefix": "parallel_process_items_processes_new",
+    "body": [
+      "parallel_process_items_processes_new(",
+      "\t${1:inputs},",
+      "\t${2:proc_func},",
+      "\tprocess_cnt=${3:None},",
+      "\ttqdm=${4:True}${5:, timeout=None}${6:, max_fail_cnt=20}",
+      ")"
+    ],
+    "description": "Parallel process items and return iterator of results"
+  },
+  "parallel_process_items_threads_new": {
+    "prefix": "parallel_process_items_threads_new",
+    "body": [
+      "parallel_process_items_threads_new(",
+      "\t${1:inputs},",
+      "\t${2:proc_func},",
+      "\tthread_cnt=${3:4}${4:, func_arg_cnt=None}",
+      ")"
+    ],
+    "description": "Multi-threaded function processing"
+  },
+  "write_file": {
+    "prefix": "write_file",
+    "body": [
+      "with write_file(${1:fname}) as ${2:f}:",
+      "\t${3:# write operations}"
+    ],
+    "description": "Context manager for file writing"
+  },
+  "redirect_stdout_to_file": {
+    "prefix": "redirect_stdout_to_file",
+    "body": [
+      "with redirect_stdout_to_file(${1:fname}) as ${2:f}:",
+      "\t${3:# stdout operations}"
+    ],
+    "description": "Redirect stdout to file"
+  },
+  "new_filename": {
+    "prefix": "new_filename",
+    "body": [
+      "new_filename(${1:fpath}, prefix=${2:''}, suffix=${3:''}, force=${4:False})"
+    ],
+    "description": "Generate new filename with prefix/suffix"
+  },
+  "fcache": {
+    "prefix": "fcache",
+    "body": [
+      "@fcache(${1:cache_dir}${2:, ignore_empty_result=True})",
+      "def ${3:function_name}(${4:args}):",
+      "\t${5:# function body}"
+    ],
+    "description": "Disk cache decorator for function"
+  },
+  "fetch_url": {
+    "prefix": "fetch_url",
+    "body": [
+      "fetch_url(",
+      "\t${1:url},",
+      "\treturn_format=${2:'json'},",
+      "\tmethod=${3:'get'}${4:, timeout=10}${5:, retry_cnt=3}",
+      ")"
+    ],
+    "description": "Fetch URL with retry logic and format response"
+  },
+  "StatCounter": {
+    "prefix": "StatCounter",
+    "body": [
+      "with StatCounter(depth=${1:1}, dimension=${2:0}) as ${3:counter}:",
+      "\t${4:counter.inc(${5:*keys})}",
+      "\t${6:# operations}"
+    ],
+    "description": "Statistical counter with nested dimensions"
+  },
+  "norm_term": {
+    "prefix": "norm_term",
+    "body": [
+      "norm_term(${1:term}, strict=${2:True}${3:, stop_chars=None})"
+    ],
+    "description": "Normalize term to lowercase and remove whitespace/punctuation"
+  },
+  "dump_json": {
+    "prefix": "dump_json",
+    "body": [
+      "dump_json(${1:obj}${2:, indent=None})"
+    ],
+    "description": "Dump JSON to string with support for set/dataclass"
+  },
+  "to_number": {
+    "prefix": "to_number",
+    "body": [
+      "to_number(${1:s})"
+    ],
+    "description": "Convert string to float/int"
+  },
+  "safe_divide": {
+    "prefix": "safe_divide",
+    "body": [
+      "safe_divide(${1:p1}, ${2:p2}, digits=${3:2}, percentage=${4:False})"
+    ],
+    "description": "Safe division returning 'nan' for zero division"
+  },
+  "ignore": {
+    "prefix": "ignore",
+    "body": [
+      "@ignore(${1:Exception}, default=${2:None}, max_error_cnt=${3:3})",
+      "def ${4:function_name}(${5:args}):",
+      "\t${6:# function body}"
+    ],
+    "description": "Decorator to ignore specified errors and return default"
+  },
+  "retry": {
+    "prefix": "retry",
+    "body": [
+      "@retry(${1:Exception}, tries=${2:3}, delay=${3:1}, backoff=${4:2})",
+      "def ${5:function_name}(${6:args}):",
+      "\t${7:# function body}"
+    ],
+    "description": "Retry decorator with exponential backoff"
+  }
+}

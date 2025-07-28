@@ -63,7 +63,7 @@ alias sort="LC_ALL=C sort"
 alias uniq="LC_ALL=C uniq"
 alias grep="LC_ALL=C grep"
 
-alias awkt='LC_ALL=C awk -F"\t"'
+alias awkt='LC_ALL=C awk -F"\t" -v OFS="\t"'
 alias cutt="cut -d$'\t'"
 alias sortt="LC_ALL=C sort -t$'\t'"
 

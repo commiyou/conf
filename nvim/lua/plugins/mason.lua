@@ -13,7 +13,7 @@ return {
       ensure_installed = {
         -- install language servers
         "lua-language-server",
-        "pyright",
+        --"pyright",
 
         -- install formatters
         "stylua",

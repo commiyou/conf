@@ -12,10 +12,10 @@ return {
           --win_borders = "rounded",
         },
         mappings = {
-          basic = true,
-          option_toggle_prefix = [[yo]],
-          windows = true,
-          move_with_alt = true,
+          --basic = true,
+          --option_toggle_prefix = [[yo]],
+          --windows = true,
+          --move_with_alt = true,
         },
         autocommands = {
           basic = true,

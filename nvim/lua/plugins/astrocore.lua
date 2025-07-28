@@ -97,7 +97,7 @@ return {
           end,
           desc = "Close buffer",
         },
-        ["yoc"] = {
+        ["<leader>uc"] = {
           "<cmd>lua if vim.o.clipboard == '' then vim.o.clipboard = 'unnamedplus' else vim.o.clipboard = '' end<cr>",
           desc = "Toggle System Clipboard",
         },

@@ -5,7 +5,10 @@ extend-select = ["I"]
 ignore = [
   # imported but unused
   "ANN101",
+  "INP001",
+  "S324",
   "FAST002",
+  "S605",
   "DOC202",
   "ANN401",
   "S104",
@@ -60,6 +63,9 @@ ignore = [
   "SIM112",
   "T201",
   "TD002",
+  "LOG015",
+  "PERF203",
+  "UP006",
   "TD003",
   "TRY002", #Create your own exception
   "TRY003", # Avoid specifying long messages outside the exception clas

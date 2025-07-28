@@ -1,279 +1,344 @@
 #!/usr/bin/env python3
-"""csbk is a tool to sum up the value of the key in the file.
-
-Usage:
-    csbk -k 1,3-5,10 -d "," -v 11,13-15,20 -s -i file.txt > output.txt
-
-Output:
-    The output is the sum of the value of the key in the file.
-
-Note:
-    -k is the key cols, default None, start from 0,Example: 1,3-5,10 (1,3,4,10)
-        Note: if key not specify, will sum up the value_cols(default 0)
-    -d is the delim, default tab
-    -v is the value cols to sum up, default None. Example: 1,3-5,10 (1,3,4,10)
-         Note: if value not sepcify, will count the value of  keys
-    -s is the file has been sorted or not, default False
-    -i is the ignore error lines
-    -h is the help
-    -v is the version
-    -V is the verbose
+"""
+csbk is a tool for performing key-based aggregation (sum, count, avg, etc.)
+on columnar data from the command line.
 """
 
+import argparse
+import codecs
+import math
 import sys
-import unittest
+from collections import defaultdict
 from io import StringIO
-from optparse import OptionParser
+from typing import Dict, Iterable, List, TextIO, Tuple
 
 
-def sum_values(fd_list: list[str], dem: str, sum_cols: list[int], ignore: bool) -> tuple[list[float], int]:
-    """Sum up values from specified columns without keys."""
-    err_cnt = 0
-    sum_value = [0.0] * len(sum_cols)
+def unescape_str(s: str) -> str:
+    """Converts escape sequences like \\t to their character equivalent."""
+    if s is None:
+        return None
+    return codecs.decode(s, "unicode_escape")
 
-    for ins in fd_list:
-        if len(fd_list) > 1:
-            print(f"==  {ins.name} : ", file=sys.stderr)
-        for line in ins:
+
+def parse_column_spec(spec_string: str) -> List[int]:
+    """Parses a column specification string like '1,3-5,7' into a list of integers."""
+    if not spec_string:
+        return []
+    indices = []
+    parts = spec_string.split(",")
+    for part in parts:
+        if "-" in part:
             try:
-                line = line.rstrip("\n")
-                ll = line.split(dem)
-                try:
-                    tmp = [ll[index] for index in sum_cols]
-                except Exception as e:
-                    err_cnt += 1
-                    if err_cnt > 5:
-                        raise e
-                    continue
-                sum_value = [float(x) + y for x, y in zip(tmp, sum_value)]
-            except:
-                print(line, file=sys.stderr)
-                err_cnt += 1
-                if not ignore:
-                    raise
-
-    return [int(x) if x.is_integer() else x for x in sum_value], err_cnt
-
-
-def count_by_keys(fd_list: list[str], dem: str, key_cols: list[int], ignore: bool) -> tuple[dict[tuple, int], int]:
-    """Count occurrences by keys."""
-    err_cnt = 0
-    result = {}
-
-    for ins in fd_list:
-        if len(fd_list) > 1:
-            print(f"==  {ins.name} : ", file=sys.stderr)
-        for line in ins:
+                start, end = map(int, part.split("-"))
+                if start > end:
+                    raise ValueError(f"Invalid range: start > end in '{part}'")
+                indices.extend(range(start, end + 1))
+            except ValueError:
+                raise ValueError(f"Invalid range in column spec: {part}")
+        else:
             try:
-                line = line.strip("\n")
-                ll = line.split(dem)
-                try:
-                    key = tuple([ll[index] for index in key_cols])
-                except Exception as e:
-                    err_cnt += 1
-                    if err_cnt > 5:
-                        raise e
-                    continue
-                if key not in result:
-                    result[key] = 0
-                result[key] += 1
-            except:
-                print(line, file=sys.stderr)
-                err_cnt += 1
-                if not ignore:
-                    raise
-
-    return result, err_cnt
+                indices.append(int(part))
+            except ValueError:
+                raise ValueError(f"Invalid number in column spec: {part}")
+    return sorted(list(set(indices)))
 
 
-def sum_by_keys(
-    fd_list: list[str], dem: str, key_cols: list[int], sum_cols: list[int], ignore: bool
-) -> tuple[dict[tuple, list[float]], int]:
-    """Sum values by keys."""
-    err_cnt = 0
-    result = {}
+def bold(text: str) -> str:
+    """Wraps text in ANSI codes for bold formatting."""
+    return f"\033[1m{text}\033[0m"
 
-    for ins in fd_list:
-        if len(fd_list) > 1:
-            print(f"==  {ins.name} : ", file=sys.stderr)
-        for line in ins:
+
+class Aggregator:
+    """Holds the state for all aggregations for a single value column."""
+
+    def __init__(self):
+        self.sum = 0.0
+        self.count = 0
+        self.min = float("inf")
+        self.max = float("-inf")
+
+    def update(self, value: float):
+        self.sum += value
+        self.count += 1
+        self.min = min(self.min, value)
+        self.max = max(self.max, value)
+
+    def merge(self, other: "Aggregator"):
+        """Merges another Aggregator's stats into this one."""
+        self.sum += other.sum
+        self.count += other.count
+        self.min = min(self.min, other.min)
+        self.max = max(self.max, other.max)
+
+    def get(self, agg_func: str) -> float:
+        if self.count == 0:
+            return 0.0 if agg_func in ["sum", "count"] else float("nan")
+
+        if agg_func == "sum":
+            return self.sum
+        if agg_func == "count":
+            return self.count
+        if agg_func == "avg":
+            return self.sum / self.count
+        if agg_func == "min":
+            return self.min
+        if agg_func == "max":
+            return self.max
+        raise ValueError(f"Unknown aggregation function: {agg_func}")
+
+
+def process_streams(
+    streams: Iterable[TextIO],
+    delimiter: str,
+    key_cols: List[int],
+    value_cols: List[int],
+    ignore_errors: bool,
+) -> Tuple[Dict[Tuple, List[Aggregator]], int]:
+    """Processes data, returning a dictionary of aggregators per key and an error count."""
+    num_aggregators = len(value_cols) if value_cols else 1
+    results = defaultdict(lambda: [Aggregator() for _ in range(num_aggregators)])
+    error_count = 0
+
+    for stream in streams:
+        for line in stream:
             try:
-                line = line.strip("\n")
-                ll = line.split(dem)
-                try:
-                    key = tuple([ll[index] for index in key_cols])
-                except Exception as e:
-                    err_cnt += 1
-                    if err_cnt > 5:
-                        raise e
+                line = line.strip()
+                if not line:
                     continue
-                sum_value = [ll[index] for index in sum_cols]
-                if key not in result:
-                    result[key] = [0.0] * len(sum_cols)
-                result[key] = [float(x) + y for x, y in zip(sum_value, result[key])]
-            except:
-                print(line, file=sys.stderr)
-                err_cnt += 1
-                if not ignore:
+                fields = line.split(delimiter)
+                key = tuple(fields[i] for i in key_cols)
+
+                if value_cols:
+                    for i, col_idx in enumerate(value_cols):
+                        value = float(fields[col_idx])
+                        results[key][i].update(value)
+                else:
+                    results[key][0].update(1.0)
+            except (ValueError, IndexError) as e:
+                error_count += 1
+                if not ignore_errors:
+                    print(f"Error on line: {line!r} -> {e}", file=sys.stderr)
                     raise
-
-    # Convert to integers where possible
-    for key, value in result.items():
-        result[key] = [int(x) if x.is_integer() else x for x in value]
-
-    return result, err_cnt
+                else:
+                    print(f"Skipping malformed line: {line!r}", file=sys.stderr)
+    return dict(results), error_count
 
 
-def sum_haskey_hassum(
-    fd_list: list[str], dem: str, key_cols: list[int], sum_cols: list[int], ignore: bool
-) -> tuple[dict | list, int]:
-    """Sum up the value of the key in the file."""
-    if key_cols is None:
-        if sum_cols is None:
-            sum_cols = [0]
-        result, err_cnt = sum_values(fd_list, dem, sum_cols, ignore)
-        print("\t".join(map(str, result)))
-        return result, err_cnt
-    if sum_cols is None:
-        result, err_cnt = count_by_keys(fd_list, dem, key_cols, ignore)
-        for key, value in result.items():
-            print("\t".join(map(str, [*list(key), value])))
-        return result, err_cnt
-
-    result, err_cnt = sum_by_keys(fd_list, dem, key_cols, sum_cols, ignore)
-    for key, value in result.items():
-        print("\t".join(map(str, [*list(key), *value])))
-    return result, err_cnt
+def format_value(value: float) -> str:
+    """Formats a float, handling integers, floats, and NaN."""
+    if math.isnan(value):
+        return "na"
+    return str(int(value)) if value == int(value) else f"{value:.2f}"
 
 
-def create_range_callback(option: str, opt: str, value: str, parser: OptionParser) -> None:
-    """Create a range callback."""
-    tmp = value.split(",")
-    res = []
-    for e in tmp:
-        try:
-            i, j = list(map(int, e.split("-")))
-            res += list(range(i, j + 1))
-        except Exception:
-            res.append(int(e))
-    setattr(parser.values, option.dest, res)
+def pretty_print_table(header: List[str], data_rows: List[List[str]], total_row: List[str] = None):
+    """Prints data in a `column -t` style table."""
+    if not header and not data_rows:
+        return
+
+    all_rows = [header] + data_rows
+    if total_row:
+        all_rows.append(total_row)
+
+    col_widths = [max(len(cell) for cell in col) for col in zip(*all_rows)]
+
+    # Print Header
+    header_line = "  ".join(f"{h:<{w}}" for h, w in zip(header, col_widths))
+    print(bold(header_line))
+
+    # Print Separator
+    separator = "  ".join("-" * w for w in col_widths)
+    print(bold(separator))
+
+    # Print Data
+    for row in data_rows:
+        print("  ".join(f"{c:<{w}}" for c, w in zip(row, col_widths)))
+
+    # Print Total if exists
+    if total_row:
+        print(bold(separator))
+        total_line = "  ".join(f"{c:<{w}}" for c, w in zip(total_row, col_widths))
+        print(bold(total_line))
 
 
-class TestCsbk(unittest.TestCase):
-    """Test the csbk module"""
+def main():
+    parser = argparse.ArgumentParser(
+        description="Perform key-based aggregation on columnar data.",
+        epilog="""
+Examples:
+  Suppose we have a file 'data.csv' with the content:
+  user1,A,10
+  user1,B,20
+  user2,A,30
 
-    def test_create_range_callback(self):
-        """Test the create_range_callback function"""
+  1. Get count and sum for col 2, grouped by key in col 0.
+     csbk -k 0 -v 2 -d "," data.csv
+     Output:
+     key_0,count_2,sum_2
+     user1,2,30
+     user2,1,30
 
-        class MockParser:
-            def __init__(self):
-                self.values = type("Values", (), {})()
+  2. Get count, sum, and avg for col 2, grouped by key in col 0, in a pretty table:
+     csbk -k 0 -v 2 -a avg -d "," -P data.csv
+     Output:
+     \033[1mkey_0  count_2  sum_2  avg_2\033[0m
+     \033[1m-----  -------  -----  -----\033[0m
+     user1  2        30     15.00
+     user2  1        30     30.00
 
-        parser = MockParser()
-        option = type("Option", (), {"dest": "test_cols"})()
+  3. Show percentages and a total row, sorted by sum:
+     csbk -k 0 -v 2 -p --sort-by-value -d "," data.csv
+     Output:
+     key_0,count_2,count_2_pct,sum_2,sum_2_pct
+     user1,2,66.67%,30,50.00%
+     user2,1,33.33%,30,50.00%
+     total,3,100.00%,60,100.00%
+""",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    parser.add_argument("-k", "--key-cols", help="Key columns, e.g., '0,1,3-5'.")
+    parser.add_argument("-v", "--value-cols", help="Value columns to aggregate, e.g., '2,6-8'.")
+    parser.add_argument(
+        "-a",
+        "--agg",
+        action="append",
+        choices=["sum", "count", "avg", "min", "max"],
+        help="Additional aggregation functions.",
+    )
+    parser.add_argument(
+        "-A",
+        "--all-aggs",
+        action="store_true",
+        help="Use all available aggregation functions (sum, count, avg, min, max).",
+    )
+    parser.add_argument("-d", "--delimiter", help=r"Input field delimiter (e.g., '\t' for tab).", default="\t")
+    parser.add_argument("-D", "--output-delimiter", help="Output field delimiter. Defaults to the input delimiter.")
+    parser.add_argument(
+        "--sort-by-value", action="store_true", help="Sort by the first aggregated value. Default is descending."
+    )
+    parser.add_argument("-r", "--reverse", action="store_true", help="Reverse the sort order.")
+    parser.add_argument(
+        "-p", "--percentage", action="store_true", help="Show percentage for sum/count and add a total row."
+    )
+    parser.add_argument("-P", "--pretty", action="store_true", help="Print output in a pretty, aligned table.")
+    parser.add_argument("-i", "--ignore-errors", action="store_true", help="Ignore lines that cause errors.")
+    parser.add_argument(
+        "files",
+        nargs="*",
+        type=argparse.FileType("r"),
+        default=[sys.stdin],
+        help="Input files. Reads from stdin if not specified.",
+    )
 
-        # Test single number
-        create_range_callback(option, None, "1", parser)
-        assert parser.values.test_cols == [1]
+    args = parser.parse_args()
 
-        # Test range
-        create_range_callback(option, None, "1-3", parser)
-        assert parser.values.test_cols == [1, 2, 3]
+    if args.all_aggs:
+        args.agg = ["sum", "count", "avg", "min", "max"]
 
-        # Test mixed format
-        create_range_callback(option, None, "1,3-5,7", parser)
-        assert parser.values.test_cols == [1, 3, 4, 5, 7]
+    input_delimiter = unescape_str(args.delimiter)
+    output_delimiter = unescape_str(args.output_delimiter) if args.output_delimiter is not None else input_delimiter
 
-    def test_sum_haskey_hassum(self):
-        """Test the sum_haskey_hassum function"""
-        # Test case 1: Simple sum without keys
-        input_data = StringIO("1\t2\t3\n4\t5\t6\n")
-        result, err_cnt = sum_haskey_hassum([input_data], "\t", None, [0, 1], False)
-        assert result == [5, 7]  # Sum of first two columns
-        assert err_cnt == 0
+    try:
+        key_cols = parse_column_spec(args.key_cols) if args.key_cols else []
+        value_cols = parse_column_spec(args.value_cols) if args.value_cols else []
+    except ValueError as e:
+        parser.error(str(e))
 
-        # Test case 2: Sum with keys
-        input_data = StringIO("A\t1\t2\nA\t3\t4\nB\t5\t6\n")
-        result, err_cnt = sum_haskey_hassum([input_data], "\t", [0], [1, 2], False)
-        expected = {
-            ("A",): [4, 6],  # Sum of values for key 'A'
-            ("B",): [5, 6],  # Values for key 'B'
-        }
-        assert result == expected
-        assert err_cnt == 0
+    if value_cols:
+        base_aggs = ["count", "sum"]
+        extra_aggs = args.agg or []
+    else:
+        base_aggs = ["count"]
+        extra_aggs = args.agg or []
+    agg_funcs = base_aggs + [agg for agg in extra_aggs if agg not in base_aggs]
 
-        # Test case 3: Count with keys (no sum columns)
-        input_data = StringIO("A\t1\t2\nA\t3\t4\nB\t5\t6\n")
-        result, err_cnt = sum_haskey_hassum([input_data], "\t", [0], None, False)
-        expected = {
-            ("A",): 2,  # Count of key 'A'
-            ("B",): 1,  # Count of key 'B'
-        }
-        assert result == expected
-        assert err_cnt == 0
+    raw_results, error_count = process_streams(args.files, input_delimiter, key_cols, value_cols, args.ignore_errors)
 
-    def test_error_handling(self):
-        """Test error handling in sum_haskey_hassum"""
-        # Test with invalid data that will definitely cause an error
-        input_data = StringIO("A\tinvalid\t2\nA\t3\t4\n")
-        # Using index 1 which contains 'invalid' that can't be converted to float
-        result, err_cnt = sum_haskey_hassum([input_data], "\t", [0], [1], True)
-        assert err_cnt > 0  # Should have some errors but continue due to ignore=True
+    # --- Data Processing in correct column order ---
+    final_results = []
+    for key, aggregators in raw_results.items():
+        row_values = []
+        for agg in aggregators:  # Outer loop: by value column
+            for agg_func in agg_funcs:  # Inner loop: by aggregation function
+                row_values.append(agg.get(agg_func))
+        final_results.append({"key": key, "values": row_values})
 
-        # Test with out of range index
-        input_data = StringIO("A\t1\t2\n")
-        result, err_cnt = sum_haskey_hassum([input_data], "\t", [0], [5], True)  # Using index 5 which doesn't exist
-        assert err_cnt > 0  # Should have some errors but continue due to ignore=True
+    # --- Totals and Percentages ---
+    num_value_cols = len(value_cols) if value_cols else 1
+    num_agg_funcs = len(agg_funcs)
+    global_aggregators = [Aggregator() for _ in range(num_value_cols)]
+    for aggs_list in raw_results.values():
+        for i, agg in enumerate(aggs_list):
+            global_aggregators[i].merge(agg)
+
+    grand_totals = []
+    for agg in global_aggregators:  # Outer loop: by value column
+        for agg_func in agg_funcs:  # Inner loop: by aggregation function
+            grand_totals.append(agg.get(agg_func))
+
+    if args.percentage:
+        for res in final_results:
+            new_values = []
+            for i, val in enumerate(res["values"]):
+                new_values.append(val)
+                agg_func_for_this_col = agg_funcs[i % num_agg_funcs]
+                if agg_func_for_this_col in ["sum", "count"]:
+                    total = grand_totals[i]
+                    pct = (val / total * 100) if total != 0 else 0
+                    new_values.append(f"{pct:.2f}%")
+            res["values"] = new_values
+
+    # --- Sorting ---
+    sort_reverse = args.reverse
+    if args.sort_by_value:
+        final_results.sort(key=lambda x: x["values"][0], reverse=not sort_reverse)
+    else:
+        final_results.sort(key=lambda x: x["key"], reverse=sort_reverse)
+
+    # --- Header and Output Formatting ---
+    header = [f"key_{k}" for k in key_cols]
+    v_headers = value_cols if value_cols else [0]
+    for v_col in v_headers:  # Outer loop: by value column
+        for agg_func in agg_funcs:  # Inner loop: by aggregation function
+            base_header = f"{agg_func}_{v_col}"
+            header.append(base_header)
+            if args.percentage and agg_func in ["sum", "count"]:
+                header.append(f"{base_header}_pct")
+
+    data_rows_str = []
+    for res in final_results:
+        key_str = list(res["key"])
+        values_str = [str(v) if isinstance(v, str) else format_value(v) for v in res["values"]]
+        data_rows_str.append(key_str + values_str)
+
+    total_row_str = None
+    if args.percentage and final_results:
+        total_row_keys = ["total"] + [""] * (len(key_cols) - 1) if key_cols else []
+        total_values = []
+        for i, val in enumerate(grand_totals):
+            total_values.append(format_value(val))
+            agg_func_for_this_col = agg_funcs[i % num_agg_funcs]
+            if agg_func_for_this_col in ["sum", "count"]:
+                total_values.append("100.00%")
+        total_row_str = total_row_keys + total_values
+
+    # --- Final Print ---
+    if args.pretty:
+        pretty_print_table(header, data_rows_str, total_row_str)
+    else:
+        print(output_delimiter.join(header))
+        for row in data_rows_str:
+            print(output_delimiter.join(row))
+        if total_row_str:
+            print(output_delimiter.join(total_row_str))
+
+    if error_count > 0:
+        print(f"Encountered {error_count} errors.", file=sys.stderr)
+
+    for f in args.files:
+        if f is not sys.stdin:
+            f.close()
 
 
 if __name__ == "__main__":
-    if len(sys.argv) > 1 and sys.argv[1] == "--test":
-        unittest.main(argv=["first-arg-is-ignored"])
-    else:
-        parser = OptionParser(usage="usage:%prog [options] [file]")
-        parser.add_option(
-            "-k",
-            dest="key_cols",
-            help=(
-                "the key cols, default None, start from 0,Example: 1,3-5,10 (1,3,4,10) ."
-                "Note: if key not specify, will sum up the value_cols(default 0)"
-            ),
-            action="callback",
-            callback=create_range_callback,
-            type="string",
-            default=None,
-        )
-        parser.add_option("-d", dest="delim", help="delimeter,default tab", default="\t")
-        parser.add_option(
-            "-v",
-            dest="value_cols",
-            help=(
-                "the value cols to sum up, default None. Example: 1,3-5,10 (1,3,4,10)."
-                "Note: if value not sepcify, will count the value of  keys"
-            ),
-            action="callback",
-            callback=create_range_callback,
-            type="string",
-            default=None,
-        )
-        parser.add_option(
-            "-s",
-            dest="sorted",
-            help="the file has been sorted or not, default False",
-            action="store_true",
-            default=False,
-        )
-        parser.add_option("-i", dest="ignore", help="ignore error lines", action="store_true", default=False)
-        (options, args) = parser.parse_args()
-        # print options,args
-
-        fd_list = []
-        if not args:
-            fd_list.append(sys.stdin)
-        else:
-            fd_list = [open(file) for file in args]
-        result, err_cnt = sum_haskey_hassum(
-            fd_list, options.delim, options.key_cols, options.value_cols, options.ignore
-        )
-        if err_cnt != 0:
-            print(f"line err cnt {err_cnt}", file=sys.stderr)
+    main()

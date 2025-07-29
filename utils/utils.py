@@ -526,7 +526,7 @@ def read_file(  # noqa: C901, PLR0912
         return
 
     if isinstance(input_, (str, Path)) and not is_large_file(input_):
-        with open(input_) as fd:
+        with open(input_, encoding=encoding) as fd:
             total = sum(1 for _ in fd)
 
     if input_ is None:

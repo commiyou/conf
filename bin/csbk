@@ -326,7 +326,6 @@ Examples:
     if args.pretty:
         pretty_print_table(header, data_rows_str, total_row_str)
     else:
-        print(output_delimiter.join(header))
         for row in data_rows_str:
             print(output_delimiter.join(row))
         if total_row_str:

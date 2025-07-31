@@ -9,7 +9,7 @@ from typing import List, Optional, Set, TextIO, Tuple
 
 def parse_column_range(value: str) -> List[int]:
     """
-    Parses a 1-based column range string (e.g., '1,3-5') into a list of
+    Parses a 0-based column range string (e.g., '1,3-5') into a list of
     0-based indices.
     """
     if not value:
@@ -22,23 +22,23 @@ def parse_column_range(value: str) -> List[int]:
         if "-" in part:
             try:
                 start, end = map(int, part.split("-"))
-                if start < 1 or end < 1:
+                if start < 0 or end < 0:
                     msg = f"Column numbers must be positive, but got '{part}'."
                     raise argparse.ArgumentTypeError(msg)
                 if start > end:
                     msg = f"Start of range must not be greater than end, but got '{part}'."
                     raise argparse.ArgumentTypeError(msg)
-                indices.update(range(start - 1, end))
+                indices.update(range(start, end))
             except ValueError as e:
                 msg = f"Invalid range format: '{part}'."
                 raise argparse.ArgumentTypeError(msg) from e
         else:
             try:
                 col = int(part)
-                if col < 1:
+                if col < 0:
                     msg = f"Column number must be positive, but got '{col}'."
                     raise argparse.ArgumentTypeError(msg)
-                indices.add(col - 1)
+                indices.add(col)
             except ValueError as e:
                 msg = f"Invalid column number: '{part}'."
                 raise argparse.ArgumentTypeError(msg) from e
@@ -153,8 +153,8 @@ Examples:
         default=None,
         help="1-based column indices for the key file. Use the whole line if not specified.\n"
         "Examples:\n"
-        "  '1'       - Use the first column.\n"
-        "  '1,3'     - Use the first and third columns.\n"
+        "  '0'       - Use the first column.\n"
+        "  '0,2'     - Use the first and third columns.\n"
         "  '2-4'     - Use columns 2, 3, and 4.\n"
         "  '1,5-7'   - Use columns 1, 5, 6, and 7.",
     )
@@ -171,9 +171,7 @@ Examples:
     parser.add_argument(
         "-D", "--input-delimiter", default="\t", help="Delimiter for fields in the input file(s). Default is TAB."
     )
-    parser.add_argument(
-        "-e", "--key-encoding", default="utf-8", help="Encoding for the key file. Default is 'utf-8'."
-    )
+    parser.add_argument("-e", "--key-encoding", default="utf-8", help="Encoding for the key file. Default is 'utf-8'.")
     parser.add_argument(
         "-E",
         "--input-encoding",

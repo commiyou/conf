@@ -505,6 +505,7 @@ def read_file(  # noqa: C901, PLR0912
     skip_notexists: bool = False,
     filter_func: Callable[[list[str]], bool] | None = None,
     norm: bool = True,  # 是否替换掉bad char， 如chr(160) 不间断空格
+    quotechar: str | None = None,
 ) -> Generator[list[str], None, None]:
     """Read the file line by line with a specified encoding and return iterator of list after splitting by sep.
 
@@ -535,7 +536,21 @@ def read_file(  # noqa: C901, PLR0912
     if tqdm is None and sys.stderr.isatty():
         tqdm = str(f"proc file {input_}") if isinstance(input_, (str, Path)) else True
 
-    cm = open(input_, "rb") if isinstance(input_, (str, Path)) else contextlib.nullcontext(input_)
+    if not quotechar:
+        cm = open(input_, "rb") if isinstance(input_, (str, Path)) else contextlib.nullcontext(input_)
+    else:
+        if "utf" in encoding.lower() and "8" in encoding.lower():
+            encoding = "utf-8-sig"  # 解决bom问题，能自动去掉bom
+        cm = (
+            open(input_, newline="", encoding=encoding)
+            if isinstance(input_, (str, Path))
+            else contextlib.nullcontext(input_)
+        )
+        import csv
+
+        cm = tqdm_.tqdm(csv.reader(cm, delimiter=sep, quotechar=quotechar))
+        yield from cm
+        return
 
     with cm as input_:
         if skip_header:

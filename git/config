@@ -35,6 +35,7 @@
   whitespace = -trailing-space
   autocrlf = input
   pager = ( diff-so-fancy 2>/dev/null || cat - ) | less --tabs=4 -RFX 
+	quotepath = false
 [credential]
 	helper = store
 [pull]

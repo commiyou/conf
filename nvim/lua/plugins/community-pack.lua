@@ -21,7 +21,8 @@ return {
   { import = "astrocommunity.colorscheme.sonokai" },
   { import = "astrocommunity.recipes.vscode" },
   { import = "astrocommunity.lsp.actions-preview-nvim" }, -- :TSInstall diff
-  {import = "astrocommunity.lsp.lsp-signature-nvim" },
-  {import = "astrocommunity.editing-support.nvim-context-vt" },
-  {import = "astrocommunity.editing-support.nvim-treesitter-context" },
+  { import = "astrocommunity.lsp.lsp-signature-nvim" },
+  { import = "astrocommunity.editing-support.nvim-context-vt" },
+  { import = "astrocommunity.editing-support.nvim-treesitter-context" },
+  { import = "astrocommunity.editing-support.refactoring-nvim" },
 }

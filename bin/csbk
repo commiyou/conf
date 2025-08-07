@@ -102,7 +102,7 @@ def process_streams(
     for stream in streams:
         for line in stream:
             try:
-                line = line.strip()
+                line = line.rstrip("\n")
                 if not line:
                     continue
                 fields = line.split(delimiter)

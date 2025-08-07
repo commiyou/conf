@@ -43,6 +43,7 @@ from pathlib import Path
 from typing import (
     IO,
     Any,
+    Callable,
     Literal,
     NewType,
     Optional,
@@ -52,6 +53,7 @@ from typing import (
     TypeAlias,
     TypeVar,
     TypeVarTuple,
+    overload,
 )
 from urllib.parse import urlencode
 
@@ -65,13 +67,22 @@ from termcolor import colored
 
 requests.packages.urllib3.disable_warnings()
 
+# Generic type variables for keys, values, and input items.
+_K = TypeVar("_K")  # Represents the key type.
+_V = TypeVar("_V")  # Represents the value type.
+_T = TypeVar("_T")  # Represents the type of items read from the input file (e.g., list[str]).
+_AccumulatedV = TypeVar("_AccumulatedV")  # Represents the type of the accumulated value.
+
 T = TypeVar("T")
 OptionalStr = TypeVar("OptionalStr", str, None)
+
+T_Input = TypeVar("T_Input")
+T_Output = TypeVar("T_Output")
 
 R = TypeVar("R")
 Ts = TypeVarTuple("Ts")
 P = ParamSpec("P")
-KeyType: TypeAlias = int | slice | Sequence | Mapping | AbstractSet | Callable[..., Any]
+KeyType: TypeAlias = int | slice | Sequence | Mapping | AbstractSet | Callable[[_T], Any]
 
 
 devnull = open(os.devnull, "w")  # noqa: SIM115
@@ -608,6 +619,43 @@ def write_file_new(filepath: str, mode: str = "w+", suffix: str = "", **kwargs):
     if suffix:
         filepath = new_filename(filepath, suffix=suffix)
     return AutoClosingFile(filepath, mode, **kwargs)
+
+
+# --- Overloaded Function Signatures ---
+@overload
+def read_kv(
+    input_: str | Path | IO | None = sys.stdin.buffer,
+    *,
+    key: KeyType = 0,
+    value: None = None,
+    filter: Callable[[list[str]], bool] | None = None,
+    value_accumulate_func: None = None,
+    **kwargs: P.kwargs,
+) -> set[_K]: ...
+
+
+@overload
+def read_kv(
+    input_: str | Path | IO | None = sys.stdin.buffer,
+    *,
+    key: KeyType = 0,
+    value: KeyType,
+    filter: Callable[[list[str]], bool] | None = None,
+    value_accumulate_func: None,
+    **kwargs: P.kwargs,
+) -> dict[_K, list[_V]]: ...
+
+
+@overload
+def read_kv(
+    input_: str | Path | IO | None = sys.stdin.buffer,
+    *,
+    key: KeyType = 0,
+    value: KeyType,
+    filter: Callable[[list[str]], bool] | None = None,
+    value_accumulate_func: Callable[[list[_V]], _AccumulatedV] = funcy.first,
+    **kwargs: P.kwargs,
+) -> dict[_K, _AccumulatedV]: ...
 
 
 def read_kv(
@@ -2145,6 +2193,9 @@ def run_with_file(
     if keys is None:
         keys = [0]
 
+    if isinstance(keys, int):
+        keys = [keys]
+
     def actual_decorator(func: Callable[P, R]) -> None:
         with write_file(ofname) as of:
             for ll in read_file(fname):
@@ -2276,6 +2327,318 @@ def aggregate_by_key(
         res = [k, len(vs)] if with_len else [k]
         res = [*res, *vs] if unpack else [*res, vs]
         xprint(*res)
+
+
+def parallel_process(  # noqa: C901, PLR0912, PLR0915
+    inputs: Iterable[T_Input],
+    target_func: Callable[..., T_Output],
+    *,
+    transform: Callable[[T_Input], tuple[tuple, dict]] | None = None,
+    process_cnt: int | None = None,
+    max_concurrency: int | None = None,
+    tqdm_desc: str | None = "Processing",
+    total: int | None = None,
+    timeout: int | None = None,
+    max_fail_cnt: int = 20,
+) -> Generator[tuple[T_Input, T_Output | Exception], None, None]:
+    """
+    使用多进程并行处理输入项，并通过 transform 函数适配目标函数。
+
+    参数:
+    - inputs: 包含原始数据的可迭代对象。
+    - target_func: 需要被并发执行的目标函数 (必须是可序列化的)。
+    - transform: 一个转换函数，接收 inputs 中的单个元素，
+                 并返回一个 (args_tuple, kwargs_dict) 格式的元组。
+    - process_cnt: 并行进程数。默认为 CPU 核心数。
+    - max_concurrency: 最大并发任务数，用于控制同时在处理的任务量，防止内存爆炸。
+                       默认为 process_cnt。
+    - tqdm_desc: tqdm 进度条的描述文本。如果为 None，则不显示进度条。
+    - total: 输入项的总数，用于tqdm。如果 inputs 是列表等有长度的类型，会自动计算。
+    - timeout: 每个任务的超时时间（秒）。
+    - max_fail_cnt: 允许的最大失败次数。超过后将抛出最后的异常。
+
+    返回:
+    - 一个生成器，逐个产出 (原始输入, 结果或异常对象) 的元组。
+    """
+
+    def _identify(x: T_Input) -> tuple[tuple[T_Input], dict]:
+        return (x,), {}
+
+    if transform is None:
+        transform = _identify
+
+    if not callable(transform):
+        raise TypeError("transform 必须是可调用的函数")
+    if not callable(target_func):
+        raise TypeError("target_func 必须是可调用的函数")
+
+    # 确定进程数
+    if process_cnt is None:
+        process_cnt = os.cpu_count() or 1
+
+    # 如果不使用tqdm，则将desc设为None
+    desc = tqdm_desc if tqdm_desc is not None else None
+
+    # 单进程模式：简单、易于调试，无需复杂的并发处理
+    if process_cnt == 1:
+        pbar = tqdm_(inputs, total=total, desc=desc, disable=desc is None)
+        for original_input in pbar:
+            try:
+                args, kwargs = transform(original_input)
+                result = target_func(*args, **kwargs)
+                yield original_input, result
+            except Exception as e:
+                yield original_input, e
+        return
+
+    # 多进程模式
+    if not total and isinstance(inputs, (list, tuple, set, dict)):
+        total = len(inputs)
+
+    fail_cnt = 0
+    failed_tasks: list[tuple[T_Input, Exception]] = []
+
+    # 确定并发窗口大小
+    concurrency = max_concurrency or process_cnt
+    if concurrency < process_cnt:
+        xerr(
+            f"警告: max_concurrency ({concurrency}) 小于 process_cnt ({process_cnt})。建议保持 max_concurrency >= process_cnt。"
+        )
+
+    def output_failed_tasks(tasks: list) -> None:
+        if not tasks:
+            return
+        xerr("-" * 60)
+        xerr(f"报告 {len(tasks)} 个失败的任务:")
+        for i, (inp, e) in enumerate(tasks):
+            xerr(f"--- 失败任务 {i + 1}/{len(tasks)} ---")
+            xerr(f"输入: {inp}")
+            traceback.print_exception(type(e), e, e.__traceback__, file=sys.stderr)
+        xerr("-" * 60)
+
+    # 将输入转换为迭代器，以确保我们始终向前处理
+    handler_inputs = iter(inputs)
+    import concurrent
+
+    with (  # noqa: PLR1702
+        concurrent.futures.ProcessPoolExecutor(max_workers=process_cnt) as executor,
+        tqdm_.tqdm(total=total, desc=desc, disable=desc is None) as pbar,
+    ):
+        # {future: original_input} 的映射
+        futures: dict[concurrent.futures.Future, T_Input] = {}
+
+        # 1. 初始填充任务队列，达到最大并发数
+        for original_input in itertools.islice(handler_inputs, concurrency):
+            try:
+                args, kwargs = transform(original_input)
+                future = executor.submit(target_func, *args, **kwargs)
+                futures[future] = original_input
+            except Exception as e:
+                # 转换阶段就失败了
+                fail_cnt += 1
+                failed_tasks.append((original_input, e))
+                pbar.update(1)
+
+        # 2. 主循环：当有任务在执行时，持续处理
+        while futures:
+            # 等待至少一个任务完成
+            done, _ = concurrent.futures.wait(futures, return_when=concurrent.futures.FIRST_COMPLETED)
+
+            for fut in done:
+                original_input = futures.pop(fut)
+                pbar.update(1)
+
+                # 2a. 获取结果
+                try:
+                    result = fut.result(timeout=timeout)
+                    yield original_input, result
+                except Exception as e:
+                    fail_cnt += 1
+                    failed_tasks.append((original_input, e))
+                    yield original_input, e  # 产出异常
+
+                    xerr(f"任务失败 ({type(e).__name__})，累计失败 {fail_cnt}/{max_fail_cnt}。输入: {original_input}")
+                    if fail_cnt > max_fail_cnt:
+                        xerr("超过最大失败次数，正在终止...")
+                        output_failed_tasks(failed_tasks)
+                        # 取消所有剩余的 future
+                        for f in futures:
+                            f.cancel()
+                        raise
+
+                # 2b. 补充新任务（如果还有的话）
+                try:
+                    next_input = next(handler_inputs)
+                    args, kwargs = transform(next_input)
+                    new_future = executor.submit(target_func, *args, **kwargs)
+                    futures[new_future] = next_input
+                except StopIteration:
+                    # 输入已经耗尽，无需补充
+                    pass
+                except Exception as e:
+                    # 新任务在转换阶段就失败了
+                    fail_cnt += 1
+                    failed_tasks.append((next_input, e))
+                    pbar.update(1)
+
+    # 循环结束后，报告所有失败的任务
+    suc_cnt = (total or pbar.n) - len(failed_tasks)
+    output_failed_tasks(failed_tasks)
+    xerr(f"处理完成。成功: {suc_cnt}, 失败: {len(failed_tasks)}")
+
+
+def parallel_thread(
+    inputs: Iterable[T_Input],
+    target_func: Callable[..., T_Output],
+    *,
+    transform: Callable[[T_Input], tuple[tuple, dict]] | None = None,
+    thread_cnt: int | None = 20,
+    tqdm_desc: str | None = "Processing",
+    max_fail_cnt: int = 20,
+    ordered_return: bool = True,
+) -> Generator[tuple[T_Input, T_Output | Exception], None, None]:
+    """
+    使用多线程并行处理输入项，并通过 transform 函数适配目标函数。
+
+    参数:
+    - inputs: 包含原始数据的可迭代对象。
+    - target_func: 需要被并发执行的目标函数 (必须是线程安全的)。
+    - transform: 一个转换函数，接收 inputs 中的单个元素，
+                 并返回一个 (args_tuple, kwargs_dict) 格式的元组。
+    - thread_cnt: 并行线程数。默认为 min(32, os.cpu_count() + 4)。
+    - tqdm_desc: tqdm 进度条的描述文本。如果为 None，则不显示进度条。
+    - max_fail_cnt: 允许的最大失败次数。超过后将抛出最后的异常。
+    - ordered_return: 是否保证输出顺序与输入顺序一致。
+
+    返回:
+    - 一个生成器，按顺序或完成顺序产出 (原始输入, 结果或异常对象) 的元组。
+    """
+
+    def _identify(x: T_Input) -> tuple[tuple[T_Input], dict]:
+        return (x,), {}
+
+    if transform is None:
+        transform = _identify
+
+    if not callable(transform) or not callable(target_func):
+        raise TypeError("transform and target_func must be callable")
+
+    if thread_cnt is None:
+        thread_cnt = min(32, (os.cpu_count() or 1) + 4)
+
+    fail_cnt = 0
+    failed_tasks: list[tuple[T_Input, Exception]] = []
+
+    def output_failed_tasks(tasks: list) -> None:
+        if not tasks:
+            return
+        xerr("-" * 60)
+        xerr(f"报告 {len(tasks)} 个失败的任务:")
+        for i, (inp, e) in enumerate(tasks):
+            xerr(f"--- 失败任务 {i + 1}/{len(tasks)} ---")
+            xerr(f"输入: {inp}")
+            traceback.print_exception(type(e), e, e.__traceback__, file=sys.stderr)
+        xerr("-" * 60)
+
+    # --- Single-threaded mode for simplicity and debugging ---
+    if thread_cnt == 1:
+        pbar = tqdm_.tqdm(inputs, desc=tqdm_desc, disable=tqdm_desc is None)
+        for original_input in pbar:
+            try:
+                args, kwargs = transform(original_input)
+                yield original_input, target_func(*args, **kwargs)
+            except Exception as e:
+                yield original_input, e
+        return
+
+    # --- Multi-threaded modes ---
+    if ordered_return:  # noqa: PLR1702
+        # --- Ordered Mode using multiprocessing.dummy.Pool.imap ---
+        # This is concise and correct for ordered results.
+        from multiprocessing.dummy import Pool
+
+        inputs_list = list(inputs)
+        total = len(inputs_list)
+        if not total:
+            return
+
+        def wrapper(original_input: T_Input) -> tuple[T_Input, T_Output | Exception]:
+            try:
+                args, kwargs = transform(original_input)
+                return original_input, target_func(*args, **kwargs)
+            except Exception as e:
+                return original_input, e
+
+        with Pool(thread_cnt) as pool:
+            pbar = tqdm_.tqdm(pool.imap(wrapper, inputs_list), total=total, desc=tqdm_desc, disable=tqdm_desc is None)
+            for original_input, result in pbar:
+                if isinstance(result, Exception):
+                    fail_cnt += 1
+                    failed_tasks.append((original_input, result))
+                yield original_input, result
+    else:
+        # --- Unordered Mode using ThreadPoolExecutor ---
+        # This correctly implements the "sliding window" of concurrent tasks.
+        import concurrent.futures
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=thread_cnt) as executor:
+            inputs_iterator = iter(inputs)
+            future_to_input = {}
+            pbar = tqdm_.tqdm(desc=tqdm_desc, disable=tqdm_desc is None)
+
+            # Initial submission of tasks
+            for _ in range(thread_cnt):
+                try:
+                    original_input = next(inputs_iterator)
+                    args, kwargs = transform(original_input)
+                    future = executor.submit(target_func, *args, **kwargs)
+                    future_to_input[future] = original_input
+                except StopIteration:
+                    break
+                except Exception as e:
+                    fail_cnt += 1
+                    failed_tasks.append((original_input, e))
+                    yield original_input, e
+
+            # Process tasks as they complete
+            while future_to_input:
+                for future in concurrent.futures.as_completed(future_to_input):
+                    original_input = future_to_input.pop(future)
+                    pbar.update(1)
+                    try:
+                        result = future.result()
+                        yield original_input, result
+                    except Exception as e:
+                        fail_cnt += 1
+                        failed_tasks.append((original_input, e))
+                        yield original_input, e
+
+                    # Submit the next task from the iterator
+                    try:
+                        next_input = next(inputs_iterator)
+                        args, kwargs = transform(next_input)
+                        new_future = executor.submit(target_func, *args, **kwargs)
+                        future_to_input[new_future] = next_input
+                    except StopIteration:
+                        pass  # No more tasks to submit
+                    except Exception as e:
+                        fail_cnt += 1
+                        failed_tasks.append((next_input, e))
+                        yield next_input, e
+
+                    if fail_cnt >= max_fail_cnt:
+                        xerr(f"Exceeded max fail count ({max_fail_cnt}). Halting.")
+                        # Cancel remaining futures
+                        for f in future_to_input:
+                            f.cancel()
+                        future_to_input.clear()
+                        break
+            pbar.close()
+
+    # Final report
+    output_failed_tasks(failed_tasks)
+    if fail_cnt >= max_fail_cnt:
+        raise failed_tasks[-1][1] from None
 
 
 if __name__ == "__main__":

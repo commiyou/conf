@@ -25,4 +25,3 @@ unset config_file
 [[ ! -f ~/conf/zsh/.p10k.zsh ]] || source ~/conf/zsh/.p10k.zsh
 [[ ! -f ~/.self.sh ]] || source ~/.self.sh
 
-

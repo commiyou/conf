@@ -7,5 +7,5 @@
 { echo '---BEGIN-PREVIEW---'
   du -ch "$@"
   echo '----END-PREVIEW----'
-} | tee /dev/tty | sed '1d;$d' | sort-h
+} | tee /dev/tty | sed '1d;$d' | sort -h
 

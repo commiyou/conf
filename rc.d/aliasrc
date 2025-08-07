@@ -1,5 +1,5 @@
 # vim: ft=sh
-shopt expand_aliases 1>&2 2>/dev/null # bash 
+shopt expand_aliases 1>&2 2>/dev/null # bash
 
 alias pl='print -rl --'
 
@@ -8,7 +8,7 @@ alias n1ips="ifconfig -a | grep -o 'inet6\? \(addr:\)\?\s\?\(\(\([0-9]\+\.\)\{3\
 alias recently_changed='find . -newerct "15 minute ago" -print'
 recently_changed_x() { find . -newerct "$1 minute ago" -print; }
 # Detect which `ls` flavor is in use
-if ls --color > /dev/null 2>&1; then # GNU `ls`
+if ls --color >/dev/null 2>&1; then # GNU `ls`
 	colorflag="--color=auto"
 else # macOS `ls`
 	colorflag="-G"
@@ -23,11 +23,17 @@ alias lrs="ls -lrSh"
 alias ld="ls -lF | grep --color=never '^d'"
 alias l.="ls -ld .*"
 
+# ls source
+export IGNORED_FILES='--ignore="*.tsv" --ignore="*.xlsx" --ignore="*.jsonl" --ignore="*.json"'
+alias lss='ls ${IGNORED_FILES}'
+alias lls="ls -lF ${IGNORED_FILES}"
+alias lrts="ls -lrth  ${IGNORED_FILES}"
+
 alias cp="cp -i"
 alias mv="mv -i"
 alias md="mkdir -p"
 mdc() {
-  mkdir -p $1 && cd $1
+	mkdir -p $1 && cd $1
 }
 alias rm="rm -i"
 alias rmr="rm -rf"
@@ -57,9 +63,8 @@ alias fdf='find . -type f -name'
 
 alias fd="fd -I"
 
-
 # fix sort bug
-alias sort="LC_ALL=C sort"  
+alias sort="LC_ALL=C sort"
 alias uniq="LC_ALL=C uniq"
 alias grep="LC_ALL=C grep"
 
@@ -100,7 +105,6 @@ alias gbsg='git bisect good'
 alias gbsr='git bisect reset'
 alias gbss='git bisect start'
 
-
 alias gc='git commit -v'
 alias 'gc!'='git commit -v --amend'
 alias 'gcn!'='git commit -v --no-edit --amend'
@@ -122,7 +126,7 @@ alias gdca='git diff --cached'
 alias gdcw='git diff --cached --word-diff'
 alias gdct='git describe --tags $(git rev-list --tags --max-count=10)'
 gdv() {
-    git diff -w "$@" | view - 
+	git diff -w "$@" | view -
 }
 # compdef _git gdv=git-diff
 

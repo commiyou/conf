@@ -1,6 +1,6 @@
 return {
   {
-    --enabled = false,
+    enabled = false,
     "rasulomaroff/reactive.nvim",
     event = { "BufReadPre", "BufNewFile" },
     config = function()

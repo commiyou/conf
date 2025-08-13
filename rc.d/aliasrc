@@ -170,4 +170,9 @@ alias gtdr="_gtdr(){git push origin :refs/tags/$1}; _gtdr"
 alias gupa='git pull --rebase --autostash'
 alias gup='git pull --rebase'
 
-alias gdmsg='git diff --staged | sgpt "Generate a one-sentence Git commit message for my changes."'
+# alias gdmsg='git diff --staged | sgpt "Generate a one-sentence Git commit message for my changes."'
+alias gdmsg='git diff --staged | sgpt "Based on the following git diff, generate a commit message that follows the Conventional Commits specification:\
+1. Write in English, with the first line containing the type and a brief description, no longer than 72 characters.\
+2. Leave the second line blank, and from the third line onward provide more detailed explanations of the changes.\
+3. Do not include any unrelated information.\
+diff:"'

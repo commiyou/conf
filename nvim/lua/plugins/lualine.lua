@@ -92,7 +92,7 @@ return {
           { "searchcount", icon = "" },
         },
         lualine_x = {
-          "hostname",
+          --"hostname",
           { recording, icon = "", color = "Constant" },
           --{ "searchcount", icon = "", color = "Function", fmt = format_search_count },
           "encoding",

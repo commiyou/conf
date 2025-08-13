@@ -27,7 +27,6 @@ import traceback
 import types
 import unicodedata
 from collections.abc import (
-    Callable,
     Generator,
     Hashable,
     Iterable,
@@ -38,11 +37,13 @@ from collections.abc import (
 from collections.abc import Set as AbstractSet
 from contextlib import ExitStack, contextmanager, nullcontext
 from functools import partial, wraps
+from io import TextIOWrapper
 from operator import itemgetter
 from pathlib import Path
 from typing import (
     IO,
     Any,
+    BinaryIO,
     Callable,
     Literal,
     NewType,
@@ -53,6 +54,7 @@ from typing import (
     TypeAlias,
     TypeVar,
     TypeVarTuple,
+    cast,
     overload,
 )
 from urllib.parse import urlencode
@@ -65,7 +67,32 @@ from bs4 import BeautifulSoup
 from diskcache import Cache
 from termcolor import colored
 
-requests.packages.urllib3.disable_warnings()
+requests.packages.urllib3.disable_warnings()  # pyright: ignore[reportAttributeAccessIssue]
+
+
+Color = Literal["grey", "red", "green", "yellow", "blue", "magenta", "cyan", "white"]
+
+Attribute = Literal["bold", "dark", "underline", "blink", "reverse", "concealed", "strike"]
+
+Highlight = Literal[
+    "on_black",
+    "on_grey",
+    "on_red",
+    "on_green",
+    "on_yellow",
+    "on_blue",
+    "on_magenta",
+    "on_cyan",
+    "on_light_grey",
+    "on_dark_grey",
+    "on_light_red",
+    "on_light_green",
+    "on_light_yellow",
+    "on_light_blue",
+    "on_light_magenta",
+    "on_light_cyan",
+    "on_white",
+]
 
 # Generic type variables for keys, values, and input items.
 _K = TypeVar("_K")  # Represents the key type.
@@ -88,7 +115,7 @@ KeyType: TypeAlias = int | slice | Sequence | Mapping | AbstractSet | Callable[[
 devnull = open(os.devnull, "w")  # noqa: SIM115
 
 with contextlib.suppress(Exception):
-    from traceback_with_variables import activate_by_import
+    from traceback_with_variables import activate_by_import  # pyright: ignore[reportUnusedImport]
 
 if locale.getencoding() != "UTF-8":
     print(f"system default locale {locale.getlocale()}", file=sys.stderr)
@@ -135,7 +162,7 @@ def xprint(
     suffix: str = "",
     sep: str = "\t",
     flush: bool = True,
-    file: "IO|None" = None,
+    file: TextIO | BinaryIO | None = None,
     encoding: str = "utf8",
     output_flag: bool = True,
     color: Literal["red", "blue", "green"] | None = None,
@@ -157,10 +184,12 @@ def xprint(
     values_str = [make_str(value) for value in values]
     out = sep.join(values_str) + end
     out = color_text_if_atty(out, color)
-    if hasattr(file, "buffer"):
+    if isinstance(file, TextIOWrapper):
         file.buffer.write(out.encode(encoding))
     else:
         file.write(out)
+    assert file is not None
+
     if flush:
         file.flush()
 
@@ -214,9 +243,9 @@ def _is_literal(s: Any) -> bool:
 
 def color_text_if_atty(
     text: str,
-    color: str,
-    on_color: str | None = None,
-    attrs: Iterable[str] | None = None,
+    color: Color | None,
+    on_color: Highlight | None = None,
+    attrs: Iterable[Attribute] | None = None,
     force: bool = False,
 ) -> str:
     """颜色 text
@@ -388,7 +417,7 @@ def is_chinese_or_alnum(uchar: str) -> bool:
     return False
 
 
-def norm_line(line: T) -> T:
+def norm_line(line: type[T]) -> T:
     r"""使用正则表达式替换多个空白符为单个空格, 去前后空白符
 
     >>> norm_line("1  2\n")
@@ -1663,7 +1692,7 @@ def urlencode_params(**params: object) -> str:
 
 def md5(input_string: str) -> str:
     """md5"""
-    md5 = hashlib.md5()  # noqa: S324
+    md5 = hashlib.md5()
     md5.update(input_string.encode("utf-8"))
     return md5.hexdigest()
 
@@ -2420,7 +2449,7 @@ def parallel_process(  # noqa: C901, PLR0912, PLR0915
     handler_inputs = iter(inputs)
     import concurrent
 
-    with (  # noqa: PLR1702
+    with (
         concurrent.futures.ProcessPoolExecutor(max_workers=process_cnt) as executor,
         tqdm_.tqdm(total=total, desc=desc, disable=desc is None) as pbar,
     ):
@@ -2552,7 +2581,7 @@ def parallel_thread(
         return
 
     # --- Multi-threaded modes ---
-    if ordered_return:  # noqa: PLR1702
+    if ordered_return:
         # --- Ordered Mode using multiprocessing.dummy.Pool.imap ---
         # This is concise and correct for ordered results.
         from multiprocessing.dummy import Pool

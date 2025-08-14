@@ -1,0 +1,39 @@
+#!/bin/bash
+
+# 检查是否有 staged 改动
+if git diff --staged --quiet; then
+    echo "No staged changes to commit."
+    exit 0
+fi
+
+# 显示 staged 的 diff
+git diff --staged
+
+# 询问用户是否继续
+read -p "Do you want to generate a commit message from this diff? (y/n) " confirm
+
+if [[ "$confirm" != "y" ]]; then
+    echo "Aborted."
+    exit 0
+fi
+
+# 调用 sgpt 生成 commit message
+commit_msg=$(git diff --staged | sgpt "Based on the following git diff, generate a commit message that follows the Conventional Commits specification:
+1. Write in English, with the first line containing the type and a brief description, no longer than 72 characters.
+2. Leave the second line blank, and from the third line onward provide more detailed explanations of the changes.
+3. Do not include any unrelated information.
+diff:")
+
+# 显示生成的 commit message 给用户确认
+echo "Generated commit message:"
+echo "---------------------------------"
+echo "$commit_msg"
+echo "---------------------------------"
+read -p "Do you want to commit with this message? (y/n) " confirm_commit
+
+if [[ "$confirm_commit" == "y" ]]; then
+    git commit -m "$commit_msg"
+    echo "Committed!"
+else
+    echo "Aborted."
+fi

@@ -9,12 +9,12 @@ import codecs
 import math
 import sys
 from collections import defaultdict
-from io import StringIO
-from typing import Dict, Iterable, List, TextIO, Tuple
+from collections.abc import Iterable
+from typing import Dict, List, TextIO, Tuple
 
 
-def unescape_str(s: str) -> str:
-    """Converts escape sequences like \\t to their character equivalent."""
+def unescape_str(s: str | None) -> str | None:
+    r"""Converts escape sequences like \t to their character equivalent."""
     if s is None:
         return None
     return codecs.decode(s, "unicode_escape")
@@ -119,8 +119,7 @@ def process_streams(
                 if not ignore_errors:
                     print(f"Error on line: {line!r} -> {e}", file=sys.stderr)
                     raise
-                else:
-                    print(f"Skipping malformed line: {line!r}", file=sys.stderr)
+                print(f"Skipping malformed line: {line!r}", file=sys.stderr)
     return dict(results), error_count
 
 
@@ -131,7 +130,7 @@ def format_value(value: float) -> str:
     return str(int(value)) if value == int(value) else f"{value:.2f}"
 
 
-def pretty_print_table(header: List[str], data_rows: List[List[str]], total_row: List[str] = None):
+def pretty_print_table(header: List[str], data_rows: List[List[str]], total_row: List[str] | None = None):
     """Prints data in a `column -t` style table."""
     if not header and not data_rows:
         return
@@ -236,7 +235,7 @@ Examples:
         args.agg = ["sum", "count", "avg", "min", "max"]
 
     input_delimiter = unescape_str(args.delimiter)
-    output_delimiter = unescape_str(args.output_delimiter) if args.output_delimiter is not None else input_delimiter
+    output_delimiter = unescape_str(args.output_delimiter) or input_delimiter
 
     try:
         key_cols = parse_column_spec(args.key_cols) if args.key_cols else []

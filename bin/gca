@@ -1,39 +1,63 @@
 #!/bin/bash
 
+# ANSI 颜色
+RED="\033[1;31m"
+GREEN="\033[1;32m"
+YELLOW="\033[1;33m"
+CYAN="\033[1;36m"
+RESET="\033[0m"
+
 # 检查是否有 staged 改动
 if git diff --staged --quiet; then
-    echo "No staged changes to commit."
+    echo -e "${YELLOW}No staged changes to commit.${RESET}"
     exit 0
 fi
 
 # 显示 staged 的 diff
 git diff --staged
 
-# 询问用户是否继续
-read -p "Do you want to generate a commit message from this diff? (y/n) " confirm
+# 函数：按键确认 y/n，最多 3 次
+confirm_key() {
+    local prompt="$1"
+    local attempt=0
+    local max_attempts=3
+    local key
+    while ((attempt < max_attempts)); do
+        read -rn1 -p "$prompt (y/n) " key
+        echo
+        case "$key" in
+        [Yy]) return 0 ;;
+        [Nn]) return 1 ;;
+        *) echo -e "${YELLOW}Invalid input. Please type y or n.${RESET}" ;;
+        esac
+        ((attempt++))
+    done
+    return 1
+}
 
-if [[ "$confirm" != "y" ]]; then
-    echo "Aborted."
+# 询问用户是否生成 commit message
+if ! confirm_key "Do you want to generate a commit message from this diff?"; then
+    echo -e "${RED}Aborted.${RESET}"
     exit 0
 fi
 
-# 调用 sgpt 生成 commit message
-commit_msg=$(git diff --staged | sgpt "Based on the following git diff, generate a commit message that follows the Conventional Commits specification:
-1. Write in English, with the first line containing the type and a brief description, no longer than 72 characters.
-2. Leave the second line blank, and from the third line onward provide more detailed explanations of the changes.
-3. Do not include any unrelated information.
+# 调用 sgpt 生成较完整的 commit message
+commit_msg=$(git diff --staged | sgpt "Based on the following git diff, generate a commit message that follows the Conventional Commits specification. 
+Include a detailed description after the first line. Only output the commit message, do NOT include explanations or extra text.
+
 diff:")
 
-# 显示生成的 commit message 给用户确认
-echo "Generated commit message:"
-echo "---------------------------------"
-echo "$commit_msg"
-echo "---------------------------------"
-read -p "Do you want to commit with this message? (y/n) " confirm_commit
+# 显示生成的 commit message（凸显）
+echo
+echo -e "${CYAN}==================== Generated Commit Message ====================${RESET}"
+echo -e "${GREEN}$commit_msg${RESET}"
+echo -e "${CYAN}==================================================================${RESET}"
+echo
 
-if [[ "$confirm_commit" == "y" ]]; then
+# 用户确认是否 commit
+if confirm_key "Do you want to commit with this message?"; then
     git commit -m "$commit_msg"
-    echo "Committed!"
+    echo -e "${GREEN}Committed!${RESET}"
 else
-    echo "Aborted."
+    echo -e "${RED}Aborted.${RESET}"
 fi

@@ -176,3 +176,5 @@ alias gdmsg='git diff --staged | sgpt "Based on the following git diff, generate
 2. Leave the second line blank, and from the third line onward provide more detailed explanations of the changes.\
 3. Do not include any unrelated information.\
 diff:"'
+
+alias ccr='http_proxy= https_proxy= ccr'

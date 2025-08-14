@@ -2410,7 +2410,7 @@ def parallel_process(  # noqa: C901, PLR0912, PLR0915
 
     # 单进程模式：简单、易于调试，无需复杂的并发处理
     if process_cnt == 1:
-        pbar = tqdm_(inputs, total=total, desc=desc, disable=desc is None)
+        pbar = tqdm_.tqdm(inputs, total=total, desc=desc, disable=desc is None)
         for original_input in pbar:
             try:
                 args, kwargs = transform(original_input)

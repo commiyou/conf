@@ -1,12 +1,16 @@
 line-length = 119
+
 [lint]
 select = ["ALL"]
 extend-select = ["I"]
+fixable = ["ALL"]
+unfixable = ["F401", "B006"]
+extend-safe-fixes = ["D200", "D202", "D400"]
+
 ignore = [
-  # imported but unused
-  "ANN101",
   "INP001",
   "S324",
+  "D203",
   "FAST002",
   "S605",
   "DOC202",
@@ -19,35 +23,35 @@ ignore = [
   "PLR0914",
   "D212",
   "ANN204",
-  "C408", #Unnecessary `dict` call (rewrite as a literal)
+  "C408",    #Unnecessary `dict` call (rewrite as a literal)
   "COM812",
   "CPY001",
-  "D202", #No blank lines allowed after function docstring
-  "D400", # First line should end with a period
+  "D202",    #No blank lines allowed after function docstring
+  "D400",    # First line should end with a period
   "D205",
   "D401",
-  "D403", #First word of the first line should be capitalized
-  "D407", # Missing dashed underline after section
-  "D413", # Missing blank line after last section
-  "D415", # First line should end with a period, question mark, or exclamation point
-  "D417",  # Missing argument descriptions in the docstring
-  "DOC201", # return
+  "D403",    #First word of the first line should be capitalized
+  "D407",    # Missing dashed underline after section
+  "D413",    # Missing blank line after last section
+  "D415",    # First line should end with a period, question mark, or exclamation point
+  "D417",    # Missing argument descriptions in the docstring
+  "DOC201",  # return
   "DOC402",
-  "DOC501", # Raised exception `Exception` missing from docstring
-  "E722", # python exception
+  "DOC501",  # Raised exception `Exception` missing from docstring
+  "E722",    # python exception
   "EM101",
-  "ERA001",# Found commented-out code
+  "ERA001",  # Found commented-out code
   "EXE",
   "F401",
   "FA100",
-  "FA102", #Missing `from __future__ import annotations`, but uses PEP 585 collection
+  "FA102",   #Missing `from __future__ import annotations`, but uses PEP 585 collection
   "FBT001",
   "FBT002",
   "G004",
-  "N806",  #Variable `C` in function should be lowercase
+  "N806",    #Variable `C` in function should be lowercase
   "PD901",
-  "PGH003", # Use specific rule codes when ignoring type issues
-  "PGH004", #Use specific rule codes when using `noqa`
+  "PGH003",  # Use specific rule codes when ignoring type issues
+  "PGH004",  #Use specific rule codes when using `noqa`
   "PLC0415",
   "PLR0913", #Too many arguments in function definition
   "PLR2004", # Magic value used in comparison, consider replacing
@@ -67,12 +71,15 @@ ignore = [
   "PERF203",
   "UP006",
   "TD003",
-  "TRY002", #Create your own exception
-  "TRY003", # Avoid specifying long messages outside the exception clas
+  "TRY002",  #Create your own exception
+  "TRY003",  # Avoid specifying long messages outside the exception clas
   #"ANN201", # Missing return type annotation for public function
-
+  "I001", # NOTE: 这个是忽略sort 顺序告警
 ]
-fixable = ["ALL"]
-unfixable = ["F401"]
+
 [format]
-docstring-code-format = true
+docstring-code-format = true      # 自动格式化 docstring 里的代码块
+quote-style = "double"            # 统一用双引号
+indent-style = "space"            # 用空格缩进
+skip-magic-trailing-comma = false # 遵循 Black 的结尾逗号规则
+line-ending = "lf"                # 统一换行符

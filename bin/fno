@@ -241,7 +241,6 @@ def find_and_print_target_line(
     help="Randomly select a line to print from the sample.",
 )
 @click.option(
-    "-r",
     "--sample-size",
     default=1000,
     type=int,
@@ -250,9 +249,9 @@ def find_and_print_target_line(
 @click.option(
     "-w",
     "--max-width",
-    default=100,
+    default=1000,
     type=int,
-    help="Truncate fields wider than this. 0 for no limit. Default is 100.",
+    help="Truncate fields wider than this. 0 for no limit. Default is 1000.",
 )
 @click.option("-H", "--header/--no-header", default=False, help="Treat the first line as a header.")
 @click.option(

@@ -1,5 +1,16 @@
 #!/bin/bash
 
+# ===================== 检查是否使用中文 commit message =====================
+generate_cn=false
+for arg in "$@"; do
+    if [[ "$arg" == "-c" ]]; then
+        generate_cn=true
+        break
+    fi
+done
+
+# ===================== 调用 sgpt 生成 commit message =====================
+
 # ===================== 配色 =====================
 RED="\033[1;31m"
 GREEN="\033[1;32m"
@@ -42,10 +53,19 @@ if ! confirm_key "Do you want to generate a commit message from this diff?"; the
 fi
 
 # ===================== 调用 sgpt 生成 commit message =====================
-raw_commit_msg=$(git diff --staged | sgpt "Based on the following git diff, generate a commit message that strictly follows the Conventional Commits specification.
+if [ "$generate_cn" = true ]; then
+    raw_commit_msg=$(git diff --staged | sgpt "请根据以下 git diff，生成一个符合 Conventional Commits 规范的 commit message，要求：
+1. 第一行为类型与简要说明，
+2. 第二行开始为详细描述，
+3. 仅输出 commit message，不要任何解释或多余内容。
+4. 注意使用中文
+diff:")
+else
+    raw_commit_msg=$(git diff --staged | sgpt "Based on the following git diff, generate a commit message that strictly follows the Conventional Commits specification.
 Include a detailed description after the first line. Only output the commit message, do NOT include any explanations or extra text.
 
 diff:")
+fi
 
 # ===================== 显示原始 LLM 输出（原样，无高亮） =====================
 echo

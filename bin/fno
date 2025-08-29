@@ -2,13 +2,15 @@
 """
 Field Number Output (fno) - A utility to display numbered fields from delimited text files.
 
-This script reads text files and displays each field with its index number,
-making it easy to identify field positions for data processing tasks.
+This script reads text files line-by-line and displays each field of a selected
+line with its index number, making it easy to identify field positions for data
+processing tasks. It operates in a streaming fashion to handle large files efficiently.
 """
 
 import random
-import subprocess
+import re
 import sys
+from typing import IO, List, Optional, Tuple
 
 import click
 
@@ -16,29 +18,34 @@ import click
 def cjk_width(s: str) -> int:
     """
     Calculate the display width of a string, treating CJK characters as 2 cells wide.
-    """
-    # A simple check for CJK Unified Ideographs range
-    return sum(2 if '\u4e00' <= char <= '\u9fff' else 1 for char in s)
-
-
-def evaluate_awk_expr(expr: str, fields: list[str], line: str) -> bool:
-    """
-    Evaluate AWK-style expression against field values.
 
     Args:
-        expr: AWK-style expression (e.g. "$1=='value'" or "$NF>100" or "$1 ~ /pattern/")
-        fields: List of field values
-        line: The original line, for $0.
+        s: The input string.
 
     Returns:
-        Boolean result of expression evaluation
+        The calculated display width.
+    """
+    return sum(2 if "\u4e00" <= char <= "\u9fff" else 1 for char in s)
+
+
+def safe_expr_eval(expr: str, fields: List[str], line: str) -> bool:
+    """
+    Safely evaluate a simple, AWK-like expression against field values.
+
+    This function avoids `eval()` and manually parses expressions for basic
+    comparisons and regex matching, supporting formats like "$1 == 'value'"
+    or "$NF ~ /pattern/".
+
+    Args:
+        expr: The expression string to evaluate.
+        fields: A list of the fields from the current line.
+        line: The raw line content ($0).
+
+    Returns:
+        True if the expression matches, False otherwise.
     """
     if not expr:
         return True
-
-    import re
-
-    safe_expr = expr
 
     def get_field_value(field_spec: str) -> str:
         """Helper to get field value from specifier like $1, $NF."""
@@ -47,261 +54,251 @@ def evaluate_awk_expr(expr: str, fields: list[str], line: str) -> bool:
         if field_spec == "$NF":
             return fields[-1] if fields else ""
         if field_spec.startswith("$") and field_spec[1:].isdigit():
-            field_num = int(field_spec[1:])
-            if 1 <= field_num <= len(fields):
-                return fields[field_num - 1]
+            try:
+                field_num = int(field_spec[1:])
+                if 1 <= field_num <= len(fields):
+                    return fields[field_num - 1]
+            except (ValueError, IndexError):
+                return ""
         return ""
 
-    # Regex to find AWK-style pattern matching expressions, e.g., $1 ~ /foo/
-    # It captures: 1. field specifier, 2. operator, 3. pattern
-    pattern_re = re.compile(r"(\$(?:\d+|NF|0))\s*(!?~)\s*\/((?:\\\/|[^\/])+)\/")
-
-    def replace_match_expr(m) -> str:
-        """Replacement function for re.sub to evaluate pattern matches."""
-        field_spec, op, pattern = m.groups()
+    # Pattern for regex matching: $N ~ /regex/ or $N !~ /regex/
+    match_re = re.match(r"(\\(?:\\d+|NF|0))\s*(!?~)\s*/(.*?)/$", expr)
+    if match_re:
+        field_spec, op, pattern = match_re.groups()
         field_value = get_field_value(field_spec)
-        pattern = pattern.replace("\\/", "/")  # Unescape slashes in pattern
-
-        re_flags = 0
-        if pattern.islower():
-            re_flags = re.IGNORECASE
-
         try:
-            is_match = bool(re.search(pattern, field_value, flags=re_flags))
+            is_match = bool(re.search(pattern, field_value, flags=re.IGNORECASE))
         except re.error:
-            # Invalid regex in user expression
-            return "False"
+            is_match = False  # Invalid regex pattern
+        return not is_match if op == "!~" else is_match
 
-        if op == "!~":
-            is_match = not is_match
+    # Pattern for simple equality/inequality: $N == 'value' or $N != "value"
+    comp_re = re.match(r"(\\(?:\\d+|NF|0))\s*(==|!=)\s*['\"](.*?)['\"]$", expr)
+    if comp_re:
+        field_spec, op, value = comp_re.groups()
+        field_value = get_field_value(field_spec)
+        return (field_value != value) if op == "!=" else (field_value == value)
 
-        return str(is_match)
-
-    # First, evaluate and replace all regex match expressions
-    safe_expr = pattern_re.sub(replace_match_expr, safe_expr)
-
-    # Now, replace remaining field variables ($1, $NF, etc.) for other comparisons
-    field_var_re = re.compile(r"(\$(?:\d+|NF|0))")
-
-    def replace_field_var(m) -> str:
-        """Replacement function for re.sub to replace field variables with their values."""
-        field_spec = m.group(0)
-        return repr(get_field_value(field_spec))
-
-    safe_expr = field_var_re.sub(replace_field_var, safe_expr)
-
-    try:
-        # Use eval with restricted globals for safety
-        return bool(eval(safe_expr, {"__builtins__": {}}, {}))
-    except Exception:
-        return False
+    return False
 
 
-def try_decode_str(line: str, encodings: list[str] = ["utf8", "gb18030"], errors: str = "strict"):
+def try_decode(line: bytes) -> str:
     """
-    Attempt to decode a byte string using multiple encodings.
+    Attempt to decode a byte string using common encodings.
 
     Args:
-        line: Input string or bytes to decode
-        encodings: Tuple of encoding names to try in order
-        errors: Error handling strategy for decoding
+        line: Input bytes to decode.
 
     Returns:
-        Decoded string
-
-    Raises:
-        UnicodeError: If all encodings fail
+        A decoded string.
     """
     if isinstance(line, str):
         return line
-    if isinstance(encodings, str):
-        encodings = [encodings]
-
-    for encoding in encodings:
+    for encoding in ["utf-8", "gb18030", "latin1"]:
         try:
-            line = line.decode(encoding, errors=errors)
-        except:
+            return line.decode(encoding)
+        except UnicodeDecodeError:
             continue
-        return line
-    msg = "line[{}] decode error, coding list {}".format(line, ", ".join(encodings))
-    raise UnicodeError(msg)
+    return line.decode("utf-8", errors="ignore")
 
 
-def get_encoding(encoding=None):
+def print_formatted_line(line: str, headers: Optional[List[str]], delim: str, line_num: int, max_width: int):
     """
-    Get the appropriate encoding for text processing.
+    Formats and prints a single line with field numbers, headers, and alignment.
 
     Args:
-        encoding: Explicit encoding to use, or None for auto-detection
-
-    Returns:
-        String encoding name, defaults to gb18030 if iso88591 is detected
+        line: The content of the line to print.
+        headers: An optional list of header names.
+        delim: The field delimiter.
+        line_num: The line number to display.
+        max_width: The maximum display width for a field before truncating.
     """
-    import locale
+    # Check TTY for both stdout and stderr to apply colors conditionally
+    is_stdout_tty = sys.stdout.isatty()
+    is_stderr_tty = sys.stderr.isatty()
 
-    encoding = encoding or locale.getpreferredencoding() or sys.stdin.encoding or sys.getdefaultencoding()
-    # Convert iso88591 to gb18030 for better Chinese character support
-    if encoding.lower().replace("-", "") == "iso88591":
-        encoding = "gb18030"
-    return encoding
+    # Colors for stdout
+    C_IDX = "\033[35m" if is_stdout_tty else ""  # Magenta for index
+    C_HDR = "\033[36m" if is_stdout_tty else ""  # Cyan for header
+    C_END = "\033[32m" if is_stdout_tty else ""  # Green for end marker
+    C_TRUNC = "\033[32m" if is_stdout_tty else ""  # Yellow for truncation
+    C_RESET = "\033[0m" if is_stdout_tty else ""
+
+    # Colors for stderr
+    C_LNO = "\033[34m" if is_stderr_tty else ""  # Blue for line number
+    C_RESET_ERR = "\033[0m" if is_stderr_tty else ""
+
+    def truncate_by_width(s: str, max_w: int) -> str:
+        """Truncates a string to a max display width, respecting CJK chars."""
+        width, pos = 0, 0
+        for char in s:
+            char_w = 2 if "\u4e00" <= char <= "\u9fff" else 1
+            if width + char_w > max_w:
+                break
+            width += char_w
+            pos += 1
+        return s[:pos]
+
+    fields = line.strip("\n").split(delim)
+    print(f"{C_LNO}== line no: {line_num}{C_RESET_ERR}", file=sys.stderr)
+
+    def get_end_marker(value: str) -> str:
+        return f"{C_END}$ {C_RESET}" if value and value.rstrip() != value else ""
+
+    if headers:
+        max_num_width = len(str(len(fields) - 1))
+        max_header_width = 0
+        for i in range(len(headers)):
+            if i < len(fields):
+                max_header_width = max(max_header_width, cjk_width(f"({headers[i]})"))
+
+        for i, field_value in enumerate(fields):
+            num_part = f"{i:>{max_num_width}}"
+            display_value = field_value
+            end_marker = get_end_marker(field_value)
+
+            if max_width > 0 and cjk_width(field_value) > max_width:
+                trunc_str = truncate_by_width(field_value, max_width)
+                display_value = trunc_str + f"{C_TRUNC}...{C_RESET}"
+                end_marker = ""
+
+            if i < len(headers):
+                header_part = f"({headers[i]})"
+                padding = " " * (max_header_width - cjk_width(header_part))
+                colored_header = f"{C_HDR}{header_part}{C_RESET}"
+                colored_num = f"{C_IDX}{num_part}{C_RESET}"
+                print(f"{colored_num} {colored_header}{padding} : {display_value}{end_marker}")
+            else:
+                padding = " " * (max_header_width + 2)
+                colored_num = f"{C_IDX}{num_part}{C_RESET}"
+                print(f"{colored_num}{padding} : {display_value}{end_marker}")
+    else:
+        max_field_num_width = max(5, len(str(len(fields) - 1)))
+        for i, field_value in enumerate(fields):
+            display_value = field_value
+            end_marker = get_end_marker(field_value)
+
+            if max_width > 0 and cjk_width(field_value) > max_width:
+                trunc_str = truncate_by_width(field_value, max_width)
+                display_value = trunc_str + f"{C_TRUNC}...{C_RESET}"
+                end_marker = ""
+
+            num_part = f"{i:>{max_field_num_width}}"
+            colored_num = f"{C_IDX}{num_part}{C_RESET}"
+            print(f"{colored_num} : {display_value}{end_marker}")
 
 
-@click.command()
-@click.option("-d", "--delim", help="delimeter, default tab", default="\t")
-@click.option("-f", "--from-encoding", help="from encoding", default=None)
-@click.option("-l", "--lineno", help="the line number to print, default 0", default=0)
-@click.option("-r/ ", "--random-line/--norandom-line", help="randome select line to print(0-10000)", default=False)
-@click.option("-h/ ", "--header/--no-header", help="treat first line as header", default=False)
-@click.option("-e", "--expr", help="filter expression (e.g. \"$1=='手机品牌排行榜'\")", default=None)
-@click.argument("files", nargs=-1, type=click.File())
-def main(delim:str, from_encoding:str, lineno:int, random_line:bool, header:bool, expr:str, files:str):
+def reservoir_sample_from_stream(stream: IO, expr: str, delim: str, sample_size: int) -> Optional[Tuple[str, int]]:
     """
-    Pretty print the fields of one line in file with field numbers.
+    Selects a random line from the first `sample_size` lines of a stream
+    that match the given expression, using reservoir sampling.
+    """
+    selected_item = None
+    filtered_count = 0
+    for i, line_bytes in enumerate(stream):
+        if i >= sample_size:
+            break
+        line = try_decode(line_bytes)
+        fields = line.strip("\n").split(delim)
+        if not safe_expr_eval(expr, fields, line):
+            continue
+        filtered_count += 1
+        if random.randrange(filtered_count) == 0:
+            selected_item = (line, i + 1)
+    return selected_item
 
-    This function processes input files (or stdin) and displays each field
-    with its index number, making it easy to identify field positions.
 
-    Args:
-        delim: Field delimiter (default: tab)
-        from_encoding: Source encoding for input text
-        to_encoding: Target encoding for output (currently unused)
-        lineno: Specific line number to process (0-based, default: 0)
-        random_line: Whether to randomly select a line instead of using lineno
-        header: Whether to treat first line as header and show field names
-        expr: AWK-style filter expression (e.g. "$1=='value'")
-        files: Input file objects to process
+def find_and_print_target_line(
+    stream: IO, lineno: int, expr: str, delim: str, headers: Optional[List[str]], max_width: int
+):
+    """
+    Finds the `lineno`-th line in the stream that matches the expression and prints it.
+    """
+    filtered_lineno = -1
+    for i, line_bytes in enumerate(stream):
+        line = try_decode(line_bytes)
+        fields = line.strip("\n").split(delim)
+        if not safe_expr_eval(expr, fields, line):
+            continue
+        filtered_lineno += 1
+        if filtered_lineno == lineno:
+            print_formatted_line(line, headers, delim, line_num=i + (2 if headers else 1), max_width=max_width)
+            return
+    print(f"Error: Line number {lineno} not found after filtering.", file=sys.stderr)
+
+
+@click.command(context_settings=dict(help_option_names=["-h", "--help"]))
+@click.option("-d", "--delim", default="\t", help="Field delimiter. Default is tab.")
+@click.option(
+    "-l", "--lineno", default=0, type=int, help="0-based line number to print after filtering. Default is 0."
+)
+@click.option(
+    "-r",
+    "--random-line",
+    is_flag=True,
+    default=False,
+    help="Randomly select a line to print from the sample.",
+)
+@click.option(
+    "-r",
+    "--sample-size",
+    default=1000,
+    type=int,
+    help="Number of lines to sample for --random-line. Default is 1000.",
+)
+@click.option(
+    "-w",
+    "--max-width",
+    default=100,
+    type=int,
+    help="Truncate fields wider than this. 0 for no limit. Default is 100.",
+)
+@click.option("-H", "--header/--no-header", default=False, help="Treat the first line as a header.")
+@click.option(
+    "-e",
+    "--expr",
+    default=None,
+    help='Filter expression (e.g. "$1==\'value\'" or "$2 ~ /pattern/").',
+)
+@click.argument("files", nargs=-1, type=click.File("rb"))
+def main(
+    delim: str,
+    lineno: int,
+    random_line: bool,
+    sample_size: int,
+    max_width: int,
+    header: bool,
+    expr: str,
+    files: Tuple[IO, ...],
+):
+    """
+    Pretty print the fields of one line in a file with field numbers.
     """
     if not files:
-        files = [sys.stdin]
+        stdin_stream = (line.encode("utf-8") for line in sys.stdin)
+        files = (stdin_stream,)  # type: ignore
 
     for fd in files:
-        # Display file information for non-stdin inputs
-        if fd is not sys.stdin:
-            print("== {}".format(subprocess.getoutput(f"file {fd.name}")), file=sys.stderr)
-
-        all_lines = []
         headers = None
+        header_line_num = 0
+        if header:
+            try:
+                header_line = try_decode(next(fd))
+                headers = header_line.strip("\n").split(delim)
+                header_line_num = 1
+            except StopIteration:
+                continue
 
-        # Read all lines and handle header if needed
-        for line in fd:
-            line = line.rstrip("\n")
-            line = line.decode(from_encoding, errors="ignore") if from_encoding else try_decode_str(line)
-            all_lines.append(line)
-
-        if not all_lines:
-            continue
-
-        # Process header if specified
-        if header and all_lines:
-            headers = all_lines[0].split(try_decode_str(delim))
-            data_lines = all_lines[1:]
+        if random_line:
+            selected = reservoir_sample_from_stream(fd, expr, delim, sample_size)
+            if selected:
+                line, num = selected
+                print_formatted_line(line, headers, delim, line_num=num + header_line_num, max_width=max_width)
+            else:
+                print("No matching lines found in the sample.", file=sys.stderr)
         else:
-            data_lines = all_lines
-
-        selected_line = None
-        selected_idx = None
-
-        if not random_line:
-            # Process lines sequentially to find the target line
-            for idx, line in enumerate(data_lines):
-                fields = line.split(try_decode_str(delim))
-
-                # Apply expression filter if provided
-                if not evaluate_awk_expr(expr, fields, line):
-                    continue
-
-                if selected_line is None:
-                    selected_line = line
-                    selected_idx = idx + (1 if header else 0)  # Adjust for header
-                if idx == lineno:
-                    selected_line = line
-                    selected_idx = idx + (1 if header else 0)
-                    break
-        else:
-            # Use reservoir sampling to randomly select a line
-            max_tries = 10000
-            filtered_lines = []
-
-            # First filter lines based on expression
-            for idx, line in enumerate(data_lines):
-                fields = line.split(try_decode_str(delim))
-                if evaluate_awk_expr(expr, fields, line):
-                    filtered_lines.append((idx, line))
-
-            if filtered_lines:
-                # Apply reservoir sampling on filtered lines
-                selected_line = filtered_lines[0][1]
-                selected_idx = filtered_lines[0][0] + (1 if header else 0)
-
-                for i, (idx, line) in enumerate(filtered_lines[1:], 2):
-                    if random.randrange(i) == 0:
-                        selected_line = line
-                        selected_idx = idx + (1 if header else 0)
-                    if i >= max_tries:
-                        break
-
-        if selected_line is None:
-            continue
-
-        delim_decoded = try_decode_str(delim)
-        print(f"== line no: {selected_idx}", file=sys.stderr)
-
-        # Note: Output encoding conversion is currently disabled
-        # to_encoding = get_encoding(to_encoding)
-        # line = line.encode(to_encoding)
-        # delim = delim.encode(to_encoding)
-
-        # Split line into fields and display with numbers and end markers
-        fields = selected_line.split(delim_decoded)
-
-        # --- Output Formatting ---
-        # Define colors for output
-        COLOR_HEADER = '\033[36m'  # Cyan
-        COLOR_END_MARKER = '\033[32m'
-        COLOR_RESET = '\033[0m'
-
-        # Helper to determine if the end marker is needed
-        def get_end_marker(value: str) -> str:
-            # Show marker only if there's trailing whitespace
-            if value and value.rstrip() != value:
-                return f"{COLOR_END_MARKER}${COLOR_RESET}"
-            return ""
-
-        # Calculate maximum widths for alignment and print fields
-        if headers:
-            max_num_width = len(str(len(fields) - 1)) if fields else 1
-            
-            max_header_display_width = 0
-            header_parts = []
-            # Pre-calculate header parts and their max display width
-            for i in range(len(headers)):
-                part = f"({headers[i]})"
-                header_parts.append(part)
-                if i < len(fields):
-                    max_header_display_width = max(max_header_display_width, cjk_width(part))
-
-            for i, field_value in enumerate(fields):
-                num_part = f"{i:>{max_num_width}}"
-                end_marker = get_end_marker(field_value)
-
-                if i < len(headers):
-                    header_part = header_parts[i]
-                    padding_width = max_header_display_width - cjk_width(header_part)
-                    padding = ' ' * padding_width
-                    colored_header = f"{COLOR_HEADER}{header_part}{COLOR_RESET}"
-                    print(f"{num_part} {colored_header}{padding} : {field_value}{end_marker}")
-                else:
-                    padding = ' ' * (max_header_display_width + 2) # +2 for ()
-                    print(f"{num_part} {padding} : {field_value}{end_marker}")
-        else:
-            # Original formatting for no-header mode
-            max_width = 5
-            if fields:
-                max_width = max(max_width, len(str(len(fields) - 1)))
-
-            for i, field_value in enumerate(fields):
-                end_marker = get_end_marker(field_value)
-                print(f"{i:>{max_width}} : {field_value}{end_marker}")
+            find_and_print_target_line(fd, lineno, expr, delim, headers, max_width)
 
 
 if __name__ == "__main__":

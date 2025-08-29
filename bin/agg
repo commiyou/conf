@@ -1,0 +1,380 @@
+#!/usr/bin/env python3
+"""
+agg is a command-line tool for performing key-based aggregation on columnar data.
+
+It is designed to work within a Unix pipeline, reading from stdin or files
+and writing machine-readable, delimited data to stdout.
+"""
+
+import argparse
+import codecs
+import math
+import sys
+from collections import defaultdict
+from collections.abc import Iterable
+from typing import Dict, List, NamedTuple, TextIO, Tuple
+
+
+class FieldSpec(NamedTuple):
+    """Represents a single aggregation operation on a column."""
+
+    col_index: int
+    agg_func: str
+
+
+def unescape_str(s: str | None) -> str | None:
+    """Converts escape sequences like \t to their character equivalent."""
+    if s is None:
+        return None
+    return codecs.decode(s, "unicode_escape")
+
+
+def parse_col_spec(spec_string: str) -> List[int]:
+    """Parses a column specification string like '1,3-5,7' into a list of integers."""
+    if not spec_string:
+        return []
+    indices = []
+    parts = spec_string.split(",")
+    for part in parts:
+        if "-" in part:
+            try:
+                start, end = map(int, part.split("-"))
+                if start > end:
+                    raise ValueError(f"Invalid range: start > end in '{part}'")
+                indices.extend(range(start, end + 1))
+            except ValueError:
+                raise ValueError(f"Invalid range in column spec: {part}")
+        else:
+            try:
+                indices.append(int(part))
+            except ValueError:
+                raise ValueError(f"Invalid number in column spec: {part}")
+    return sorted(list(set(indices)))
+
+
+class Aggregator:
+    """Holds the state for all aggregations for a single value stream."""
+
+    def __init__(self):
+        self.sum = 0.0
+        self.count = 0
+        self.min = float("inf")
+        self.max = float("-inf")
+
+    def update(self, value: float):
+        """Updates statistics with a new value."""
+        self.sum += value
+        self.count += 1
+        self.min = min(self.min, value)
+        self.max = max(self.max, value)
+
+    def get(self, agg_func: str) -> float:
+        """Retrieves a calculated aggregation value."""
+        if self.count == 0:
+            return 0.0 if agg_func in ["sum", "count"] else float("nan")
+
+        if agg_func == "sum":
+            return self.sum
+        if agg_func == "count":
+            return float(self.count)
+        if agg_func == "avg":
+            return self.sum / self.count
+        if agg_func == "min":
+            return self.min
+        if agg_func == "max":
+            return self.max
+        raise ValueError(f"Unknown aggregation function: {agg_func}")
+
+
+def parse_field_specs(spec_string: str, all_aggs_flag: bool) -> List[FieldSpec]:
+    """Parses the -f, --fields argument into a list of FieldSpec objects."""
+    if not spec_string:
+        return []
+
+    field_specs: List[FieldSpec] = []
+    all_agg_funcs = ["count", "sum", "avg", "min", "max"]
+    default_agg_funcs = ["count", "sum"]
+
+    expanded_parts = []
+    for part in spec_string.split(","):
+        if "-" in part and ":" not in part:
+            try:
+                start, end = map(int, part.split("-"))
+                if start > end:
+                    raise ValueError(f"Invalid range: start > end in '{part}'")
+                expanded_parts.extend(map(str, range(start, end + 1)))
+            except ValueError:
+                expanded_parts.append(part)
+        else:
+            expanded_parts.append(part)
+
+    for part in expanded_parts:
+        if ":" in part:
+            parts = part.split(":")
+            if len(parts) != 2:
+                raise ValueError(f"Invalid field spec: '{part}'. Use comma to separate, e.g. '2:sum,2:avg'")
+
+            col_str, func = parts
+            if func not in all_agg_funcs:
+                raise ValueError(
+                    f"Unsupported aggregation function: '{func}'. Supported are: {', '.join(all_agg_funcs)}"
+                )
+            col_index = int(col_str)
+            field_specs.append(FieldSpec(col_index, func))
+        else:
+            col_index = int(part)
+            funcs_to_apply = all_agg_funcs if all_aggs_flag else default_agg_funcs
+            for func in funcs_to_apply:
+                field_specs.append(FieldSpec(col_index, func))
+
+    return field_specs
+
+
+def format_value(value: float) -> str:
+    """Formats a float, handling integers, floats, and NaN."""
+    if math.isnan(value):
+        return "na"
+    return str(int(value)) if value == int(value) else f"{value:.2f}"
+
+
+def main():
+    """Main command-line entry point."""
+    if "--test" in sys.argv:
+        run_tests()
+        return
+
+    parser = argparse.ArgumentParser(
+        description="Perform key-based aggregation on columnar data.",
+        epilog="Example: cat data.csv | agg --header -k 0 -f '2,3:sum' -d ',' | pp",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    parser.add_argument("--test", action="store_true", help="Run internal self-tests and exit.")
+    parser.add_argument("-k", "--key-cols", help="Key columns, e.g., '0,1,3-5'.")
+    parser.add_argument("-f", "--fields", required=True, help="Aggregation fields, e.g., '2,3:sum,4-5:avg'.")
+    parser.add_argument("-A", "--all-aggs", action="store_true", help="Use all aggregations for shortcut fields.")
+    parser.add_argument("-d", "--delimiter", help=r"Input field delimiter (e.g., '\t').", default="\t")
+    parser.add_argument("-D", "--output-delimiter", help="Output field delimiter. Defaults to input.")
+    parser.add_argument("--header", action="store_true", help="Treat first line of input as a header row.")
+    parser.add_argument("--no-output-header", action="store_true", help="Suppress header from the output.")
+    parser.add_argument(
+        "files",
+        nargs="*",
+        type=argparse.FileType("r", encoding="utf-8"),
+        default=[sys.stdin],
+        help="Input files. Reads from stdin if not specified.",
+    )
+
+    args = parser.parse_args()
+
+    input_delimiter = unescape_str(args.delimiter)
+    output_delimiter = unescape_str(args.output_delimiter) or input_delimiter
+
+    try:
+        key_cols = parse_col_spec(args.key_cols) if args.key_cols else []
+        field_specs = parse_field_specs(args.fields, args.all_aggs)
+    except ValueError as e:
+        parser.error(str(e))
+
+    # --- Header and Data Processing ---
+    header_map = {}
+    input_streams = list(args.files)
+
+    if args.header and input_streams:
+        first_file_iter = iter(input_streams[0])
+        header_line = next(first_file_iter, None)
+        if header_line:
+            header_map = {i: name for i, name in enumerate(header_line.rstrip("\n").split(input_delimiter))}
+            input_streams[0] = first_file_iter
+
+    if not args.no_output_header:
+        key_headers = [header_map.get(k, f"key_{k}") for k in key_cols]
+        agg_headers = [f"{spec.agg_func}_{header_map.get(spec.col_index, spec.col_index)}" for spec in field_specs]
+        print(output_delimiter.join(key_headers + agg_headers))
+
+    results: Dict[Tuple, List[Aggregator]] = defaultdict(lambda: [Aggregator() for _ in field_specs])
+
+    error_count = 0
+    for stream in input_streams:
+        for line_num, line in enumerate(stream, 1):
+            try:
+                line = line.rstrip("\n")
+                if not line:
+                    continue
+
+                fields = line.split(input_delimiter)
+                key = tuple(fields[i] for i in key_cols)
+
+                for i, spec in enumerate(field_specs):
+                    value = float(fields[spec.col_index])
+                    results[key][i].update(value)
+
+            except (ValueError, IndexError) as e:
+                error_count += 1
+                stream_name = stream.name if stream is not sys.stdin else "stdin"
+                print(
+                    f"Skipping malformed line #{line_num} in {stream_name}: {line!r} -> {e}",
+                    file=sys.stderr,
+                )
+
+    # --- Output Results ---
+    sorted_keys = sorted(results.keys())
+
+    for key in sorted_keys:
+        aggregators = results[key]
+        key_parts = list(key)
+        value_parts = [format_value(agg.get(spec.agg_func)) for agg, spec in zip(aggregators, field_specs)]
+        print(output_delimiter.join(key_parts + value_parts))
+
+    if error_count > 0:
+        print(f"Encountered {error_count} errors.", file=sys.stderr)
+
+    for f in args.files:
+        if f is not sys.stdin:
+            f.close()
+
+
+def run_tests():
+    """Runs a series of self-tests to verify the script's functionality."""
+    import shlex
+    import subprocess
+    import textwrap
+
+    script_path = __file__
+    test_cases = []
+
+    # Test Case 1: Default aggregation with header
+    test_cases.append(
+        {
+            "name": "Test 1: Aggregation with header",
+            "args": "--header -k 0 -f 2 -d ,",
+            "input": textwrap.dedent("""\
+            group,user,score
+            A,user1,10
+            A,user2,20
+            B,user1,30
+            A,user1,5
+            """),
+            "output": textwrap.dedent("""\
+            group,count_score,sum_score
+            A,3,35
+            B,1,30
+            """).lstrip(),
+        }
+    )
+
+    # Test Case 2: No-header input (default) and multiple keys
+    test_cases.append(
+        {
+            "name": "Test 2: No-header input and multiple keys",
+            "args": "-k 0,1 -f 2:avg -d ,",
+            "input": textwrap.dedent("""\
+            A,user1,10
+            A,user2,20
+            B,user1,30
+            A,user1,5
+            """),
+            "output": textwrap.dedent("""\
+            key_0,key_1,avg_2
+            A,user1,7.50
+            A,user2,20
+            B,user1,30
+            """).lstrip(),
+        }
+    )
+
+    # Test Case 3: --all-aggs with named headers
+    test_cases.append(
+        {
+            "name": "Test 3: --all-aggs with named headers",
+            "args": "--header -k 0 -f 2 -A -d ,",
+            "input": "group,user,score\nA,user1,10\nA,user2,20",
+            "output": textwrap.dedent("""\
+            group,count_score,sum_score,avg_score,min_score,max_score
+            A,2,30,15,10,20
+            """).lstrip(),
+        }
+    )
+
+    # Test Case 4: Bad function name
+    test_cases.append(
+        {
+            "name": "Test 4: Bad function name",
+            "args": "-k 0 -f 1:foo -d ,",
+            "input": "h,v\na,1",
+            "should_fail": True,
+            "expected_stderr": "Unsupported aggregation function: 'foo'",
+        }
+    )
+
+    # Test Case 5: No output header
+    test_cases.append(
+        {
+            "name": "Test 5: --no-output-header",
+            "args": "-k 0 -f 1 -d , --no-output-header",
+            "input": textwrap.dedent("""\
+            A,10
+            A,20
+            B,30
+            """),
+            "output": textwrap.dedent("""\
+            A,2,30
+            B,1,30
+            """).lstrip(),
+        }
+    )
+
+    print(f"Running {len(test_cases)} tests...\n")
+    failures = 0
+    for i, case in enumerate(test_cases):
+        print(f"--- {case['name']} ---")
+        command = [sys.executable, script_path] + shlex.split(case["args"])
+        should_fail = case.get("should_fail", False)
+        try:
+            process = subprocess.run(
+                command, input=case["input"], capture_output=True, text=True, check=True, encoding="utf-8"
+            )
+
+            if should_fail:
+                failures += 1
+                print("\033[91mFAIL\033[0m: Process was expected to fail but succeeded.")
+                print(f"Stdout:\n{process.stdout}")
+            else:
+                actual_output = process.stdout
+                expected_output = case["output"]
+                if actual_output.strip() == expected_output.strip():
+                    print("\033[92mPASS\033[0m")
+                else:
+                    failures += 1
+                    print("\033[91mFAIL\033[0m")
+                    print("Expected:")
+                    print(textwrap.indent(expected_output, "> "))
+                    print("Got:")
+                    print(textwrap.indent(actual_output, "> "))
+
+        except subprocess.CalledProcessError as e:
+            if should_fail:
+                if case["expected_stderr"] in e.stderr:
+                    print("\033[92mPASS\033[0m (Process failed as expected)")
+                else:
+                    failures += 1
+                    print("\033[91mFAIL\033[0m: Process failed, but stderr did not match.")
+                    print(f"Expected stderr to contain: {case['expected_stderr']}")
+                    print(f"Actual stderr:\n{e.stderr}")
+            else:
+                failures += 1
+                print("\033[91mFAIL (Process Error)\033[0m")
+                print(f"Return code: {e.returncode}")
+                print(f"Stdout: {e.stdout}")
+                print(f"Stderr: {e.stderr}")
+        print()
+
+    if failures > 0:
+        print(f"Result: {failures} of {len(test_cases)} tests failed.")
+        sys.exit(1)
+    else:
+        print("Result: All tests passed.")
+        sys.exit(0)
+
+
+if __name__ == "__main__":
+    main()

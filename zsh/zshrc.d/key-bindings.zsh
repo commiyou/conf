@@ -144,21 +144,44 @@ function _ls_cwd {
   zle accept-line
 }
 zle -N _ls_cwd
-bindkey '^Xl' _ls_cwd
+bindkey '^X^l' _ls_cwd
 
 
-function _fno_last_arg {
+function _fno_with_last_word {
+  local orig_buffer="$BUFFER"
+  local orig_cursor=$CURSOR
+
+  # 获取最后一个单词
+  local last_word=${(M)BUFFER##* }
+  #zle push-line
+
+  local query=""
+  if [[ $last_word == *.tsv || $last_word == *.txt ]]; then
+    query="--query=$last_word"
+  fi
+
+  local sel qsel
+  sel=$(fd --type f . | fzf $query --preview 'fno -- {}') || {
+    zle redisplay
+    return 0
+  }
+
+  [[ -z "$sel" ]] && {
+    zle redisplay
+    return 0
+  }
+
+  qsel=$(printf "%q" "$sel")
+
   zle push-line
-  # 设置缓冲区为新命令并执行
-  BUFFER="fzf | fno"
-  #zle end-of-line
+  # 执行 fno
+  BUFFER="fno $qsel"
   zle accept-line
-  
-  # 恢复原始缓冲区
-  #BUFFER="$original_buffer"
 }
-zle -N _fno_last_arg
-bindkey "^X^x" _fno_last_arg
+zle -N _fno_with_last_word
+bindkey "^X^x" _fno_with_last_word
+
+
 
 # emacs - Emacs emulation
 # viins - Vi mode - INSERT mode
@@ -181,6 +204,13 @@ function zvm_after_init() {
 
   zvm_define_widget _insert_date
   zvm_bindkey viins '^Xa' _insert_date
+
+  zvm_define_widget _ls_cwd
+  zvm_bindkey viins '^X^l' _ls_cwd
+
+  zvm_define_widget _fno_with_last_word
+  zvm_bindkey viins '^X^x' _fno_with_last_word
+
   export ZVM_ESCAPE_KEYTIMEOUT=0.05
 
   #zvm_define_widget expand-dot-to-parent-directory-path

@@ -5,6 +5,7 @@
 return {
   "mikavilpas/blink-ripgrep.nvim",
   lazy = true,
+  enabled=false,
   dependencies = {
     -- 👆🏻👆🏻 add the dependency here
 

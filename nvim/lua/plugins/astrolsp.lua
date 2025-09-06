@@ -42,32 +42,32 @@ return {
       -- end
     },
     -- enable servers that you already have installed without mason
-    servers = {
-      "pyright",
-    },
+    -- servers = {
+    --   "pyright",
+    -- },
     -- customize language server configuration options passed to `lspconfig`
     ---@diagnostic disable: missing-fields
-    config = {
-      -- clangd = { capabilities = { offsetEncoding = "utf-8" } },
-      pyright = {
-        single_file_support = true,
-        settings = {
-          pyright = {
-            disableLanguageServices = false,
-            disableOrganizeImports = false,
-          },
-          python = {
-            analysis = {
-              autoImportCompletions = true,
-              autoSearchPaths = true,
-              diagnosticMode = "openFilesOnly", -- openFilesOnly, workspace
-              typeCheckingMode = "basic", -- off, basic, strict
-              useLibraryCodeForTypes = true,
-            },
-          },
-        },
-      },
-    },
+    -- config = {
+    --   -- clangd = { capabilities = { offsetEncoding = "utf-8" } },
+    --   pyright = {
+    --     single_file_support = true,
+    --     settings = {
+    --       pyright = {
+    --         disableLanguageServices = false,
+    --         disableOrganizeImports = false,
+    --       },
+    --       python = {
+    --         analysis = {
+    --           autoImportCompletions = true,
+    --           autoSearchPaths = true,
+    --           diagnosticMode = "openFilesOnly", -- openFilesOnly, workspace
+    --           typeCheckingMode = "basic", -- off, basic, strict
+    --           useLibraryCodeForTypes = true,
+    --         },
+    --       },
+    --     },
+    --   },
+    -- },
     -- customize how language servers are attached
     handlers = {
       -- a function without a key is simply the default handler, functions take two parameters, the server name and the configured options table for that server

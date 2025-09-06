@@ -1,9 +1,13 @@
 #!/usr/bin/env python3
 """insert value to a file"""
 
+import contextlib
 import os
 import sys
 import traceback
+
+with contextlib.suppress(Exception):
+    from traceback_with_variables import activate_by_import
 
 
 def create_range_callback(option, opt, value, parser):
@@ -29,6 +33,9 @@ if __name__ == "__main__":
         help="the colom to put,start from 0, default NF (number of field) Note: this index can be -1 ",
         default=None,
     )
+    parser.add_option(
+        "-I", dest="ignore_case_space", help="ignore case space", action="store_true", default=False)
+
     # ==  only insert const "value"
     group_const = OptionGroup(parser, "Const Value Options", "insert const value")
     group_const.add_option("-p", dest="param", help="the value to be put, default '-' ", default="-")
@@ -79,6 +86,9 @@ if __name__ == "__main__":
         index = int(index)
     delim = options.delim
 
+    def norm_func(x):
+        return "".join(x.split()).lower()
+
     
     fd_list = []
     if not args:
@@ -128,6 +138,9 @@ if __name__ == "__main__":
                 traceback.print_exc()
                 print(line, file=sys.stderr)
                 exit(-1)
+            key = tuple(x.strip() for x in key)
+            if options.ignore_case_space:
+                key = tuple(norm_func(x) for x in key)
             
             if value_cols is None:
                 value = ll[max_key_col + 1 :]
@@ -142,8 +155,10 @@ if __name__ == "__main__":
                 ll = line.split(delim)
                 if index is None:
                     index = len(ll)
-                key = tuple([ll[i] for i in key_cols2])
+                key = tuple([ll[i].strip() for i in key_cols2])
                 # print>>sys.stderr, "Error: the line skiped for key [%s] not found, \n %s" % ( delim.join(key), line)
+                if options.ignore_case_space:
+                    key = tuple(norm_func(x) for x in key)
 
                 value = dd.get(key, options.default_value)
                 if value is None:

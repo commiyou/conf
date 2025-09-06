@@ -63,6 +63,9 @@ return {
           },
         },
       },
+      behaviour = {
+        auto_check_diagnostics=false,
+      }
     },
     dependencies = {
       "nvim-lua/plenary.nvim",

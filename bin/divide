@@ -1,231 +1,220 @@
 #!/usr/bin/env python3
 import argparse
 import sys
-from typing import TextIO
+from typing import Callable, Dict, List, TextIO, Tuple
 
 
-class ValueGetter:
-    """get a value from a line"""
-
-    def __init__(self, e: str):
-        """initialize"""
-        if e.startswith("v"):
-            self.e = float(e[1:])
-            self.get = self._value
-        else:
-            self.e = int(e)
-            self.get = self._idx
-
-    def _idx(self, ll: list[str]) -> str:
-        return ll[self.e]
-
-    def _value(self, ll: list[str]) -> str:
-        return self.e
-
-
-def safe_divide(e1: str, e2: str, default: str = "N/A", percent: bool = False) -> str:
-    """safe divide e1 by e2, return default if e2 is 0"""
-    try:
-        value = "%.6f" % (float(e1) / float(e2))
-    except:
-        value = default
-
-    if percent:
+def create_value_getter(spec: str) -> Callable[[List[str]], float]:
+    """
+    Creates a function that gets a value from a line.
+    'v123' -> returns 123.0
+    '0'    -> returns the value from column 0
+    """
+    if spec.startswith("v"):
         try:
-            return "%.2f%%" % (float(value) * 100)
-        except:
-            return value
+            value = float(spec[1:])
+            return lambda fields: value
+        except (ValueError, TypeError):
+            raise ValueError(f"Invalid literal value in spec: '{spec}'")
     else:
-        return value
+        try:
+            col_idx = int(spec)
+            return lambda fields: float(fields[col_idx])
+        except (ValueError, TypeError):
+            raise ValueError(f"Invalid column index in spec: '{spec}'")
 
 
-def calculate_column_totals(files: list[TextIO], delim: str, column_idx: int) -> float:
-    """calculate the total of a column"""
-    total = 0
-    for fd in files:
-        for line in fd:
-            line = line.rstrip("\n")
-            ll = [x.strip() for x in line.split(delim)]
-            try:
-                total += float(ll[column_idx])
-            except (ValueError, IndexError):
-                continue
-    return total
 
-
-def parse_arguments() -> argparse.Namespace:
-    """parse arguments"""
-    parser = argparse.ArgumentParser(description="divide num by indexs or values")
-    parser.add_argument("-d", "--delim", nargs=1, required=False, default="\t")
-    parser.add_argument("-D", "--DELIM", nargs=1, required=False, default="\t", help="output delim")
-    parser.add_argument("-e", "--divide_exception_default", required=False, default="N/A", help="default N/A")
-    parser.add_argument(
-        "-p", nargs="+", metavar="p1[,p2]", help="idx1,idx2 or idx1,v123 or v123,idx1 or idx1 (uses column total)"
-    )
-    parser.add_argument("-P", "--percent", action="store_true", help="percent")
-    parser.add_argument("--test", action="store_true", help="run test cases")
-    parser.add_argument("files", nargs="*", type=argparse.FileType("r"))
-    args = parser.parse_args(sys.argv[1:])
-
-    # Make -p required only if --test is not specified
-    if not args.test and not args.p:
-        parser.error("the following arguments are required: -p")
-
-    return args
+def safe_divide(numerator: float, denominator: float, default: str = "N/A", as_percent: bool = False) -> str:
+    """Safely divides numerator by denominator, returning default if denominator is 0."""
+    try:
+        if denominator == 0:
+            raise ZeroDivisionError
+        value = numerator / denominator
+        if as_percent:
+            return f"{value * 100:.2f}%"
+        else:
+            return f"{value:.4f}"
+    except (ValueError, TypeError, ZeroDivisionError):
+        return default
 
 
 def process_line(
     line: str,
-    idxs: list[list[ValueGetter]],
-    column_totals: dict[str, float],
+    division_specs: List[Tuple],
+    column_totals: Dict[str, float],
     delim: str,
     default_value: str,
-    percent: bool,
-) -> list[str]:
-    """process a line"""
+    as_percent: bool,
+) -> List[str]:
+    """Processes a single line of input, performing the specified divisions."""
     line = line.rstrip("\n")
-    ll = [x.strip() for x in line.split(delim)]
-    for e1, e2 in idxs:
-        if e2 is None:
-            # Use column total as denominator
-            if isinstance(e1.e, str) and e1.e.startswith("v"):
-                denominator = float(e1.e[1:])
+    fields = [x.strip() for x in line.split(delim)]
+    try:
+        for (numerator_getter, ns_spec_str), denominator_spec in division_specs:
+            numerator_val = numerator_getter(fields)
+
+            if denominator_spec is None:  # Division by column total
+                total = column_totals.get(ns_spec_str)
+                if total is None:
+                    fields.append(default_value)
+                    continue
+                denominator_val = total
             else:
-                denominator = column_totals[e1.e]
-            ll.append(safe_divide(e1.get(ll), denominator, default=default_value, percent=percent))
-        else:
-            ll.append(safe_divide(e1.get(ll), ValueGetter(e2).get(ll), default=default_value, percent=percent))
-    return ll
+                denominator_getter = create_value_getter(denominator_spec)
+                denominator_val = denominator_getter(fields)
+
+            fields.append(safe_divide(numerator_val, denominator_val, default=default_value, as_percent=as_percent))
+    except IndexError:
+        print(
+            f"Error: A specified column index is out of bounds for the line: '{line.strip()}'",
+            file=sys.stderr,
+        )
+    except (ValueError, TypeError):
+        print(
+            f"Error: Could not convert a value to a number in line: '{line.strip()}'",
+            file=sys.stderr,
+        )
+    return fields
 
 
-def run_tests():
-    """run tests"""
-    test_cases = [
-        # Test case 1: Basic division
-        {"input": "1\t2\t3", "delim": "\t", "p": ["0,1"], "expected": ["1", "2", "3", "0.500000"]},
-        # Test case 2: Division by value
-        {"input": "1\t2\t3", "delim": "\t", "p": ["0,v2"], "expected": ["1", "2", "3", "0.500000"]},
-        # Test case 3: Percent calculation
-        {"input": "1\t2\t3", "delim": "\t", "p": ["0,1"], "percent": True, "expected": ["1", "2", "3", "50.00%"]},
-        # Test case 4: Division by zero
-        {"input": "1\t0\t3", "delim": "\t", "p": ["0,1"], "expected": ["1", "0", "3", "N/A"]},
-        # Test case 5: Multiple divisions
-        {
-            "input": "10\t2\t5",
-            "delim": "\t",
-            "p": ["0,1", "2,1"],
-            "expected": ["10", "2", "5", "5.000000", "2.500000"],
-        },
-        # Test case 6: Non-numeric values
-        {"input": "abc\tdef\tghi", "delim": "\t", "p": ["0,1"], "expected": ["abc", "def", "ghi", "N/A"]},
-        # Test case 7: Empty fields
-        {"input": "\t\t", "delim": "\t", "p": ["0,1"], "expected": ["", "", "", "N/A"]},
-        # Test case 8: Custom delimiter
-        {"input": "10,2,5", "delim": ",", "p": ["0,1"], "expected": ["10", "2", "5", "5.000000"]},
-        # Test case 9: Multiple percent calculations
-        {
-            "input": "10\t20\t30",
-            "delim": "\t",
-            "p": ["0,1", "2,1"],
-            "percent": True,
-            "expected": ["10", "20", "30", "50.00%", "150.00%"],
-        },
-        # Test case 10: Division with floating point numbers
-        {"input": "3.14\t2.0\t1.5", "delim": "\t", "p": ["0,1"], "expected": ["3.14", "2.0", "1.5", "1.570000"]},
-        # Test case 11: Division by column total
-        {"input": "10\t20\t30", "delim": "\t", "p": ["0"], "expected": ["10", "20", "30", "0.166667"]},
-        # Test case 12: Division with negative numbers
-        {
-            "input": "-10\t2\t-5",
-            "delim": "\t",
-            "p": ["0,1", "2,1"],
-            "expected": ["-10", "2", "-5", "-5.000000", "-2.500000"],
-        },
-        # Test case 13: Division with very small numbers
-        {
-            "input": "0.000001\t0.000002\t0.000003",
-            "delim": "\t",
-            "p": ["0,1"],
-            "expected": ["0.000001", "0.000002", "0.000003", "0.500000"],
-        },
-        # Test case 14: Division with very large numbers
-        {
-            "input": "1000000\t2000000\t3000000",
-            "delim": "\t",
-            "p": ["0,1"],
-            "expected": ["1000000", "2000000", "3000000", "0.500000"],
-        },
-    ]
 
-    for i, test in enumerate(test_cases, 1):
-        print(f"\nRunning test case {i}:")
-        print(f"Input: {test['input']}")
-        print(f"Parameters: p={test['p']}, percent={test.get('percent', False)}")
+def parse_arguments() -> argparse.Namespace:
+    """Parses command-line arguments."""
+    parser = argparse.ArgumentParser(
+        description="Perform division on columnar data. New columns are appended to the end of each line.",
+        formatter_class=argparse.RawTextHelpFormatter,
+    )
+    parser.add_argument("-d", "--delim", default="\t", help="Input field delimiter. Default is tab.")
+    parser.add_argument("-D", "--DELIM", default="\t", help="Output field delimiter. Default is tab.")
+    parser.add_argument(
+        "-e",
+        "--divide_exception_default",
+        default="N/A",
+        help="Default value for division errors (e.g., division by zero). Default is 'N/A'.",
+    )
+    parser.add_argument(
+        "-P", "--percent", action="store_true", help="Format the output as a percentage (e.g., 0.5 -> 50.00%%)."
+    )
 
-        # Process the test case
-        line = test["input"]
-        idxs = []
-        for e in test["p"]:
-            parts = e.split(",")
-            e1 = parts[0]
-            e2 = parts[1] if len(parts) > 1 else None
-            idxs.append([ValueGetter(e1), e2])
+    # --- Division Specifiers ---
+    group = parser.add_argument_group(
+        "division specifiers",
+        "Specify the division operations. Use one or more of the following options. They are executed in order.",
+    )
+    group.add_argument(
+        "-p",
+        dest="p_specs",
+        action="append",
+        metavar="SPEC",
+        help="""Legacy specifier for division. Can be used multiple times.
+Examples:
+  '0,1'      - Divide column 0 by column 1.
+  '0,v100'   - Divide column 0 by the literal value 100.
+  '0'        - Divide column 0 by its column total.
+             (Note: reads the entire file into memory)""",
+    )
+    group.add_argument(
+        "--col-by-col",
+        dest="cbc_specs",
+        action="append",
+        metavar="NUM_IDX,DENOM_IDX",
+        help="Divide column by another column. Example: '0,1'",
+    )
+    group.add_argument(
+        "--col-by-val",
+        dest="cbv_specs",
+        action="append",
+        metavar="IDX,VALUE",
+        help="Divide column by a literal value. Example: '0,100'",
+    )
+    group.add_argument(
+        "--col-by-total",
+        dest="cbt_specs",
+        action="append",
+        metavar="IDX",
+        help="Divide column by its total sum. (Note: reads the entire file into memory)",
+    )
 
-        # For column total tests, we need to simulate the total
-        column_totals = {}
-        if any(e2 is None for _, e2 in idxs):
-            # Simulate column totals for testing
-            column_totals = {0: 60}  # Example total for column 0
+    parser.add_argument("files", nargs="*", type=argparse.FileType("r"), default=[sys.stdin])
+    args = parser.parse_args()
 
-        result = process_line(line, idxs, column_totals, test["delim"], "N/A", test.get("percent", False))
-        print(f"Result: {result}")
-        print(f"Expected: {test['expected']}")
-        print(f"Test {'passed' if result == test['expected'] else 'failed'}")
+    # --- Consolidate all specs into a single list ---
+    args.division_specs = []
+    if args.p_specs:
+        args.division_specs.extend(args.p_specs)
+    if args.cbc_specs:
+        args.division_specs.extend(args.cbc_specs)
+    if args.cbv_specs:
+        # Add 'v' prefix for value-based specs
+        args.division_specs.extend([f"{spec.split(',')[0]},v{spec.split(',')[1]}" for spec in args.cbv_specs])
+    if args.cbt_specs:
+        args.division_specs.extend(args.cbt_specs)
+
+    if not args.division_specs:
+        parser.error("At least one division specifier (-p, --col-by-col, etc.) is required.")
+
+    return args
 
 
 def main():
-    """main"""
+    """Main execution function."""
     args = parse_arguments()
 
-    if args.test:
-        run_tests()
-        return
+    # --- Prepare division specifications ---
+    division_specs = []
+    needs_column_totals = False
+    for spec in args.division_specs:
+        try:
+            parts = spec.split(",")
+            if not 1 <= len(parts) <= 2:
+                raise ValueError("Spec must have 1 or 2 parts")
+            
+            numerator_spec = parts[0]
+            denominator_spec = parts[1] if len(parts) > 1 else None
 
-    idxs = []
-    for e in args.p:
-        parts = e.split(",")
-        e1 = parts[0]
-        e2 = parts[1] if len(parts) > 1 else None
-        idxs.append([ValueGetter(e1), e2])
+            numerator_getter = create_value_getter(numerator_spec)
+            division_specs.append(((numerator_getter, numerator_spec), denominator_spec))
+
+            if denominator_spec is None and not numerator_spec.startswith("v"):
+                needs_column_totals = True
+        except ValueError as e:
+            parser.error(f"Invalid division specifier '{spec}': {e}")
+
+    # --- Pre-pass to calculate totals if needed ---
+    column_totals = {}
+    stored_lines = []
 
     infiles = args.files
     if not infiles:
         infiles = [sys.stdin]
 
-    # Calculate column totals for empty p2 values
-    column_totals = {}
-    stored_lines = []
-    need_column_totals = any(e2 is None and not (isinstance(e1.e, str) and e1.e.startswith("v")) for e1, e2 in idxs)
+    # We must read all lines to calculate totals accurately
+    for fd in infiles:
+        stored_lines.extend(fd.readlines())
 
-    if need_column_totals:
-        for fd in infiles:
-            for i, line in enumerate(fd):
-                stored_lines.append(line)
-                line = line.rstrip("\n")
-                ll = [x.strip() for x in line.split(args.delim)]
-                for e1, e2 in idxs:
-                    if e2 is None and not (isinstance(e1.e, str) and e1.e.startswith("v")):
-                        try:
-                            column_totals[e1.e] = column_totals.get(e1.e, 0) + float(ll[e1.e])
-                        except (ValueError, IndexError):
-                            print(f"Error: file {fd.name} line {i} column {e1.e} is not a number", file=sys.stderr)
-                            continue
-    else:
-        stored_lines = [line for fd in infiles for line in fd]
+    if needs_column_totals:
+        for line in stored_lines:
+            fields = [x.strip() for x in line.strip("\n").split(args.delim)]
+            for (numerator_getter, numerator_spec_str), denominator_spec in division_specs:
+                if denominator_spec is None and not numerator_spec_str.startswith("v"):
+                    try:
+                        value = float(fields[int(numerator_spec_str)])
+                        column_totals[numerator_spec_str] = column_totals.get(numerator_spec_str, 0) + value
+                    except (ValueError, IndexError):
+                        continue  # Ignore lines/fields that can't be converted to float
 
+    # --- Main processing pass ---
     for line in stored_lines:
-        result = process_line(line, idxs, column_totals, args.delim, args.divide_exception_default, args.percent)
-        print(args.DELIM.join(result))
+        result_fields = process_line(
+            line,
+            division_specs,
+            column_totals,
+            args.delim,
+            args.divide_exception_default,
+            args.percent,
+        )
+        print(args.DELIM.join(map(str, result_fields)))
 
 
 if __name__ == "__main__":

@@ -58,6 +58,7 @@ return {
         mouse = "h",
         clipboard = "", -- not use system clipboard, use yoc to turn on
         cmdheight = 1, --
+        confirm = false, -- 弹窗提示是否保存
         --timeoutlen = 500,
         --ttimeoutlen = 10,
       },

@@ -24,7 +24,6 @@ import sys
 import threading
 import time
 import traceback
-import types
 import unicodedata
 from collections.abc import (
     Generator,
@@ -47,7 +46,6 @@ from typing import (
     Callable,
     Literal,
     NewType,
-    Optional,
     ParamSpec,
     Self,
     TextIO,
@@ -59,13 +57,17 @@ from typing import (
 )
 from urllib.parse import urlencode
 
+import fire
 import funcy
 import pandas as pd
 import requests
+import rich.progress
+import rich.traceback
 import tqdm as tqdm_
-from bs4 import BeautifulSoup
 from diskcache import Cache
 from termcolor import colored
+
+rich.traceback.install(show_locals=True, suppress=[fire], width=None)
 
 requests.packages.urllib3.disable_warnings()  # pyright: ignore[reportAttributeAccessIssue]
 
@@ -109,13 +111,11 @@ T_Output = TypeVar("T_Output")
 R = TypeVar("R")
 Ts = TypeVarTuple("Ts")
 P = ParamSpec("P")
-KeyType: TypeAlias = int | slice | Sequence | Mapping | AbstractSet | Callable[[_T], Any]
+KeyType: TypeAlias = int | slice | Sequence | Mapping | AbstractSet | Callable[[_T], Any] | None
 
 
 devnull = open(os.devnull, "w")  # noqa: SIM115
 
-with contextlib.suppress(Exception):
-    from traceback_with_variables import activate_by_import  # pyright: ignore[reportUnusedImport]
 
 if locale.getencoding() != "UTF-8":
     print(f"system default locale {locale.getlocale()}", file=sys.stderr)
@@ -162,10 +162,13 @@ def xprint(
     suffix: str = "",
     sep: str = "\t",
     flush: bool = True,
-    file: TextIO | BinaryIO | None = None,
+    file: IO[Any] | BinaryIO | None = None,
     encoding: str = "utf8",
     output_flag: bool = True,
-    color: Literal["red", "blue", "green"] | None = None,
+    color: Color | None = None,
+    newline_replacement: str | None = " ",
+    tab_replacement: str | None = " ",
+    strip_whitespace: bool = True,
 ) -> None:
     r"""print with default sep and suffix and encoding
 
@@ -181,6 +184,14 @@ def xprint(
     if file is None:
         file = sys.stdout
     end = suffix + "\n"
+    if newline_replacement is not None:
+        values = tuple(x.replace("\n", newline_replacement) if isinstance(x, str) else x for x in values)
+    if tab_replacement is not None:
+        values = tuple(x.replace("\t", tab_replacement) if isinstance(x, str) else x for x in values)
+
+    if strip_whitespace:
+        values = tuple(x.strip() if isinstance(x, str) else x for x in values)
+
     values_str = [make_str(value) for value in values]
     out = sep.join(values_str) + end
     out = color_text_if_atty(out, color)
@@ -201,7 +212,7 @@ def xerr(
     encoding: str = "utf8",
     debug: bool = True,
     output_flag: bool = True,
-    color: Literal["red", "blue", "green"] | None = None,
+    color: Color | None = None,
     file: "IO|None" = sys.stderr,
 ) -> None:
     """print to stderr with default sep and suffix and encoding"""
@@ -273,7 +284,7 @@ def xvar(
     suffix: str = "",
     sep: str = "\t",
     encoding: str = "utf8",
-    color: Literal["red", "blue", "green"] | None = None,
+    color: Color | None = None,
     force_debug: bool = False,
 ) -> None:
     """Output var and var's name in debug mode.
@@ -335,7 +346,7 @@ def xdebug(
     suffix: str = "",
     sep: str = "\t",
     encoding: str = "utf8",
-    color: Literal["red", "blue", "green"] | None = None,
+    color: Color | None = None,
     force_debug: bool = False,
     file: "IO|None" = sys.stderr,
 ) -> None:
@@ -531,8 +542,83 @@ def is_valid_value(value: Any) -> bool:
     return bool(value is not None and not pd.isna(value))
 
 
+def _read_excel(
+    path: str | Path,
+    norm: bool = True,
+) -> Generator[list[str], None, None]:
+    """Helper to read an Excel file into lists of strings."""
+    # 明确警告：此函数将整个文件加载到内存中。
+    df = pd.read_excel(path, dtype=str, header=None)
+    it: Iterator[tuple] = df.itertuples(index=False)
+
+    for row in it:
+        # 将 NaN 或 None 转换为空字符串
+        cells = ["" if pd.isna(cell) else str(cell) for cell in row]
+        if norm:
+            cells = [remove_invalid_char(cell) for cell in cells]
+        yield cells
+
+
+def _read_csv(
+    text_iterator: Iterator[str],
+    sep: str,
+    quotechar: str,
+) -> Generator[list[str], None, None]:
+    """Helper to read CSV-formatted lines using csv.reader."""
+    import csv
+
+    reader = csv.reader(text_iterator, delimiter=sep, quotechar=quotechar)
+    yield from reader
+
+
+def _read_text_lines(
+    text_iterator: Iterator[str],
+    sep: str,
+    maxsplit: int,
+    norm: bool,
+    filter_func: Callable[[list[str]], bool] | None,
+) -> Generator[list[str], None, None]:
+    """Helper to read and split plain text lines."""
+    for line in text_iterator:
+        ll = split_str(line, sep=sep, maxsplit=maxsplit)
+        if norm:
+            # 使用列表推导式通常比 lmap 略快
+            ll = [remove_invalid_char(x) for x in ll]
+
+        if filter_func is not None and not filter_func(ll):
+            continue
+        yield ll
+
+        import sys
+
+
+def _decode_with_tolerance(
+    binary_iterator: Iterator[bytes],
+    encoding: str,
+    errors: str,
+    tolerance_count: int,
+) -> Generator[str, None, None]:
+    """一个生成器，它包装一个二进制迭代器，并提供解码容错计数功能。"""
+    # 负数表示无限容忍
+    remaining_tolerance = tolerance_count
+
+    for i, binary_line in enumerate(binary_iterator):
+        try:
+            yield binary_line.decode(encoding, errors)
+        except UnicodeDecodeError:
+            # sys.stderr.write(...) 比 print 更适合输出错误日志
+            sys.stderr.write(f"Warning: UnicodeDecodeError on line {i + 1}. Raw content: {binary_line[:120]!r}\n")
+            if remaining_tolerance >= 0:
+                remaining_tolerance -= 1
+                if remaining_tolerance < 0:
+                    sys.stderr.write("Error: Decode error tolerance exceeded. Raising exception.\n")
+                    raise
+            # 如果 remaining_tolerance 是负数（无限容忍），则不进行任何操作
+            continue
+
+
 def read_file(  # noqa: C901, PLR0912
-    input_: str | Path | IO | None = sys.stdin.buffer,
+    input_: str | Path | IO[bytes] | IO[str] | None = None,
     *,
     sep: str = "\t",
     encoding: str = "utf-8",
@@ -543,83 +629,85 @@ def read_file(  # noqa: C901, PLR0912
     tqdm: str | bool | None = None,
     total: int | None = None,
     skip_notexists: bool = False,
-    filter_func: Callable[[list[str]], bool] | None = None,
+    filter_func: Callable[[Sequence[str]], bool] | None = None,
     norm: bool = True,  # 是否替换掉bad char， 如chr(160) 不间断空格
     quotechar: str | None = None,
 ) -> Generator[list[str], None, None]:
     """Read the file line by line with a specified encoding and return iterator of list after splitting by sep.
 
     input_: file name/path or io; excel时，返回的每一列都是str
+    filter_func: 对line split后的list进行判断，为true时保留
     """
-    if isinstance(input_, (str, Path)) and skip_notexists and not os.path.exists(input_):
-        return
+    if input_ is None:
+        input_ = sys.stdin.buffer
 
-    if isinstance(input_, str) and input_.endswith(".xlsx"):
-        df = pd.read_excel(input_, dtype=str)
-        it = df.itertuples(index=False)
-        if norm:
-            it = (tuple(remove_invalid_char(cell) if isinstance(cell, str) else cell for cell in row) for row in it)
-
-        it = (tuple(cell if is_valid_value(cell) else None for cell in row) for row in it)
-        it = (tuple(cell.strip() if isinstance(cell, str) else cell for cell in row) for row in it)
-
-        yield from tqdm_.tqdm(it, total=len(df))
-        return
-
+    if isinstance(input_, (str, Path)):
+        if skip_notexists and not os.path.exists(input_):
+            return
+        # Excel 是特殊情况，因其格式和库的限制，单独处理
+        # 修正了原先只检查 str 的 bug
+        path_str = str(input_)
+        if path_str.endswith(".xlsx"):
+            iterator = _read_excel(input_, norm=norm)
+            if skip_header:
+                next(iterator, None)
+            if tqdm:
+                # excel 读取时，可以方便地获取总行数
+                df_len = len(pd.read_excel(path_str, usecols=[0]))
+                pbar = tqdm_.tqdm(iterator, total=df_len, desc=f"Processing {path_str}")
+                yield from pbar
+            else:
+                yield from iterator
+            return
+    # --- 2. 统一创建上下文和迭代器 ---
+    # 默认启用tqdm（如果是终端环境）
+    use_tqdm = tqdm is True or (tqdm is None and hasattr(sys.stderr, "isatty") and sys.stderr.isatty())
+    tqdm_desc = tqdm if isinstance(tqdm, str) else f"Processing {input_}"
     if isinstance(input_, (str, Path)) and not is_large_file(input_):
         with open(input_, encoding=encoding) as fd:
             total = sum(1 for _ in fd)
 
-    if input_ is None:
-        input_ = sys.stdin.buffer
-
-    if tqdm is None and sys.stderr.isatty():
-        tqdm = str(f"proc file {input_}") if isinstance(input_, (str, Path)) else True
-
-    if not quotechar:
-        cm = open(input_, "rb") if isinstance(input_, (str, Path)) else contextlib.nullcontext(input_)
+    # 根据输入类型，创建合适的上下文管理器和二进制流
+    if isinstance(input_, (str, Path)):
+        context_manager = open(input_, "rb")
+    elif hasattr(input_, "read"):  # Duck-typing for IO streams
+        context_manager = contextlib.nullcontext(input_)
     else:
-        if "utf" in encoding.lower() and "8" in encoding.lower():
-            encoding = "utf-8-sig"  # 解决bom问题，能自动去掉bom
-        cm = (
-            open(input_, newline="", encoding=encoding)
-            if isinstance(input_, (str, Path))
-            else contextlib.nullcontext(input_)
-        )
-        import csv
+        raise TypeError(f"Unsupported input type: {type(input_)}")
+    with context_manager as binary_stream:
+        # --- 3. 将输入统一为文本迭代器 ---
+        # 兼容二进制流 (IO[bytes]) 和文本流 (IO[str])
+        if isinstance(binary_stream, (io.TextIOBase)):
+            # 输入本身就是文本流
+            text_iterator: Iterator[str] = binary_stream
+        else:
+            # 输入是二进制流，用TextIOWrapper包装以进行解码
+            # 解决BOM问题，对于csv读取很关键
+            effective_encoding = "utf-8-sig" if quotechar and "utf" in encoding.lower() else encoding
+            # text_iterator = io.TextIOWrapper(binary_stream, encoding=effective_encoding, errors=errors)
+            text_iterator = _decode_with_tolerance(
+                binary_stream,
+                encoding,
+                errors,
+                decode_error_tolerance_count,
+            )
 
-        cm = tqdm_.tqdm(csv.reader(cm, delimiter=sep, quotechar=quotechar))
-        yield from cm
-        return
+        # --- 4. 调度到具体的处理函数 ---
+        if quotechar:
+            iterator = _read_csv(text_iterator, sep, quotechar)
+        else:
+            # 传递 filter_func 到最终处理环节，避免在调度器中处理复杂逻辑
+            iterator = _read_text_lines(text_iterator, sep, maxsplit, norm, filter_func)
 
-    with cm as input_:
         if skip_header:
-            input_ = funcy.rest(input_)  # type:ignore  # noqa: PLW2901
-        if tqdm:
-            input_ = tqdm_.tqdm(input_, total=total, desc=tqdm if isinstance(tqdm, str) else None)
+            next(iterator, None)
+            if total is not None:
+                total -= 1  # 如果提供了总数，需要减去表头
 
-        for i, line in enumerate(input_):  # type:ignore
-            if not isinstance(line, str):
-                try:
-                    uline: str = line.decode(encoding, errors=errors)  # type:ignore
-                except UnicodeDecodeError:
-                    xerr(f"line decode failed! #{i}:[{line[:120] if line else None}]")
-                    decode_error_tolerance_count -= 1
-                    if decode_error_tolerance_count < 0:
-                        raise
-                    else:
-                        continue
-            else:
-                uline = line
+        if use_tqdm:
+            iterator = tqdm_.tqdm(iterator, total=total, desc=tqdm_desc)
 
-            ll = split_str(uline, sep=sep, maxsplit=maxsplit)
-            if norm:
-                ll = funcy.lmap(remove_invalid_char, ll)
-
-            if filter_func is not None and not filter_func(ll):
-                continue
-
-            yield ll
+        yield from iterator
 
 
 class AutoClosingFile:
@@ -643,48 +731,41 @@ class AutoClosingFile:
             xdebug(f"File '{self.file.name}' closed automatically.")
 
 
-def write_file_new(filepath: str, mode: str = "w+", suffix: str = "", **kwargs):
+def write_file_new(filepath: str, mode: str = "w+", suffix: str = "", **kwargs: Any) -> IO[Any]:
     """返回自动关闭的文件对象"""
     if suffix:
         filepath = new_filename(filepath, suffix=suffix)
-    return AutoClosingFile(filepath, mode, **kwargs)
+    ret = AutoClosingFile(filepath, mode, **kwargs)
+    return cast("IO[Any]", ret)
 
 
 # --- Overloaded Function Signatures ---
+
+
+# 情况 1: value=None -> 返回 set
 @overload
 def read_kv(
-    input_: str | Path | IO | None = sys.stdin.buffer,
-    *,
-    key: KeyType = 0,
-    value: None = None,
-    filter: Callable[[list[str]], bool] | None = None,
-    value_accumulate_func: None = None,
-    **kwargs: P.kwargs,
-) -> set[_K]: ...
+    input_: str | Path | IO | None = ...,
+    key: KeyType = ...,
+    value: None = ...,
+    filter: Callable[[list], bool] | None = ...,
+    value_accumulate_func: None = ...,
+    *args: object,
+    **kwargs: object,
+) -> set[KeyType]: ...
 
 
+# 情况 2: value指定 -> 返回 dict
 @overload
 def read_kv(
-    input_: str | Path | IO | None = sys.stdin.buffer,
-    *,
-    key: KeyType = 0,
-    value: KeyType,
-    filter: Callable[[list[str]], bool] | None = None,
-    value_accumulate_func: None,
-    **kwargs: P.kwargs,
-) -> dict[_K, list[_V]]: ...
-
-
-@overload
-def read_kv(
-    input_: str | Path | IO | None = sys.stdin.buffer,
-    *,
-    key: KeyType = 0,
-    value: KeyType,
-    filter: Callable[[list[str]], bool] | None = None,
-    value_accumulate_func: Callable[[list[_V]], _AccumulatedV] = funcy.first,
-    **kwargs: P.kwargs,
-) -> dict[_K, _AccumulatedV]: ...
+    input_: str | Path | IO | None = ...,
+    key: KeyType = ...,
+    value: KeyType = ...,
+    filter: Callable[[list], bool] | None = ...,
+    value_accumulate_func: Callable | None = ...,
+    *args: object,
+    **kwargs: object,
+) -> dict: ...
 
 
 def read_kv(
@@ -692,6 +773,7 @@ def read_kv(
     key: KeyType = 0,
     value: KeyType | None = None,
     filter: Callable | None = None,
+    key_map_func: Callable | None = None,
     value_accumulate_func: Callable | None = funcy.first,
     *args: P.args,
     **kwargs: P.kwargs,
@@ -719,6 +801,8 @@ def read_kv(
             if max_try_cnt < 0:
                 raise
             continue
+        if key_map_func:
+            k = key_map_func(k)
         if value_func:
             try:
                 v = value_func(ll)
@@ -744,13 +828,15 @@ def read_and_filter_by_key(
     with_key: bool = True,
     ofname: str | None = None,
     ofname_suffix: str | None = None,
-    ofname_key: KeyType = 0,
+    ofname_key: KeyType | None = None,
     mode: str = "a+",
 ) -> tuple[list[list[Any]], IO]:
     """read file and filter by key, return list of remain items"""
     if not ofname and ofname_suffix:
         ofname = new_filename(fname, suffix=ofname_suffix)
 
+    if ofname_key is None:
+        ofname_key = key
     already_done = read_kv(ofname, key=ofname_key, skip_notexists=True) if ofname else set()
 
     xerr(f"{ofname} has done keys cnt {len(already_done)}")
@@ -769,6 +855,38 @@ def read_and_filter_by_key(
         else:
             todos.append(ll)
 
+    of = write_file_new(ofname, mode=mode) if ofname else sys.stdout
+    return todos, of
+
+
+def load_unprocessed_items(
+    fname: str,
+    key: KeyType = 0,
+    ofname: str | None = None,
+    ofname_suffix: str | None = None,
+    ofname_key: KeyType | None = None,
+    mode: str = "a+",
+    **kwargs: Any,
+) -> tuple[list[list[str]], IO[Any]]:
+    """read file and filter by key, return list of remain items"""
+    if not ofname and ofname_suffix:
+        ofname = new_filename(fname, suffix=ofname_suffix)
+
+    if ofname_key is None:
+        ofname_key = key
+    already_done = read_kv(ofname, key=ofname_key, skip_notexists=True) if ofname else set()
+
+    xerr(f"{ofname} has done keys cnt {len(already_done)}")
+    todos = []
+
+    key_func = make_key_func(key)
+    for ll in read_file(fname, **kwargs):
+        real_key = key_func(ll)
+        if real_key in already_done:
+            continue
+        todos.append(ll)
+
+    xerr(f"{fname} left todos: {len(todos)}")
     of = write_file_new(ofname, mode=mode) if ofname else sys.stdout
     return todos, of
 
@@ -794,10 +912,20 @@ def make_key_func(
     >>> make_key_func(lambda x: x[1])(ll)
     1
     """
+    if f is None:
+        return lambda x: x
     if callable(f):
         return f
     if isinstance(f, int):
         return itemgetter(f)
+    if isinstance(f, str):
+        # 尝试 dict/list 索引，否则尝试 getattr
+        def func(x):
+            if isinstance(x, Mapping) and f in x:
+                return x[f]
+            return getattr(x, f)
+
+        return func
     if isinstance(f, slice):
         return lambda x: tuple(itemgetter(f)(x))
     if isinstance(f, Sequence):
@@ -818,6 +946,7 @@ def group_file_by_key(
     encoding: str = "utf-8",
     maxsplit: int = -1,
     decode_error_tolerance_count: int = 10,
+    **kwargs: Any,
 ) -> Generator:
     """read file line by line and split by sep and group by key, return like itertools.groupby"""
     key_func = make_key_func(key)
@@ -827,6 +956,7 @@ def group_file_by_key(
         encoding=encoding,
         maxsplit=maxsplit,
         decode_error_tolerance_count=decode_error_tolerance_count,
+        **kwargs,
     )
 
     yield from itertools.groupby(f, key=key_func)
@@ -1657,6 +1787,8 @@ def crawl_parse(url: str, **css_selectors: str) -> dict[str, str | dict[str, Any
     ... ]["website"][0].get("href")
     '/ajaxstream/link/?url=https://www.toptoyglobal.com/'
     """
+    from bs4 import BeautifulSoup
+
     response = requests.get(url, timeout=300)
     soup = BeautifulSoup(response.text, "html.parser")
 
@@ -2336,7 +2468,10 @@ def strip_accents(s: OptionalStr) -> OptionalStr:
     """去除unicode中的重读 兰蔻LANCÔM -> 兰蔻LANCOM"""
     if not s:
         return s
-    return "".join(c for c in unicodedata.normalize("NFD", s) if unicodedata.category(c) != "Mn")
+
+    assert s is not None
+    result = "".join(c for c in unicodedata.normalize("NFD", s) if unicodedata.category(c) != "Mn")
+    return cast("OptionalStr", result)
 
 
 def aggregate_by_key(
@@ -2348,9 +2483,63 @@ def aggregate_by_key(
     *args,
     **kwargs,
 ):
-    """指定key，聚合value
+    """根据指定键（key）对值（value）进行分组，并打印聚合结果。
 
-    upack为True的话分成多列
+    该函数是 `read_kv` 的一个封装，用于快速进行分组聚合和格式化输出。
+    它从数据源读取数据，将 `value` 列按 `key` 列进行分组，然后逐行打印
+    每个 key 及其聚合后的 value 列表。
+
+    Args:
+        fname: 数据源文件名。若为 None，则行为取决于底层 `read_kv` 的实现
+               （通常是从标准输入读取）。
+        key: 用于分组的键，可以是列索引（int）或列名（str）。默认为 0。
+        value: 需要被聚合的值，可以是列索引（int）或列名（str）。默认为 1。
+        unpack: 是否将聚合后的 value 列表展开。
+                - True: 列表中的每个元素作为独立列输出。
+                - False: 整个 value 列表作为一个单独的列输出。
+                默认为 False。
+        with_len: 是否在输出中包含聚合值的数量。
+                  - True: 在 key 之后、value 之前插入一个计数列。
+                  - False: 不输出计数列。
+                  默认为 False。
+        *args: 传递给底层 `read_kv` 函数的位置参数。
+        **kwargs: 传递给底层 `read_kv` 函数的关键字参数。
+
+    Side Effects:
+        此函数没有返回值。它会调用 `xprint` 将结果直接打印到标准输出。
+
+    Examples:
+        假设输入数据 (data.txt) 如下，以制表符分隔:
+        ```
+        user1   itemA
+        user2   itemB
+        user1   itemC
+        user1   itemA
+        ```
+
+        1. 默认调用:
+        >>> aggregate_by_key("data.txt")
+        # 输出:
+        # user1   ['itemA', 'itemC', 'itemA']
+        # user2   ['itemB']
+
+        2. 包含数量 (with_len=True):
+        >>> aggregate_by_key("data.txt", with_len=True)
+        # 输出:
+        # user1   3   ['itemA', 'itemC', 'itemA']
+        # user2   1   ['itemB']
+
+        3. 展开 value 列表 (unpack=True):
+        >>> aggregate_by_key("data.txt", unpack=True)
+        # 输出:
+        # user1   itemA   itemC   itemA
+        # user2   itemB
+
+        4. 同时启用 with_len 和 unpack:
+        >>> aggregate_by_key("data.txt", with_len=True, unpack=True)
+        # 输出:
+        # user1   3   itemA   itemC   itemA
+        # user2   1   itemB
     """
     for k, vs in read_kv(fname, *args, value_accumulate_func=None, key=key, value=value, **kwargs).items():
         res = [k, len(vs)] if with_len else [k]
@@ -2358,17 +2547,68 @@ def aggregate_by_key(
         xprint(*res)
 
 
+def _normalize_transform_output(
+    output: Any,
+    mode: str,
+) -> tuple[tuple, dict]:
+    """根据指定模式，将 transform 函数的输出标准化为 (args, kwargs) 元组。"""
+
+    if mode == "auto":
+        if (
+            isinstance(output, tuple)
+            and len(output) == 2
+            and isinstance(output[0], tuple)
+            and isinstance(output[1], dict)
+        ):
+            return output
+        if isinstance(output, dict):
+            return ((), output)
+        if isinstance(output, tuple):
+            return (output, {})
+        return ((output,), {})
+
+    if mode == "args_kwargs":
+        if (
+            isinstance(output, tuple)
+            and len(output) == 2
+            and isinstance(output[0], tuple)
+            and isinstance(output[1], dict)
+        ):
+            return output
+        msg = f"transform_mode='args_kwargs' 要求返回值是 (tuple, dict) 格式, 但得到: {type(output).__name__}"
+        raise TypeError(msg)
+
+    if mode == "kwargs":
+        if isinstance(output, dict):
+            return ((), output)
+        msg = f"transform_mode='kwargs' 要求返回值是 dict, 但得到: {type(output).__name__}"
+        raise TypeError(msg)
+
+    if mode == "args":
+        if isinstance(output, tuple):
+            return (output, {})
+        msg = f"transform_mode='args' 要求返回值是 tuple, 但得到: {type(output).__name__}"
+        raise TypeError(msg)
+
+    if mode == "single_arg":
+        return ((output,), {})
+
+    msg = f"不支持的 transform_mode: '{mode}'"
+    raise ValueError(msg)
+
+
 def parallel_process(  # noqa: C901, PLR0912, PLR0915
     inputs: Iterable[T_Input],
     target_func: Callable[..., T_Output],
     *,
-    transform: Callable[[T_Input], tuple[tuple, dict]] | None = None,
+    transform: Callable[[T_Input], Any] | None = None,
+    transform_mode: Literal["auto", "kwargs", "args", "single_arg"] = "auto",
     process_cnt: int | None = None,
     max_concurrency: int | None = None,
     tqdm_desc: str | None = "Processing",
     total: int | None = None,
     timeout: int | None = None,
-    max_fail_cnt: int = 20,
+    max_fail_cnt: int | float = 50,
 ) -> Generator[tuple[T_Input, T_Output | Exception], None, None]:
     """
     使用多进程并行处理输入项，并通过 transform 函数适配目标函数。
@@ -2376,15 +2616,20 @@ def parallel_process(  # noqa: C901, PLR0912, PLR0915
     参数:
     - inputs: 包含原始数据的可迭代对象。
     - target_func: 需要被并发执行的目标函数 (必须是可序列化的)。
-    - transform: 一个转换函数，接收 inputs 中的单个元素，
-                 并返回一个 (args_tuple, kwargs_dict) 格式的元组。
+    - transform: 一个转换函数，接收 inputs 中的单个元素，返回 target_func 的参数
+    - transform_mode: 指定如何解析 transform 函数的返回值。
+                 - 'auto' (默认): 自动检测返回类型 (tuple, dict), dict, tuple 或其他。
+                 - 'args_kwargs': 强制要求返回 (tuple, dict)。
+                 - 'kwargs': 强制要求返回 dict。
+                 - 'args': 强制要求返回 tuple。
+                 - 'single_arg': 将返回值视为单一位置参数。
     - process_cnt: 并行进程数。默认为 CPU 核心数。
     - max_concurrency: 最大并发任务数，用于控制同时在处理的任务量，防止内存爆炸。
                        默认为 process_cnt。
     - tqdm_desc: tqdm 进度条的描述文本。如果为 None，则不显示进度条。
     - total: 输入项的总数，用于tqdm。如果 inputs 是列表等有长度的类型，会自动计算。
     - timeout: 每个任务的超时时间（秒）。
-    - max_fail_cnt: 允许的最大失败次数。超过后将抛出最后的异常。
+    - max_fail_cnt: 允许的最大失败次数。超过后将抛出最后的异常。如果为小数 则表示占比
 
     返回:
     - 一个生成器，逐个产出 (原始输入, 结果或异常对象) 的元组。
@@ -2412,12 +2657,11 @@ def parallel_process(  # noqa: C901, PLR0912, PLR0915
     if process_cnt == 1:
         pbar = tqdm_.tqdm(inputs, total=total, desc=desc, disable=desc is None)
         for original_input in pbar:
-            try:
-                args, kwargs = transform(original_input)
-                result = target_func(*args, **kwargs)
-                yield original_input, result
-            except Exception as e:
-                yield original_input, e
+            # args, kwargs = transform(original_input)
+            transformed_output = transform(original_input)
+            args, kwargs = _normalize_transform_output(transformed_output, mode=transform_mode)
+            result = target_func(*args, **kwargs)
+            yield original_input, result
         return
 
     # 多进程模式
@@ -2431,7 +2675,8 @@ def parallel_process(  # noqa: C901, PLR0912, PLR0915
     concurrency = max_concurrency or process_cnt
     if concurrency < process_cnt:
         xerr(
-            f"警告: max_concurrency ({concurrency}) 小于 process_cnt ({process_cnt})。建议保持 max_concurrency >= process_cnt。"
+            f"警告: max_concurrency ({concurrency}) 小于 process_cnt ({process_cnt})。"
+            "建议保持 max_concurrency >= process_cnt。"
         )
 
     def output_failed_tasks(tasks: list) -> None:
@@ -2447,7 +2692,13 @@ def parallel_process(  # noqa: C901, PLR0912, PLR0915
 
     # 将输入转换为迭代器，以确保我们始终向前处理
     handler_inputs = iter(inputs)
-    import concurrent
+    import concurrent.futures
+
+    if total:
+        max_fail_cnt = max_fail_cnt if max_fail_cnt >= 1 else int(total * max_fail_cnt)
+    elif max_fail_cnt < 1:
+        max_fail_cnt = 50
+    xerr(f"{total=}, {max_fail_cnt=}")
 
     with (
         concurrent.futures.ProcessPoolExecutor(max_workers=process_cnt) as executor,
@@ -2459,7 +2710,9 @@ def parallel_process(  # noqa: C901, PLR0912, PLR0915
         # 1. 初始填充任务队列，达到最大并发数
         for original_input in itertools.islice(handler_inputs, concurrency):
             try:
-                args, kwargs = transform(original_input)
+                # args, kwargs = transform(original_input)
+                transformed_output = transform(original_input)
+                args, kwargs = _normalize_transform_output(transformed_output, mode=transform_mode)
                 future = executor.submit(target_func, *args, **kwargs)
                 futures[future] = original_input
             except Exception as e:
@@ -2498,17 +2751,21 @@ def parallel_process(  # noqa: C901, PLR0912, PLR0915
                 # 2b. 补充新任务（如果还有的话）
                 try:
                     next_input = next(handler_inputs)
-                    args, kwargs = transform(next_input)
-                    new_future = executor.submit(target_func, *args, **kwargs)
-                    futures[new_future] = next_input
                 except StopIteration:
                     # 输入已经耗尽，无需补充
                     pass
-                except Exception as e:
-                    # 新任务在转换阶段就失败了
-                    fail_cnt += 1
-                    failed_tasks.append((next_input, e))
-                    pbar.update(1)
+                else:
+                    try:
+                        transformed_output = transform(next_input)
+                        args, kwargs = _normalize_transform_output(transformed_output, mode=transform_mode)
+                        # args, kwargs = transform(next_input)
+                        new_future = executor.submit(target_func, *args, **kwargs)
+                        futures[new_future] = next_input
+                    except Exception as e:
+                        # 新任务在转换阶段就失败了
+                        fail_cnt += 1
+                        failed_tasks.append((next_input, e))
+                        pbar.update(1)
 
     # 循环结束后，报告所有失败的任务
     suc_cnt = (total or pbar.n) - len(failed_tasks)
@@ -2516,11 +2773,13 @@ def parallel_process(  # noqa: C901, PLR0912, PLR0915
     xerr(f"处理完成。成功: {suc_cnt}, 失败: {len(failed_tasks)}")
 
 
-def parallel_thread(
+def parallel_thread(  # noqa: C901
     inputs: Iterable[T_Input],
     target_func: Callable[..., T_Output],
     *,
-    transform: Callable[[T_Input], tuple[tuple, dict]] | None = None,
+    # transform: Callable[[T_Input], tuple[tuple, dict]] | None = None,
+    transform: Callable[[T_Input], Any] | None = None,
+    transform_mode: Literal["auto", "kwargs", "args", "single_arg"] = "auto",
     thread_cnt: int | None = 20,
     tqdm_desc: str | None = "Processing",
     max_fail_cnt: int = 20,
@@ -2532,8 +2791,13 @@ def parallel_thread(
     参数:
     - inputs: 包含原始数据的可迭代对象。
     - target_func: 需要被并发执行的目标函数 (必须是线程安全的)。
-    - transform: 一个转换函数，接收 inputs 中的单个元素，
-                 并返回一个 (args_tuple, kwargs_dict) 格式的元组。
+    - transform: 一个转换函数，接收 inputs 中的单个元素，返回 target_func 的参数
+    - transform_mode: 指定如何解析 transform 函数的返回值。
+                 - 'auto' (默认): 自动检测返回类型 (tuple, dict), dict, tuple 或其他。
+                 - 'args_kwargs': 强制要求返回 (tuple, dict)。
+                 - 'kwargs': 强制要求返回 dict。
+                 - 'args': 强制要求返回 tuple。
+                 - 'single_arg': 将返回值视为单一位置参数。
     - thread_cnt: 并行线程数。默认为 min(32, os.cpu_count() + 4)。
     - tqdm_desc: tqdm 进度条的描述文本。如果为 None，则不显示进度条。
     - max_fail_cnt: 允许的最大失败次数。超过后将抛出最后的异常。
@@ -2574,7 +2838,9 @@ def parallel_thread(
         pbar = tqdm_.tqdm(inputs, desc=tqdm_desc, disable=tqdm_desc is None)
         for original_input in pbar:
             try:
-                args, kwargs = transform(original_input)
+                # args, kwargs = transform(original_input)
+                transformed_output = transform(original_input)
+                args, kwargs = _normalize_transform_output(transformed_output, mode=transform_mode)
                 yield original_input, target_func(*args, **kwargs)
             except Exception as e:
                 yield original_input, e
@@ -2593,7 +2859,9 @@ def parallel_thread(
 
         def wrapper(original_input: T_Input) -> tuple[T_Input, T_Output | Exception]:
             try:
-                args, kwargs = transform(original_input)
+                # args, kwargs = transform(original_input)
+                transformed_output = transform(original_input)
+                args, kwargs = _normalize_transform_output(transformed_output, mode=transform_mode)
                 return original_input, target_func(*args, **kwargs)
             except Exception as e:
                 return original_input, e
@@ -2619,15 +2887,19 @@ def parallel_thread(
             for _ in range(thread_cnt):
                 try:
                     original_input = next(inputs_iterator)
-                    args, kwargs = transform(original_input)
-                    future = executor.submit(target_func, *args, **kwargs)
-                    future_to_input[future] = original_input
+                    # args, kwargs = transform(original_input)
                 except StopIteration:
                     break
-                except Exception as e:
-                    fail_cnt += 1
-                    failed_tasks.append((original_input, e))
-                    yield original_input, e
+                else:
+                    try:
+                        transformed_output = transform(original_input)
+                        args, kwargs = _normalize_transform_output(transformed_output, mode=transform_mode)
+                        future = executor.submit(target_func, *args, **kwargs)
+                        future_to_input[future] = original_input
+                    except Exception as e:
+                        fail_cnt += 1
+                        failed_tasks.append((original_input, e))
+                        yield original_input, e
 
             # Process tasks as they complete
             while future_to_input:
@@ -2645,15 +2917,19 @@ def parallel_thread(
                     # Submit the next task from the iterator
                     try:
                         next_input = next(inputs_iterator)
-                        args, kwargs = transform(next_input)
-                        new_future = executor.submit(target_func, *args, **kwargs)
-                        future_to_input[new_future] = next_input
                     except StopIteration:
                         pass  # No more tasks to submit
-                    except Exception as e:
-                        fail_cnt += 1
-                        failed_tasks.append((next_input, e))
-                        yield next_input, e
+                    else:
+                        try:
+                            # args, kwargs = transform(next_input)
+                            transformed_output = transform(next_input)
+                            args, kwargs = _normalize_transform_output(transformed_output, mode=transform_mode)
+                            new_future = executor.submit(target_func, *args, **kwargs)
+                            future_to_input[new_future] = next_input
+                        except Exception as e:
+                            fail_cnt += 1
+                            failed_tasks.append((next_input, e))
+                            yield next_input, e
 
                     if fail_cnt >= max_fail_cnt:
                         xerr(f"Exceeded max fail count ({max_fail_cnt}). Halting.")
@@ -2670,7 +2946,293 @@ def parallel_thread(
         raise failed_tasks[-1][1] from None
 
 
-if __name__ == "__main__":
-    import fire
+def classification_report(
+    y_true: list[float] | None = None,
+    y_pred: list[float] | None = None,
+    fname: str | None = None,
+    y_true_idx: int = 0,
+    y_pred_idx: int = 1,
+    digits: int = 3,
+    positive_label: int = 1,
+    col_width: int = 17,
+    print_report: bool = True,
+):
+    """
+    轻量级分类评估报告，支持二分类和多分类
 
+    参数:
+        y_true: list[int/str] or np.ndarray
+        y_pred: list[int/str] or np.ndarray
+        digits: 小数点保留位数（仅影响打印）
+        positive_label: 二分类正类标签，必须出现在数据标签集合中
+        col_width: 打印表格列宽
+        print_report: 是否打印报告；False 时仅返回结果字典
+
+    返回:
+        dict: 包含 per_class 和 summary
+            per_class: {label: {"precision", "recall", "f1", "support"}}
+            summary: {
+                "accuracy", "balanced_accuracy",
+                "mcc",
+                "specificity"(仅二分类),
+                "micro avg": {"precision","recall","f1"},
+                "macro avg": {"precision","recall","f1"},
+                "weighted avg": {"precision","recall","f1"},
+                "total": 样本总数
+            }
+    """
+    import numpy as np
+
+    def safe_div(n: float, d: float) -> float:
+        return float(n) / float(d) if d != 0 else 0.0
+
+    if y_true is None and y_pred is None:
+        assert fname
+        y_true = []
+        y_pred = []
+        for ll in read_file(fname):
+            y_true.append(int(ll[y_true_idx]))
+            y_pred.append(int(ll[y_pred_idx]))
+
+    y_true = np.asarray(y_true)
+    y_pred = np.asarray(y_pred)
+
+    assert y_true is not None
+    assert y_pred is not None
+    if len(y_true) != len(y_pred):
+        raise ValueError("y_true 与 y_pred 的长度不一致")
+    total = len(y_true)
+    if total == 0:
+        raise ValueError("空输入：没有样本")
+    # 全局 accuracy
+    accuracy = safe_div(np.sum(y_true == y_pred), total)
+
+    # 标签集合（保持稳定顺序）
+    labels = np.unique(np.concatenate([y_true, y_pred]))
+    positive_label = labels.dtype.type(positive_label)
+    n_labels = len(labels)
+
+    # ================= 二分类 =================
+    if n_labels == 2:
+        if positive_label not in set(labels.tolist()):
+            msg = f"positive_label={positive_label} 不在数据标签集合 {labels.tolist()} 中，请显式指定。"
+            raise ValueError(msg)
+        negative_label = labels.dtype.type(next(label for label in labels if label != positive_label))
+
+        # 统计
+        tp = int(np.sum((y_true == positive_label) & (y_pred == positive_label)))
+        fp = int(np.sum((y_true == negative_label) & (y_pred == positive_label)))
+        fn = int(np.sum((y_true == positive_label) & (y_pred == negative_label)))
+        tn = int(np.sum((y_true == negative_label) & (y_pred == negative_label)))
+        xdebug(f"{n_labels=}, {tp=}, {fp=}, {tn=}, {fn=}, {positive_label=}, {negative_label=}")
+
+        # 正类
+        precision_pos = safe_div(tp, tp + fp)
+        recall_pos = safe_div(tp, tp + fn)
+        f1_pos = safe_div(2 * precision_pos * recall_pos, precision_pos + recall_pos)
+        support_pos = int(np.sum(y_true == positive_label))
+
+        # 负类（当作对称 one-vs-rest）
+        precision_neg = safe_div(tn, tn + fn)  # NPV
+        recall_neg = safe_div(tn, tn + fp)  # TNR / specificity
+        f1_neg = safe_div(2 * precision_neg * recall_neg, precision_neg + recall_neg)
+        support_neg = int(np.sum(y_true == negative_label))
+
+        per_class = {
+            positive_label: {"precision": precision_pos, "recall": recall_pos, "f1": f1_pos, "support": support_pos},
+            negative_label: {"precision": precision_neg, "recall": recall_neg, "f1": f1_neg, "support": support_neg},
+        }
+
+        precisions = [precision_pos, precision_neg]
+        recalls = [recall_pos, recall_neg]
+        f1s = [f1_pos, f1_neg]
+        supports = [support_pos, support_neg]
+
+        macro = {
+            "precision": float(np.mean(precisions)),
+            "recall": float(np.mean(recalls)),
+            "f1": float(np.mean(f1s)),
+        }
+        weighted = {
+            "precision": float(np.sum(np.array(precisions) * np.array(supports)) / total),
+            "recall": float(np.sum(np.array(recalls) * np.array(supports)) / total),
+            "f1": float(np.sum(np.array(f1s) * np.array(supports)) / total),
+        }
+        micro = {"precision": accuracy, "recall": accuracy, "f1": accuracy}
+
+        balanced_accuracy = macro["recall"]
+        specificity = recall_neg
+        denom = np.sqrt((tp + fp) * (tp + fn) * (tn + fp) * (tn + fn))
+        mcc = safe_div((tp * tn) - (fp * fn), denom)
+
+        summary = {
+            "accuracy": accuracy,
+            "balanced_accuracy": balanced_accuracy,
+            "specificity": specificity,
+            "mcc": mcc,
+            "micro avg": micro,
+            "macro avg": macro,
+            "weighted avg": weighted,
+            "total": int(total),
+        }
+
+    # ================= 多分类 =================
+    label_to_idx = {lab: i for i, lab in enumerate(labels)}
+    idx_true = np.array([label_to_idx[v] for v in y_true])
+    idx_pred = np.array([label_to_idx[v] for v in y_pred])
+
+    cm = np.zeros((n_labels, n_labels), dtype=int)
+    for i in range(total):
+        cm[idx_true[i], idx_pred[i]] += 1
+
+    per_class = {}
+    precisions, recalls, f1s, supports = [], [], [], []
+
+    for i, c in enumerate(labels):
+        tp = cm[i, i]
+        fp = int(np.sum(cm[:, i]) - tp)
+        fn = int(np.sum(cm[i, :]) - tp)
+        support = int(np.sum(cm[i, :]))
+
+        precision = safe_div(tp, tp + fp)
+        recall = safe_div(tp, tp + fn)
+        f1 = safe_div(2 * precision * recall, precision + recall)
+
+        per_class[c] = {"precision": precision, "recall": recall, "f1": f1, "support": support}
+
+        precisions.append(precision)
+        recalls.append(recall)
+        f1s.append(f1)
+        supports.append(support)
+
+    macro = {"precision": float(np.mean(precisions)), "recall": float(np.mean(recalls)), "f1": float(np.mean(f1s))}
+    weighted = {
+        "precision": float(np.sum(np.array(precisions) * np.array(supports)) / total),
+        "recall": float(np.sum(np.array(recalls) * np.array(supports)) / total),
+        "f1": float(np.sum(np.array(f1s) * np.array(supports)) / total),
+    }
+
+    tp_sum = float(np.trace(cm))
+    fp_sum = float(np.sum(cm) - np.trace(cm))
+    fn_sum = float(np.sum(cm) - np.trace(cm))
+    micro_p = safe_div(tp_sum, tp_sum + fp_sum)
+    micro_r = safe_div(tp_sum, tp_sum + fn_sum)
+    micro_f1 = safe_div(2 * micro_p * micro_r, micro_p + micro_r)
+    micro = {"precision": micro_p, "recall": micro_r, "f1": micro_f1}
+
+    balanced_accuracy = macro["recall"]
+
+    t_sum = float(np.sum(cm))
+    row_sums = np.sum(cm, axis=1).astype(float)
+    col_sums = np.sum(cm, axis=0).astype(float)
+    s = float(np.sum(row_sums * col_sums))
+    trace = float(np.trace(cm))
+    denom_left = t_sum**2 - np.sum(col_sums**2)
+    denom_right = t_sum**2 - np.sum(row_sums**2)
+    denom = np.sqrt(denom_left * denom_right)
+    mcc = safe_div((trace * t_sum) - s, denom)
+
+    summary = {
+        "accuracy": accuracy,
+        "balanced_accuracy": balanced_accuracy,
+        "mcc": mcc,
+        "macro avg": macro,
+        "micro avg": micro,
+        "weighted avg": weighted,
+        "total": int(total),
+    }
+
+    if print_report:
+        header = (
+            f"{'Class':>{col_width}} {'Precision':>{col_width}} "
+            f"{'Recall':>{col_width}} {'F1':>{col_width}} {'Support':>{col_width}}"
+        )
+        print(header)
+        print("-" * len(header))
+        for c in labels:
+            p = per_class[c]["precision"]
+            r = per_class[c]["recall"]
+            f = per_class[c]["f1"]
+            s = per_class[c]["support"]
+            print(
+                f"{c!s:>{col_width}} {p:{col_width}.{digits}f} "
+                f"{r:{col_width}.{digits}f} {f:{col_width}.{digits}f} {s:{col_width}d}"
+            )
+
+        print("\nSummary")
+        print("-" * (len("Summary") + 0))
+        print(f"{'accuracy':>{col_width}} {summary['accuracy']:{col_width}.{digits}f}")
+        print(f"{'balanced_acc':>{col_width}} {summary['balanced_accuracy']:{col_width}.{digits}f}")
+        print(f"{'mcc':>{col_width}} {summary['mcc']:{col_width}.{digits}f}")
+
+        header_avg = (
+            f"{'Average':>{col_width}} {'Precision':>{col_width}} "
+            f"{'Recall':>{col_width}} {'F1':>{col_width}} {'Support':>{col_width}}"
+        )
+        print(header_avg)
+        print("-" * len(header_avg))
+        for avg_name in ["micro avg", "macro avg", "weighted avg"]:
+            avg_metrics = summary[avg_name]
+            print(
+                f"{avg_name:>{col_width}} {avg_metrics['precision']:{col_width}.{digits}f}"
+                f" {avg_metrics['recall']:{col_width}.{digits}f} "
+                f"{avg_metrics['f1']:{col_width}.{digits}f} {total:{col_width}d}"
+            )
+
+    return {"per_class": per_class, "summary": summary}
+
+
+def import_from_string(path: str):
+    """
+    根据字符串动态导入函数或对象
+    :param path: 例如 "run.func1" 表示从 run.py 中获取 func1
+    :return: 对应的对象（函数、类、变量等）
+    """
+    import importlib
+    import sys
+
+    sys.path.append(".")  # 把当前目录加进去
+    sys.path.append(os.getcwd())  # 把当前目录加进去
+
+    if "." not in path:
+        raise ValueError("路径格式错误，应为 'module.attr'")
+
+    module_name, attr_name = path.rsplit(".", 1)
+    module = importlib.import_module(module_name)
+    return getattr(module, attr_name)
+
+
+def run_with_file_v2(
+    ifname: str,
+    func: str,  # "run.fun"
+    keys: list[KeyType] | None = None,
+    expand_result: bool = False,
+    transform_mode: Literal["single_arg", "args"] = "args",
+    **func_kwargs,
+):
+    if keys is None:
+        keys = [0]
+
+    if isinstance(keys, int):
+        keys = [keys]
+
+    real_func = import_from_string(func)
+    keys_func = [make_key_func(key) for key in keys]
+    for ll in read_file(ifname):
+        real_keys = [key_func(ll) for key_func in keys_func]
+        if transform_mode == "args":
+            result = real_func(*real_keys, **func_kwargs)
+        else:
+            result = real_func(real_keys, **func_kwargs)
+
+        if isinstance(result, (Generator, Iterator)):
+            result = list(result)
+
+        if expand_result:
+            xprint(*ll, *result)
+        else:
+            xprint(*ll, result)
+
+
+if __name__ == "__main__":
     fire.Fire()

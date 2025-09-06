@@ -111,6 +111,7 @@ zt wait binary from"gh-r" for \
 
 zinit wait lucid light-mode for from'gh-r' as'program' id-as'navi' pick'navi' denisidoro/navi
 
+zt wait for reegnz/jq-zsh-plugin
 
 # # Always starting with insert mode for each command line
 zinit ice depth=1
@@ -121,6 +122,7 @@ ZVM_LINE_INIT_MODE=$ZVM_MODE_INSERT
 
 zinit ice as"program" pick"$ZPFX/bin/git-*" src"etc/git-extras-completion.zsh" make"PREFIX=$ZPFX"
 zinit light tj/git-extras
+
 #
 #zinit ice if'[[ -n "$commands[rg]" ]]' binary from"gh-r" lman lbin"**/rg -> rg" 
 #zinit load @BurntSushi/ripgrep
@@ -181,9 +183,10 @@ zt wait for \
     git config --global interactive.diffFilter "diff-so-fancy --patch";' \
   z-shell/zsh-diff-so-fancy \
   atload$'!__forgit_atload;compdef _git gco=git-checkout;' wfxr/forgit \
-  as"program" atload'export SSHHOME=$XDG_CONFIG_HOME' pick'sshrc' IngoMeyer441/sshrc \
-  atinit"local zew_word_style=whitespace" \
-  zdharma-continuum/zsh-editing-workbench 
+
+  # as"program" atload'export SSHHOME=$XDG_CONFIG_HOME' pick'sshrc' IngoMeyer441/sshrc \
+  # atinit"local zew_word_style=whitespace" \
+  # zdharma-continuum/zsh-editing-workbench 
 
 
 #zt wait'1' for \
@@ -198,12 +201,16 @@ zt wait for \
 #  svn OMZP::docker \
 #  svn OMZP::ripgrep
 
-zt wait'[[ -n $WORK_ENV ]]' id-as for \
+zt wait'[[ -n $WORK_ENV ]]' id-as'work-env' for \
   $XDG_CONFIG_HOME/work/$WORK_ENV
 
 zt wait for \
   blockf as'completion' atpull'zinit creinstall -q .' id-as'commiyou-completions'\
   $XDG_CONFIG_HOME/zsh/completions
+
+
+zinit ice lucid nocompile wait'0e' nocompletions
+zinit load MenkeTechnologies/zsh-more-completions
 
 
 # 使用 zinit 处理特定的补全脚本
@@ -234,4 +241,4 @@ zt wait'0b' for \
   atload"!_zsh_autosuggest_start" zsh-users/zsh-autosuggestions 
 
 zupdate() { [[ $# -eq 0 ]] && zinit update --all --parallel || zinit update --parallel 15 "$@" }
-zt wait'0c' for atload'compdef _zinit zi; compdef _zinit_update zupate;' zdharma-continuum/null
+zt wait'0c' for atload'compdef _zinit zi; compdef _zinit_update zupdate;' zdharma-continuum/null

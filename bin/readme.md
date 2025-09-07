@@ -201,26 +201,35 @@
 
 ### `slbk`
 
-根据一个文件中的键，筛选另一个文件中的行 (select line by key)。这是一个非常强大的工具，可以看作是针对结构化文本文件的 `grep`。
+根据一个或多个文件中的键，筛选另一个文件中的行 (select line by key)。这是一个非常强大的工具，可以看作是针对结构化文本文件的 `grep`。
+
+**重要提示:** 列索引是从 **0** 开始计算的。例如，第一列的索引是 `0`，第二列是 `1`。范围（如 `2-4`）是包含端点的。
 
 **常见用法:**
 
 - **基础筛选:**
-  筛选出 `data.tsv` 中，第一列的值存在于 `keys.txt` 中的行。
+  筛选出 `data.tsv` 中，第一列 (索引 `0`) 的值存在于 `keys.txt` 中的行。
 
   ```shell
   slbk -f keys.txt -K 0 data.tsv
   ```
 
+- **使用多个密钥文件:**
+  从 `keys1.txt` 和 `keys2.txt` 中收集所有密钥，然后用它们来筛选 `data.tsv`。
+
+  ```shell
+  slbk -f keys1.txt -f keys2.txt -K 0 data.tsv
+  ```
+
 - **反向筛选:**
-  选择 `data.tsv` 中，第一列的值不存在于 `keys.txt` 中的行。
+  选择 `data.tsv` 中，第一列 (索引 `0`) 的值不存在于 `keys.txt` 中的行。
 
   ```shell
   slbk -f keys.txt -K 0 -r data.tsv
   ```
 
 - **多列匹配与不同分隔符:**
-  筛选 `data.csv` 中第2和第4列组成的键，该键需要匹配 `keys.csv` 中第1和第2列组成的键。两个文件都使用逗号作为分隔符。
+  筛选 `data.csv` 中第3和第5列 (索引 `2` 和 `4`) 组成的键，该键需要匹配 `keys.csv` 中第2和第3列 (索引 `1` 和 `2`) 组成的键。两个文件都使用逗号作为分隔符。
 
   ```shell
   slbk -f keys.csv -k 1,2 -K 2,4 -d ',' -D ',' data.csv

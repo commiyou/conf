@@ -1,0 +1,40 @@
+#!/bin/bash
+#
+# tsv-format.sh (macOS Version)
+#
+# 读取剪贴板中的 TSV 文本, 转换为 HTML 表格,
+# 并将其作为富文本格式放回剪贴板。
+
+# 检查 textutil 是否存在
+if ! command -v textutil >/dev/null 2>&1; then
+    echo "错误: 核心工具 textutil 未找到。" >&2
+    exit 1
+fi
+
+echo "📋 正在转换剪贴板中的 TSV 数据..."
+
+# 1. 从剪贴板读取 (pbpaste)
+# 2. 用 awk 转换为 HTML
+# 3. 用 textutil 将 HTML 转为 RTF (macOS 剪贴板原生支持)
+# 4. 写回剪贴板 (pbcopy)
+pbpaste | awk '
+BEGIN {
+    FS="\t";
+    print "<table>";
+}
+{
+    print "<tr>";
+    for (i=1; i<=NF; i++) {
+        cell = $i;
+        gsub(/&/, "\\&amp;", cell);
+        gsub(/</, "\\&lt;", cell);
+        gsub(/>/, "\\&gt;", cell);
+        print "<td>" cell "</td>";
+    }
+    print "</tr>";
+}
+END {
+    print "</table>";
+}' | textutil -stdin -format html -convert rtf -stdout -inputencoding utf8 | pbcopy
+
+echo "✅ 完成！现在可以粘贴为表格了。" >&2

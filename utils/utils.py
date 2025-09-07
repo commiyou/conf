@@ -542,23 +542,6 @@ def is_valid_value(value: Any) -> bool:
     return bool(value is not None and not pd.isna(value))
 
 
-def _read_excel(
-    path: str | Path,
-    norm: bool = True,
-) -> Generator[list[str], None, None]:
-    """Helper to read an Excel file into lists of strings."""
-    # 明确警告：此函数将整个文件加载到内存中。
-    df = pd.read_excel(path, dtype=str, header=None)
-    it: Iterator[tuple] = df.itertuples(index=False)
-
-    for row in it:
-        # 将 NaN 或 None 转换为空字符串
-        cells = ["" if pd.isna(cell) else str(cell) for cell in row]
-        if norm:
-            cells = [remove_invalid_char(cell) for cell in cells]
-        yield cells
-
-
 def _read_csv(
     text_iterator: Iterator[str],
     sep: str,
@@ -575,21 +558,11 @@ def _read_text_lines(
     text_iterator: Iterator[str],
     sep: str,
     maxsplit: int,
-    norm: bool,
-    filter_func: Callable[[list[str]], bool] | None,
 ) -> Generator[list[str], None, None]:
     """Helper to read and split plain text lines."""
     for line in text_iterator:
         ll = split_str(line, sep=sep, maxsplit=maxsplit)
-        if norm:
-            # 使用列表推导式通常比 lmap 略快
-            ll = [remove_invalid_char(x) for x in ll]
-
-        if filter_func is not None and not filter_func(ll):
-            continue
         yield ll
-
-        import sys
 
 
 def _decode_with_tolerance(
@@ -617,97 +590,185 @@ def _decode_with_tolerance(
             continue
 
 
-def read_file(  # noqa: C901, PLR0912
+def _open_excel_iterator(
+    path: str | Path,
+) -> Generator[list[str], None, None]:
+    """[new] Single responsibility: parses an Excel file into a list[str] iterator."""
+    import pandas as pd
+
+    df = pd.read_excel(path, dtype=str, header=None)
+    for row in df.itertuples(index=False):
+        yield ["" if pd.isna(cell) else str(cell) for cell in row]
+
+
+def _open_text_iterator(
+    input_stream: IO,
+    *,
+    encoding: str,
+    errors: str,
+    decode_error_tolerance_count: int,
+    sep: str,
+    maxsplit: int,
+    quotechar: str | None,
+) -> Generator[list[str], None, None]:
+    """[new] Single responsibility: decodes a text stream and splits it into a list[str] iterator based on rules (text/csv)."""
+    if isinstance(input_stream, io.TextIOBase):
+        text_iterator: Iterator[str] = input_stream
+    else:
+        text_iterator = _decode_with_tolerance(
+            input_stream,
+            encoding,
+            errors,
+            decode_error_tolerance_count,
+        )
+
+    if quotechar:
+        yield from _read_csv(text_iterator, sep, quotechar)
+    else:
+        yield from _read_text_lines(text_iterator, sep, maxsplit)
+
+
+def read_file(
     input_: str | Path | IO[bytes] | IO[str] | None = None,
     *,
+    # --- Text parsing parameters (passed to _open_text_iterator) ---
     sep: str = "\t",
     encoding: str = "utf-8",
     maxsplit: int = -1,
     errors: str = "strict",
     decode_error_tolerance_count: int = 10,
-    skip_header: bool = False,
-    tqdm: str | bool | None = None,
-    total: int | None = None,
-    skip_notexists: bool = False,
-    filter_func: Callable[[Sequence[str]], bool] | None = None,
-    norm: bool = True,  # 是否替换掉bad char， 如chr(160) 不间断空格
     quotechar: str | None = None,
+    # --- Unified processing parameters ---
+    skip_header: bool = False,
+    filter_func: Callable[[Sequence[str]], bool] | None = None,
+    norm: bool = True,
+    # --- Progress bar and filesystem parameters ---
+    total: int | None = None,
+    tqdm_desc_func: KeyType = None,
+    skip_notexists: bool = False,
 ) -> Generator[list[str], None, None]:
-    """Read the file line by line with a specified encoding and return iterator of list after splitting by sep.
+    r"""智能文件读取器，作为统一的逻辑处理器，支持多种文件格式、自动计算总行数并显示动态进度条。
 
-    input_: file name/path or io; excel时，返回的每一列都是str
-    filter_func: 对line split后的list进行判断，为true时保留
+    Args:
+        input_ (str | Path | IO | None): 输入源。可以是文件路径 (str/Path)，
+            一个已打开的IO流对象 (例如 sys.stdin.buffer)，或者 None (将自动从 sys.stdin.buffer 读取)。
+            支持文本文件、CSV文件和Excel文件 (.xls, .xlsx)。
+        sep (str): 文本文件的列分隔符。默认为 '\t'。
+        encoding (str): 文本文件的解码格式。默认为 'utf-8'。
+        maxsplit (int): 每行最大拆分次数。默认为 -1 (无限制)。
+        errors (str): 解码错误的处理方式 (例如 'strict', 'ignore')。默认为 'strict'。
+        decode_error_tolerance_count (int): 在因解码错误而失败前，允许的解码错误行数。默认为 10。
+        quotechar (str | None): CSV文件的引用字符。如果提供此参数，将启用CSV解析模式。默认为 None。
+        skip_header (bool): 是否跳过输入的第一行。默认为 False。
+        filter_func (Callable | None): 一个函数，用于过滤行。该函数接收一个行(list[str])作为参数，
+            返回 True 则保留该行，返回 False 则跳过。默认为 None。
+        norm (bool): 是否对每行中的字符串元素进行标准化（例如，移除无效字符）。默认为 True。
+        total (int | None): 手动指定总行数以初始化进度条。如果为 None，对于本地的小文件会自动计算。
+        tqdm_desc_func (KeyType | None): 一个函数或列索引，用于为进度条生成动态描述。
+        skip_notexists (bool): 如果为 True 且输入是文件路径但文件不存在，则静默返回，不抛出错误。默认为 False。
+
+    Yields:
+        Generator[list[str], None, None]: 一个生成器，每次产出一行处理后的数据，格式为字符串列表。
     """
-    if input_ is None:
-        input_ = sys.stdin.buffer
 
-    if isinstance(input_, (str, Path)):
-        if skip_notexists and not os.path.exists(input_):
-            return
-        # Excel 是特殊情况，因其格式和库的限制，单独处理
-        # 修正了原先只检查 str 的 bug
-        path_str = str(input_)
-        if path_str.endswith(".xlsx"):
-            iterator = _read_excel(input_, norm=norm)
-            if skip_header:
-                next(iterator, None)
-            if tqdm:
-                # excel 读取时，可以方便地获取总行数
-                df_len = len(pd.read_excel(path_str, usecols=[0]))
-                pbar = tqdm_.tqdm(iterator, total=df_len, desc=f"Processing {path_str}")
-                yield from pbar
-            else:
-                yield from iterator
-            return
-    # --- 2. 统一创建上下文和迭代器 ---
-    # 默认启用tqdm（如果是终端环境）
-    use_tqdm = tqdm is True or (tqdm is None and hasattr(sys.stderr, "isatty") and sys.stderr.isatty())
-    tqdm_desc = tqdm if isinstance(tqdm, str) else f"Processing {input_}"
-    if isinstance(input_, (str, Path)) and not is_large_file(input_):
-        with open(input_, encoding=encoding) as fd:
-            total = sum(1 for _ in fd)
+    # --- 1. Initialization and pre-flight checks ---
+    desc_generator = make_key_func(tqdm_desc_func) if tqdm_desc_func else None
+    calculated_total = total
 
-    # 根据输入类型，创建合适的上下文管理器和二进制流
-    if isinstance(input_, (str, Path)):
-        context_manager = open(input_, "rb")
-    elif hasattr(input_, "read"):  # Duck-typing for IO streams
-        context_manager = contextlib.nullcontext(input_)
-    else:
-        raise TypeError(f"Unsupported input type: {type(input_)}")
-    with context_manager as binary_stream:
-        # --- 3. 将输入统一为文本迭代器 ---
-        # 兼容二进制流 (IO[bytes]) 和文本流 (IO[str])
-        if isinstance(binary_stream, (io.TextIOBase)):
-            # 输入本身就是文本流
-            text_iterator: Iterator[str] = binary_stream
-        else:
-            # 输入是二进制流，用TextIOWrapper包装以进行解码
-            # 解决BOM问题，对于csv读取很关键
-            effective_encoding = "utf-8-sig" if quotechar and "utf" in encoding.lower() else encoding
-            # text_iterator = io.TextIOWrapper(binary_stream, encoding=effective_encoding, errors=errors)
-            text_iterator = _decode_with_tolerance(
-                binary_stream,
-                encoding,
-                errors,
-                decode_error_tolerance_count,
+    # -- Handle `skip_notexists` --
+    if isinstance(input_, (str, Path)) and skip_notexists and not os.path.exists(input_):
+        xerr(f"File not found: {input_}. Skipping.")
+        return
+
+    # -- Calculate `total` for the progress bar --
+    if calculated_total is None and isinstance(input_, (str, Path)):  # noqa: SIM102
+        if not str(input_).endswith((".xlsx", ".xls")) and not is_large_file(input_):
+            with open(input_, encoding=encoding, errors="ignore") as f:
+                calculated_total = sum(1 for _ in f)
+
+    pbar = tqdm_.tqdm(total=calculated_total, desc="Initializing...")
+
+    # --- 2. Get the raw row iterator ---
+    row_iterator: Generator[list[str], None, None]
+    input_stream: IO | None = None
+    stream_opened_by_func = False
+
+    try:
+        if input_ is None:
+            input_stream = sys.stdin.buffer
+            input_stream = cast("IO", input_stream)
+            row_iterator = _open_text_iterator(
+                input_stream,
+                encoding=encoding,
+                errors=errors,
+                decode_error_tolerance_count=decode_error_tolerance_count,
+                sep=sep,
+                maxsplit=maxsplit,
+                quotechar=quotechar,
             )
-
-        # --- 4. 调度到具体的处理函数 ---
-        if quotechar:
-            iterator = _read_csv(text_iterator, sep, quotechar)
+        elif isinstance(input_, (str, Path)):
+            if str(input_).endswith((".xlsx", ".xls")):
+                row_iterator = _open_excel_iterator(input_)
+            else:
+                input_stream = open(input_, "rb")  # noqa: SIM115
+                stream_opened_by_func = True
+                row_iterator = _open_text_iterator(
+                    input_stream,
+                    encoding=encoding,
+                    errors=errors,
+                    decode_error_tolerance_count=decode_error_tolerance_count,
+                    sep=sep,
+                    maxsplit=maxsplit,
+                    quotechar=quotechar,
+                )
+        elif hasattr(input_, "read"):
+            # Handle cases where input_ is already an open stream (binary or text)
+            input_stream = input_
+            row_iterator = _open_text_iterator(
+                input_stream,  # type: ignore
+                encoding=encoding,
+                errors=errors,
+                decode_error_tolerance_count=decode_error_tolerance_count,
+                sep=sep,
+                maxsplit=maxsplit,
+                quotechar=quotechar,
+            )
         else:
-            # 传递 filter_func 到最终处理环节，避免在调度器中处理复杂逻辑
-            iterator = _read_text_lines(text_iterator, sep, maxsplit, norm, filter_func)
+            msg = f"Unsupported input type: {type(input_)}"
+            raise TypeError(msg)
 
+        # --- 3. Unified processing loop ---
         if skip_header:
-            next(iterator, None)
-            if total is not None:
-                total -= 1  # 如果提供了总数，需要减去表头
+            next(row_iterator, None)
+            if pbar.total is not None and pbar.total > 0:
+                pbar.total -= 1
+                pbar.refresh()
 
-        if use_tqdm:
-            iterator = tqdm_.tqdm(iterator, total=total, desc=tqdm_desc)
+        for row_list in row_iterator:
+            processed_row = row_list
 
-        yield from iterator
+            if norm:
+                processed_row = [
+                    remove_invalid_char(cell) if isinstance(cell, str) else cell for cell in processed_row
+                ]
+
+            if filter_func and not filter_func(processed_row):
+                continue
+
+            if desc_generator:
+                desc_text = str(desc_generator(processed_row))
+                desc_preview = (desc_text[:47] + "...") if len(desc_text) > 50 else desc_text
+                pbar.set_description(f"Processing: {desc_preview}")
+
+            pbar.update(1)
+            yield processed_row
+
+    finally:
+        # --- 4. Cleanup ---
+        # Only close the stream if this function opened it
+        if stream_opened_by_func and input_stream:
+            input_stream.close()
+        pbar.close()
 
 
 class AutoClosingFile:

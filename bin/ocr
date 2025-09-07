@@ -1,9 +1,11 @@
-#!/Users/youbin/miniconda3/bin/python3
+#!~/miniconda3/bin/python3
 """在“安全性与隐私”窗口中，选择“隐私”标签。 在左侧栏中，向下滚动并选择“屏幕录制”。"""
+
 import os
 import time
-from rapidocr_onnxruntime import RapidOCR
+
 import pyperclip
+from rapidocr_onnxruntime import RapidOCR
 
 
 def main():

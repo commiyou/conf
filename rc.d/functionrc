@@ -1,48 +1,46 @@
 # vim: ft=zsh
 
 die() {
-  echo "$@" 1>&2 ; exit 1;
+  echo "$@" 1>&2
+  exit 1
 }
 err() {
-  echo "$@" 1>&2 
+  echo "$@" 1>&2
 }
 
 # Reset
-Color_Off='\033[0m'       # Text Reset
+Color_Off='\033[0m' # Text Reset
 
 # Regular Colors
-Black='\033[0;30m'        # Black
-Red='\033[0;31m'          # Red
-Green='\033[0;32m'        # Green
-Yellow='\033[0;33m'       # Yellow
-Blue='\033[0;34m'         # Blue
-Purple='\033[0;35m'       # Purple
-Cyan='\033[0;36m'         # Cyan
-White='\033[0;37m'        # White
+Black='\033[0;30m'  # Black
+Red='\033[0;31m'    # Red
+Green='\033[0;32m'  # Green
+Yellow='\033[0;33m' # Yellow
+Blue='\033[0;34m'   # Blue
+Purple='\033[0;35m' # Purple
+Cyan='\033[0;36m'   # Cyan
+White='\033[0;37m'  # White
 
-echor () {
+echor() {
   echo -e "${Red}$*${Color_Off}"
 }
 
-echog () {
+echog() {
   echo -e "${Green}$*${Color_Off}"
 }
 
-
-ts(){
-  for ts_ in $@
-  do
-    if [[ ${#ts_} == 16 ]]
-    then
+ts() {
+  for ts_ in $@; do
+    if [[ ${#ts_} == 16 ]]; then
       let ns=$ts_%1000000
       let ts_=$ts_/1000000
-      r=$(date -d @$ts_  +"%Y-%m-%d %H:%M:%S")
-      [ -z "$r"  ] && continue
-      red $ts_$ns : $r.$ns 2>/dev/null || echo $ts_$ns : $r.$ns
+      r=$(date -d @$ts_ +"%Y-%m-%d %H:%M:%S")
+      [ -z "$r" ] && continue
+      red $ts_$ns : "$r".$ns 2>/dev/null || echo $ts_$ns : "$r".$ns
     else
-      r=$(date -d @$ts_  +"%Y-%m-%d %H:%M:%S")
-      [ -z "$r"  ] && continue
-      red $ts_: $r.$ns 2>/dev/null || echo $ts_: $r.$ns
+      r=$(date -d @"$ts_" +"%Y-%m-%d %H:%M:%S")
+      [ -z "$r" ] && continue
+      red "$ts_": "$r"."$ns" 2>/dev/null || echo "$ts_": "$r"."$ns"
     fi
   done
 }
@@ -56,19 +54,19 @@ check_or_die() {
 git_repo_name() {
   local repo_path
   if repo_path="$(git rev-parse --show-toplevel 2>/dev/null)" && [[ -n "$repo_path" ]]; then
-    echo ${repo_path:t}
+    echo "${repo_path:t}"
   fi
 }
 
 git_current_branch() {
   local ref
-  ref=$(command git symbolic-ref --quiet HEAD 2> /dev/null)
+  ref=$(command git symbolic-ref --quiet HEAD 2>/dev/null)
   local ret=$?
   if [[ $ret != 0 ]]; then
-    [[ $ret == 128 ]] && return  # no git repo.
-    ref=$(command git rev-parse --short HEAD 2> /dev/null) || return
+    [[ $ret == 128 ]] && return # no git repo.
+    ref=$(command git rev-parse --short HEAD 2>/dev/null) || return
   fi
-  echo ${ref#refs/heads/}
+  echo "${ref#refs/heads/}"
 }
 
 git_current_remote_branch() {
@@ -87,15 +85,14 @@ git_config_user() {
     email="$1"
     name="$2"
   fi
-  git config user.email $email
-  git config user.name $name
+  git config user.email "$email"
+  git config user.name "$name"
 }
 
 filepath() {
   local p="${1:-.}"
-  if command -v realpath > /dev/null 2>&1 
-  then
-    realpath "${p}" 
+  if command -v realpath >/dev/null 2>&1; then
+    realpath "${p}"
   else
     readlink -f "$p"
   fi
@@ -103,25 +100,42 @@ filepath() {
 
 myip() {
   if [[ -n "$SSH_CONNECTION" ]]; then
-    echo $SSH_CONNECTION | cut -f3 -d' '
-  elif [[ $(uname -s) =~ Darwin* ]]; then
-    ipconfig getifaddr en0
-  else
-    hostname -i | tail -n +1 | xargs -n1
+    # 如果是 SSH 会话，打印客户端 IP (此逻辑跨平台通用)
+    echo "$SSH_CONNECTION" | cut -f3 -d' '
+    return
   fi
+
+  # 本地会话，根据操作系统获取本机主 IP 地址
+  case "$(uname)" in
+  'Linux')
+    # Linux 系统, 使用 hostname -i
+    # -i, --ip-address: an IP address for the host name
+    # 在某些发行版中，-i 可能返回 127.0.1.1，而 -I (大写) 更佳。
+    # 但为保持与原始脚本的意图一致，这里仍可用 -i。
+    # xargs -n1 用于将单行输出的多个 IP 地址格式化为每行一个。
+    hostname -i | xargs -n1
+    ;;
+  'Darwin')
+    # macOS 系统, 使用 ipconfig + netstat
+    ipconfig getifaddr "$(netstat -rn | awk '/^default/ {print $NF; exit}')"
+    ;;
+  *)
+    echo "Unsupported OS: $(uname)" >&2
+    return 1
+    ;;
+  esac
 }
 
 fp() {
   [[ $# = 0 ]] && echo $(myip | head -1):$(filepath .) && return
   for file in "$@"; do
-    [[ -e "$file" ]] && echo $(myip | head -1):$(filepath "$file") \
-      || echo "can NOT find $file" >&2
-    done
+    [[ -e "$file" ]] && echo $(myip | head -1):$(filepath "$file") ||
+      echo "can NOT find $file" >&2
+  done
 }
 # human size
 human() {
-  for arg in "$@"
-  do
+  for arg in "$@"; do
     echo "$arg" | awk '{ split( "B KB MB GB TB" , v ); s=1;size=int($1); while( size>1024 && s<5){ size/=1024; s++ } printf("%s\t%.1f%s\n", $0, size, v[s]) }'
   done
 }
@@ -136,26 +150,31 @@ reescape() {
   echo "$1" | python -c 'import re,sys;print re.escape(sys.stdin.readline().rstrip("\n"));'
 }
 escape_string() {
-    echo "$1" | sed "s/'/'\\\''/g;s/^\(.*\)$/'\1'/"
+  echo "$1" | sed "s/'/'\\\''/g;s/^\(.*\)$/'\1'/"
 }
 
 #   buf:  back up file with timestamp
 #   ---------------------------------------------------------
 buf() {
-  local filename filetime newest_buf  bufs
+  local filename filetime newest_buf bufs
   filename="$1"
-  [ -e "$filename" ] || { err file $filename not exists; return 1; }
+  [ -e "$filename" ] || {
+    err file "$filename" not exists
+    return 1
+  }
   filetime=$(date +%Y%m%d_%H%M%S)
   cp -a "${filename}" "${filename}_${filetime}"
 }
-
 
 #   unbuf:  restore back up file
 #   ---------------------------------------------------------
 unbuf() {
   local filename filetime
   filename=$1
-  [ -e "$filename" ] || { err file $filename not exists; return 1; }
+  [ -e "$filename" ] || {
+    err file "$filename" not exists
+    return 1
+  }
 
   if [ -z "$2" ]; then
     bufs=($1*)
@@ -163,7 +182,10 @@ unbuf() {
     newest_buf=${bufs[-1]}
   else
     newest_buf="$2"
-    [ -e "$newest_buf" ] || { err file $newest_buf not exists; return 1; }
+    [ -e "$newest_buf" ] || {
+      err file "$newest_buf" not exists
+      return 1
+    }
   fi
   filetime=$(date +%Y%m%d_%H%M%S)
   mv "${filename}" "${filename}_${filetime}"
@@ -178,21 +200,26 @@ diffd() {
 
 }
 
-
 # fco- checkout git branch/tag, with a preview showing the commits between the tag/branch and HEAD
 fco() {
   local tags branches target
   branches=$(
     git --no-pager branch --all \
-      --format="%(if)%(HEAD)%(then)%(else)%(if:equals=HEAD)%(refname:strip=3)%(then)%(else)%1B[0;34;1mbranch%09%1B[m%(refname:short)%(end)%(end)" \
-    | sed '/^$/d') || return
+      --format="%(if)%(HEAD)%(then)%(else)%(if:equals=HEAD)%(refname:strip=3)%(then)%(else)%1B[0;34;1mbranch%09%1B[m%(refname:short)%(end)%(end)" |
+      sed '/^$/d'
+  ) || return
   tags=$(
-    git --no-pager tag | awk '{print "\x1b[35;1mtag\x1b[m\t" $1}') || return
+    git --no-pager tag | awk '{print "\x1b[35;1mtag\x1b[m\t" $1}'
+  ) || return
   target=$(
-    (echo "$branches"; echo "$tags") |
-    fzf --no-hscroll --no-multi -n 2 \
-        --ansi --preview="git --no-pager log -150 --pretty=format:%s '..{2}'") || return
-  git checkout $(awk '{print $2}' <<<"$target" )
+    (
+      echo "$branches"
+      echo "$tags"
+    ) |
+      fzf --no-hscroll --no-multi -n 2 \
+        --ansi --preview="git --no-pager log -150 --pretty=format:%s '..{2}'"
+  ) || return
+  git checkout $(awk '{print $2}' <<<"$target")
 }
 
 # fstash - easier way to deal with stashes
@@ -204,22 +231,22 @@ fstash() {
   local out q k sha
   while out=$(
     git stash list --pretty="%C(yellow)%h %>(14)%Cgreen%cr %C(blue)%gs" |
-    fzf --ansi --no-sort --query="$q" --print-query \
-        --expect=ctrl-d,ctrl-b);
-  do
-    mapfile -t out <<< "$out"
+      fzf --ansi --no-sort --query="$q" --print-query \
+        --expect=ctrl-d,ctrl-b
+  ); do
+    mapfile -t out <<<"$out"
     q="${out[0]}"
     k="${out[1]}"
     sha="${out[-1]}"
     sha="${sha%% *}"
     [[ -z "$sha" ]] && continue
     if [[ "$k" == 'ctrl-d' ]]; then
-      git diff $sha
+      git diff "$sha"
     elif [[ "$k" == 'ctrl-b' ]]; then
-      git stash branch "stash-$sha" $sha
-      break;
+      git stash branch "stash-$sha" "$sha"
+      break
     else
-      git stash show -p $sha
+      git stash show -p "$sha"
     fi
   done
 }
@@ -242,10 +269,10 @@ proxy() {
   local port
   port=${1:-1080}
   local hostip
-  if ! command -v wsl.exe &> /dev/null; then
+  if ! command -v wsl.exe &>/dev/null; then
     hostip=127.0.0.1
   else
-    hostip=$(cat /etc/resolv.conf |grep -oP '(?<=nameserver\ ).*')
+    hostip=$(cat /etc/resolv.conf | grep -oP '(?<=nameserver\ ).*')
   fi
   export https_proxy=http://${hostip}:$port http_proxy=http://${hostip}:$port all_proxy=socks5://${hostip}:$port
 }
@@ -256,25 +283,25 @@ proxy_unset() {
   unset http_proxy
 }
 
-__cd () {
+__cd() {
   #set -x
   if [[ -e "$1" && ! -d "$1" ]]; then
     builtin cd "${1%/*}" && return
   fi
   if [[ $# -eq 0 || -d "$1" ]]; then
-    builtin cd "$@"  && return 
+    builtin cd "$@" && return
   fi
 
   local dname=$(dirname "$@")
   local fname=$(basename "$@")
   local file
-  if command -v fzf &> /dev/null; then
-    file=$(find -L "$dname" -maxdepth 1 -type d  | fzf -1 -q "$fname" --prompt='Search the dir: ' -n -1 -d /)
+  if command -v fzf &>/dev/null; then
+    file=$(find -L "$dname" -maxdepth 1 -type d | fzf -1 -q "$fname" --prompt='Search the dir: ' -n -1 -d /)
   else
     local files=$(find -L "$dname" -maxdepth 1 -type d | grep -i "$fname")
     echo "$files" | awk '{print NR ": " $0}'
     echog "Enter the index of the directory you want: "
-    read choice 
+    read choice
     file=$(echo "$files" | sed -n "$choice p")
   fi
   if [ -d "$file" ]; then
@@ -292,11 +319,11 @@ ncsend() {
   echo "nc send $2 to $1.."
   echo "nc -l 8188 > $2"
   echo "ncget $2"
-  nc -w 1 "$1" 8188 < "$2"
+  nc -w 1 "$1" 8188 <"$2"
 }
 
 ncget() {
   echo "ncget $1"
   echo "nc -w 1 $(myip) 8188 < $1"
-  nc -l 8188 > "$1"
+  nc -l 8188 >"$1"
 }

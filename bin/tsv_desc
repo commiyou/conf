@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 import argparse
+import csv
 import sys
 from contextlib import ExitStack
 
+import numpy as np
 import pandas as pd
 
 
@@ -47,10 +49,47 @@ def parse_column_ranges(range_str: str) -> list[int]:
     return sorted(list(indices))
 
 
+def get_text_stats(series: pd.Series, top_n: int) -> pd.Series:
+    """
+    计算单个文本型/分类型 Series 的描述性统计信息。
+
+    Args:
+        series: pandas Series.
+        top_n: 要报告的最常见值的数量。
+
+    Returns:
+        一个包含统计信息的 pandas Series。
+    """
+    # .describe() 对 object 类型给出: count, unique, top, freq
+    # 此时 series 中的无效值已被替换为 NaN，因此 .count() 和 .describe()
+    # 得到的 'count' 已经是“有效值计数”。
+    total_count = len(series)
+    desc = series.describe()
+    stats = {
+        "total_count": total_count,
+        "count": desc.get("count", 0),
+        "unique": desc.get("unique", 0),
+    }
+
+    # 计算 Top N 常见值
+    value_counts = series.value_counts().head(top_n)
+    for i in range(top_n):
+        key_val = f"top_{i + 1}"
+        key_freq = f"freq_{i + 1}"
+        if i < len(value_counts):
+            stats[key_val] = value_counts.index[i]
+            stats[key_freq] = value_counts.values[i]
+        else:
+            stats[key_val] = np.nan
+            stats[key_freq] = np.nan
+
+    return pd.Series(stats, name=series.name)
+
+
 def get_args():
     """解析命令行参数"""
     parser = argparse.ArgumentParser(
-        description="计算数值列的描述性统计信息。从文件或标准输入读取数据。",
+        description="计算数值和文本列的描述性统计信息。从文件或标准输入读取数据。",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
 
@@ -70,13 +109,20 @@ def get_args():
         "-c", "--columns", type=str, default=None, help="要计算的列，使用 0-based 索引。支持范围和组合，例如 '0-2,4'。"
     )
     parser.add_argument(
+        "--invalid-values",
+        nargs="+",
+        default=["0", "", "None", "null", "nan"],
+        help="视作无效值并替换为 NaN 的值列表（默认 '0' 会匹配 '0', 0, 0.0）。",
+    )
+    parser.add_argument(
         "-q",
         "--quantiles",
         nargs="+",
         type=float,
         default=[0.01, 0.05, 0.1, 0.25, 0.5, 0.75, 0.9, 0.95, 0.99],
-        help="要计算的分位数列表。",
+        help="要计算的分位数列表（仅用于数值列）。",
     )
+    parser.add_argument("--top-n", type=int, default=3, help="为文本列显示 N 个最常见的值。")
     parser.add_argument("-T", "--transpose", action="store_true", help="转置输出的统计结果表格。")
     parser.add_argument("-p", "--precision", type=int, default=2, help="输出浮点数的精度（小数位数）。")
     parser.add_argument(
@@ -103,6 +149,9 @@ def main():
                 input_stream,
                 sep=args.delimiter,
                 header=0 if args.header else None,
+                quoting=csv.QUOTE_NONE,
+                # on_bad_lines="skip",
+                low_memory=False,  # 避免混合类型推断警告
             )
         except Exception as e:
             print(f"读取数据时出错: {e}", file=sys.stderr)
@@ -119,13 +168,66 @@ def main():
                 print(f"处理列索引时出错: {e}", file=sys.stderr)
                 sys.exit(1)
 
-        df_numeric = target_df.select_dtypes(include="number")
-        if df_numeric.empty:
-            print("错误：在指定数据中未找到可供计算的数值类型列。", file=sys.stderr)
+        # 构建用于替换的无效值字典
+        # 我们会尝试匹配多种类型（str, int, float, None, nan）
+        replace_map = {}
+        for v_str in args.invalid_values:
+            v_str_low = v_str.lower()
+            replace_map[v_str] = np.nan  # 原始字符串
+
+            if v_str_low == "none" or v_str_low == "null":
+                replace_map[None] = np.nan
+            elif v_str_low == "nan":
+                replace_map[np.nan] = np.nan
+            else:
+                # 尝试添加 int 和 float 变体
+                try:
+                    replace_map[int(v_str)] = np.nan
+                except (ValueError, TypeError):
+                    pass
+                try:
+                    replace_map[float(v_str)] = np.nan
+                except (ValueError, TypeError):
+                    pass
+
+        # 应用替换
+        target_df_cleaned = target_df.replace(replace_map)
+
+        # 分离数值列和文本列
+        df_numeric = target_df_cleaned.select_dtypes(include="number")
+        df_object = target_df_cleaned.select_dtypes(include=["object", "string", "category"])
+
+        stats_parts = []
+
+        # 1. 处理数值列
+        if not df_numeric.empty:
+            # 增加 total_count (替换前的总行数)
+            total_count_num = pd.Series(
+                [len(target_df)] * len(df_numeric.columns),
+                index=df_numeric.columns,
+                name="total_count",
+            )
+            # .describe() 自动计算 'count' (有效值), mean, std 等
+            stats_num = df_numeric.describe(percentiles=args.quantiles)
+            stats_num = pd.concat([total_count_num.to_frame().T, stats_num])
+            stats_parts.append(stats_num)
+
+        # 2. 处理文本列
+        if not df_object.empty:
+            stats_obj = df_object.apply(get_text_stats, top_n=args.top_n)
+            stats_parts.append(stats_obj)
+
+        if not stats_parts:
+            print("错误：在指定数据中未找到可供计算的列。", file=sys.stderr)
             sys.exit(1)
 
+        # 合并统计结果
+        stats = pd.concat(stats_parts, axis=1)
+        # 对列进行排序，保持与输入一致
+        stats = stats.reindex(columns=target_df.columns)
+        stats.index.name = "statistic"
+
         pd.set_option("display.float_format", f"{{:.{args.precision}f}}".format)
-        stats = df_numeric.describe(percentiles=args.quantiles)
 
         if args.transpose:
             stats = stats.T
@@ -138,4 +240,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

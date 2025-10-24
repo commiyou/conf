@@ -178,3 +178,5 @@ alias gdmsg='git diff --staged | sgpt "Based on the following git diff, generate
 diff:"'
 
 alias ccr='http_proxy= https_proxy= ccr'
+
+alias rpath="realpath --relative-to=. "

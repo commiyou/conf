@@ -2042,8 +2042,9 @@ def fetch_url(
     retry_cnt: int = 3,
     return_format: Literal["html", "json", "markdown"] = "json",
     method: Literal["get", "post"] = "get",
-    timeout: int = 10,
+    timeout: float = 10,
     proxy: str | list[str] | None = None,
+    headers: dict | None = None,
     **kwargs: object,
 ) -> dict | str | None:
     """A function to fetch a URL with retry logic, random proxy selection, and format the response.
@@ -2082,23 +2083,28 @@ def fetch_url(
                     timeout=timeout,
                     proxies=proxies,
                     params=params,
+                    headers=headers,
                     verify=False,
                     **kwargs,
                 )
             elif method == "post":
                 response = requests.post(
                     url,
+                    params=params,
                     timeout=timeout,
                     proxies=proxies,
                     data=data,
                     json=json,
+                    headers=headers,
                     **kwargs,
                 )
 
             response.raise_for_status()  # Raise an error for bad responses
 
             if return_format == "json":
-                return response.json()  # Return JSON data
+                # print(response.text)
+                ret = response.json()  # Return JSON data
+                return ret
 
             # 使用charset检测编码
             response.encoding = response.apparent_encoding

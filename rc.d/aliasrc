@@ -120,6 +120,8 @@ alias gcoo='git checkout --others'
 
 alias gd='git diff'
 alias gds='git diff --staged --ignore-all-space'
+alias gdf='git diff -U999999'
+alias gdsf='git diff --staged --ignore-all-space -U999999'
 alias gr='git restore'
 alias grs='git restore --staged'
 alias gdca='git diff --cached'

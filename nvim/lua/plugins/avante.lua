@@ -55,7 +55,7 @@ return {
         },
         openai = {
           endpoint = "http://10.12.215.17:8000/v1",
-          model = "gpt-4.1",
+          model = "gpt-5",
           timeout = 30000, -- Timeout in milliseconds
           extra_request_body = {
             temperature = 0.75,

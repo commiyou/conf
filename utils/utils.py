@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
-"""python3 utils"""
+"""python3 utils
+
+
+funcy typing hint stub:
+pip install git+https://github.com/ruancomelli/funcy-stubs.git
+"""
 
 import ast
 import atexit
@@ -67,7 +72,16 @@ import tqdm as tqdm_
 from diskcache import Cache
 from termcolor import colored
 
-rich.traceback.install(show_locals=True, suppress=[fire], width=None)
+rich.traceback.install(
+    # show_locals=True,
+    suppress=[
+        fire,
+        tqdm_,
+        funcy,
+        pd,
+    ],
+    width=None,
+)
 
 requests.packages.urllib3.disable_warnings()  # pyright: ignore[reportAttributeAccessIssue]
 
@@ -2088,6 +2102,9 @@ def fetch_url(
                     **kwargs,
                 )
             elif method == "post":
+                if isinstance(data, dict):
+                    data = dump_json(data)
+
                 response = requests.post(
                     url,
                     params=params,

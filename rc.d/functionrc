@@ -327,3 +327,7 @@ ncget() {
   echo "nc -w 1 $(myip) 8188 < $1"
   nc -l 8188 >"$1"
 }
+
+lnr() {
+  ln -s "$(realpath --relative-to=. "$1")" "$2"
+}

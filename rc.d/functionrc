@@ -329,5 +329,5 @@ ncget() {
 }
 
 lnr() {
-  ln -s "$(realpath --relative-to=. "$1")" "$2"
+  ln -s "$(realpath --relative-to=. "$1")" "${2:-.}"
 }

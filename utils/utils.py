@@ -73,7 +73,7 @@ from diskcache import Cache
 from termcolor import colored
 
 rich.traceback.install(
-    # show_locals=True,
+    show_locals=True,
     suppress=[
         fire,
         tqdm_,
@@ -658,6 +658,7 @@ def read_file(
     norm: bool = True,
     # --- Progress bar and filesystem parameters ---
     total: int | None = None,
+    tqdm: str | bool | None = None,
     tqdm_desc_func: KeyType = None,
     skip_notexists: bool = False,
 ) -> Generator[list[str], None, None]:
@@ -700,7 +701,8 @@ def read_file(
             with open(input_, encoding=encoding, errors="ignore") as f:
                 calculated_total = sum(1 for _ in f)
 
-    pbar = tqdm_.tqdm(total=calculated_total, desc="Initializing...")
+    if isinstance(input_, (str, Path)) and tqdm is not False:
+        pbar = tqdm_.tqdm(total=calculated_total, desc=f"Initializing {input_}")
 
     # --- 2. Get the raw row iterator ---
     row_iterator: Generator[list[str], None, None]
@@ -769,10 +771,13 @@ def read_file(
             if filter_func and not filter_func(processed_row):
                 continue
 
-            if desc_generator:
-                desc_text = str(desc_generator(processed_row))
-                desc_preview = (desc_text[:47] + "...") if len(desc_text) > 50 else desc_text
-                pbar.set_description(f"Processing: {desc_preview}")
+            if tqdm is not False:
+                if isinstance(tqdm, str):
+                    pbar.set_description(tqdm)
+                elif desc_generator:
+                    desc_text = str(desc_generator(processed_row))
+                    desc_preview = (desc_text[:47] + "...") if len(desc_text) > 50 else desc_text
+                    pbar.set_description(f"Processing: {desc_preview}")
 
             pbar.update(1)
             yield processed_row

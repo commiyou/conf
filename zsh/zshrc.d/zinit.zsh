@@ -96,7 +96,9 @@ zt wait binary from"gh-r" lman lbin for \
   if'[[ -z "$commands[bat]" ]]' @sharkdp/bat  \
   if'[[ -z "$commands[mdcat]" ]]' @swsnr/mdcat \
   if'[[ -z "$commands[xsv]" ]]' BurntSushi/xsv \
-  if'[[ -z "$commands[sad]" ]]' ms-jpq/sad
+  if'[[ -z "$commands[sad]" ]]' ms-jpq/sad \
+  id-as'fx-bin' lbin"fx* -> fx"  \
+  if'[[ -z "$commands[fx]" ]]' antonmedv/fx 
 
 
 

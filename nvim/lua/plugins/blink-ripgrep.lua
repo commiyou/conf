@@ -18,6 +18,7 @@ return {
     ---@type blink.cmp.Config
     "Saghen/blink.cmp",
     optional = true,
+    version = "1.*",
     opts = {
       sources = {
         default = {

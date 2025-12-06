@@ -98,7 +98,9 @@ zt wait binary from"gh-r" lman lbin for \
   if'[[ -z "$commands[xsv]" ]]' BurntSushi/xsv \
   if'[[ -z "$commands[sad]" ]]' ms-jpq/sad \
   id-as'fx-bin' lbin"fx* -> fx"  \
-  if'[[ -z "$commands[fx]" ]]' antonmedv/fx 
+  if'[[ -z "$commands[fx]" ]]' antonmedv/fx  \
+  id-as'tmux-bin' lbin"tmux* -> tmux" ver"v3.3a"  \
+  mjakob-gh/build-static-tmux 
 
 
 

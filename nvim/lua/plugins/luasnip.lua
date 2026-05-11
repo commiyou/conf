@@ -9,31 +9,12 @@ return {
         paths = { vim.fn.stdpath "config" .. "/snippets" },
       }
     end,
-    specs = {
-      {
-        "Saghen/blink.cmp",
-        optional = true,
-        opts = {
-          keymap = {
-            ["<Tab>"] = { "select_and_accept", "snippet_forward", "fallback" },
-          },
-        },
-      },
-    },
   },
   {
     "chrisgrieser/nvim-scissors",
     dependencies = { "nvim-telescope/telescope.nvim", "L3MON4D3/LuaSnip" },
     opts = {
       snippetDir = vim.fn.stdpath "config" .. "/snippets/",
-      require("luasnip.loaders.from_vscode").lazy_load {
-        paths = { vim.fn.stdpath "config" .. "/snippets/" },
-      },
-
-      -- vim.keymap.set("n", "<leader>se", function() require("scissors").editSnippet() end),
-      --
-      -- -- when used in visual mode, prefills the selection as snippet body
-      -- vim.keymap.set({ "n", "x" }, "<leader>sa", function() require("scissors").addNewSnippet() end),
     },
     keys = {
       {

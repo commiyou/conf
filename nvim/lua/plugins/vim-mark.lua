@@ -10,10 +10,12 @@ return {
     vim.g.mw_no_mappings = 1
   end,
   keys = {
-    { "<leader>M", "<Plug>MarkSet", mode = "n", desc = "设置标记 (MarkSet)" },
-    -- 你可以在这里添加该插件的其他快捷键
-    -- 例如:
-    -- { "<leader>mj", "<Plug>MarkNext", mode = "n", desc = "下一个标记" },
-    -- { "<leader>mk", "<Plug>MarkPrev", mode = "n", desc = "上一个标记" },
+    { "<leader>mm", "<Plug>MarkSet",               mode = { "n", "v" }, desc = "Mark toggle word/selection" },
+    { "<leader>mr", "<Plug>MarkRegex",             mode = { "n", "v" }, desc = "Mark by regex" },
+    { "<leader>mc", "<Plug>MarkAllClear",          mode = "n",          desc = "Mark clear all" },
+    { "<leader>mn", "<Plug>MarkSearchNext",        mode = "n",          desc = "Next mark (any)" },
+    { "<leader>mp", "<Plug>MarkSearchPrev",        mode = "n",          desc = "Prev mark (any)" },
+    { "]m",         "<Plug>MarkSearchCurrentNext", mode = "n",          desc = "Next current mark" },
+    { "[m",         "<Plug>MarkSearchCurrentPrev", mode = "n",          desc = "Prev current mark" },
   },
 }

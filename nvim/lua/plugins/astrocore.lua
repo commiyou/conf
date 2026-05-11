@@ -52,7 +52,6 @@ return {
         list = true,
         listchars = "tab:>-,trail:·",
         tags = "./tags;$HOME",
-        fileencodings = "utf8,gb18030",
         termguicolors = true,
         isfname = vim.opt.isfname - "=",
         mouse = "h",
@@ -80,6 +79,12 @@ return {
         ["[b"] = { function() require("astrocore.buffer").nav(-vim.v.count1) end, desc = "Previous buffer" },
         ["L"] = { function() require("astrocore.buffer").nav(vim.v.count1) end, desc = "Next buffer" },
         ["H"] = { function() require("astrocore.buffer").nav(-vim.v.count1) end, desc = "Previous buffer" },
+
+        -- which-key group labels
+        ["<leader>a"] = { desc = "AI" },
+        ["<leader>D"] = { desc = "AI Diagnose" },
+        ["<leader>m"] = { desc = "Marks" },
+        ["<leader>x"] = { desc = "Trouble" },
 
         -- mappings seen under group name "Buffer"
         ["<Leader>bd"] = {

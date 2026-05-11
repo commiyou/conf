@@ -51,3 +51,6 @@ lvim.old
 lvim/lazy-lock.json
 zsh/.zsh_sessions/
 .android
+nvim/Session.vim
+nvim/lazy-lock.json
+nvim/README.md

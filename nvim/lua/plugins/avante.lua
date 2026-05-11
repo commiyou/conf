@@ -45,17 +45,19 @@ return {
       provider = "openai",
       providers = {
         claude = {
-          endpoint = "https://api.anthropic.com",
-          model = "claude-sonnet-4-20250514",
-          timeout = 30000, -- Timeout in milliseconds
+          endpoint = "https://oneapi-comate.baidu-int.com",
+          model = "Claude Sonnet 4.6",
+          api_key_name = "ANTHROPIC_AUTH_TOKEN",
+          timeout = 30000,
           extra_request_body = {
             temperature = 0.75,
             max_tokens = 20480,
           },
         },
         openai = {
-          endpoint = "http://10.12.215.17:8000/v1",
-          model = "gpt-5",
+          endpoint = "https://oneapi-comate.baidu-int.com/v1",
+          model = "glm-5.1",
+          api_key_name = "ANTHROPIC_AUTH_TOKEN",
           timeout = 30000, -- Timeout in milliseconds
           extra_request_body = {
             temperature = 0.75,
@@ -64,8 +66,9 @@ return {
         },
       },
       behaviour = {
-        auto_check_diagnostics=false,
-      }
+        auto_check_diagnostics = false,
+        auto_suggestions = false,
+      },
     },
     dependencies = {
       "nvim-lua/plenary.nvim",
@@ -110,19 +113,15 @@ return {
     "saghen/blink.cmp",
     dependencies = {
       "Kaiser-Yang/blink-cmp-avante",
-      -- ... Other dependencies
     },
     opts = {
       sources = {
-        -- Add 'avante' to the list
-        default = { "avante", "lsp", "path", "snippets", "buffer" },
+        default = { "avante" },
         providers = {
           avante = {
             module = "blink-cmp-avante",
             name = "Avante",
-            opts = {
-              -- options for blink-cmp-avante
-            },
+            opts = {},
           },
         },
       },
@@ -130,5 +129,6 @@ return {
         preset = "luasnip",
       },
     },
+    opts_extend = { "sources.default" },
   },
 }

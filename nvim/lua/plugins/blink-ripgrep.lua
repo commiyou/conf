@@ -5,7 +5,6 @@
 return {
   "mikavilpas/blink-ripgrep.nvim",
   lazy = true,
-  enabled=false,
   dependencies = {
     -- 👆🏻👆🏻 add the dependency here
 
@@ -19,6 +18,7 @@ return {
     "Saghen/blink.cmp",
     optional = true,
     version = "1.*",
+    opts_extend = { "sources.default" },
     opts = {
       sources = {
         default = {

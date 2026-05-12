@@ -28,7 +28,7 @@ return {
       context_window = 4096,
       request_timeout = 8,
       throttle = 1200,
-      notify = "debug",
+      notify = "error",
       provider_options = {
         claude = {
           model = "Claude Haiku 4.5",

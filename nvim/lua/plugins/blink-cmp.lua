@@ -45,7 +45,11 @@ return {
       -- Cmdline completion for ':' commands and '/' search
       cmdline = {
         enabled = true,
-        keymap = { preset = "cmdline" },
+        keymap = {
+          preset = "cmdline",
+          ["<Up>"] = { "select_prev", "fallback" },
+          ["<Down>"] = { "select_next", "fallback" },
+        },
         completion = { menu = { auto_show = true } },
       },
 

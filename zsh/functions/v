@@ -1,120 +1,142 @@
 ## Inspired by https://github.com/rupa/v
 [ "$vim" ] || vim=vim
-[ $viminfo ] || viminfo="$XDG_CACHE_HOME/vim/viminfo"
+if [ -z "$viminfo" ]; then
+  if [ -f "${XDG_STATE_HOME:-$HOME/.local/state}/nvim/shada/main.shada" ]; then
+    viminfo="${XDG_STATE_HOME:-$HOME/.local/state}/nvim/shada/main.shada"
+  elif [ -f "$XDG_CACHE_HOME/vim/viminfo" ]; then
+    viminfo="$XDG_CACHE_HOME/vim/viminfo"
+  elif [ -f "$HOME/.viminfo" ]; then
+    viminfo="$HOME/.viminfo"
+  fi
+fi
 
-setopt localoptions extendedglob globsubst
-local usage="usage: [-a] [-c] [-d[directory]] [-l] [-[0-9]] [--debug] [--help] [regexes]"
-
-[ $1 ] || list=1
+setopt localoptions extendedglob
+local usage="usage: v [-a] [-c] [-d[directory]] [-l] [-[0-9]] [--debug] [--help] [regexes]"
 
 local _pwd="$(command pwd)"
 
-local fnd=() 
-local files=()
-local deleted subdir list edit debug resp i line _cpath _csv_marks
+local fnd=()
+local -a files=()
+local -a raw_files=()
+local deleted subdir list edit debug resp line _cpath _csv_marks
+
+local _no_args
+[ $# -eq 0 ] && _no_args=1
 for x; do
   case $x in
     -a) deleted=1;;
-    -c) subdir="$_pwd"; ;;
-    -d*) subdir="${x:2}" && [ -z "$subdir" ] && subdir="-d"; ;;
+    -c) subdir="$_pwd";;
+    -d*) subdir="${x:2}" && [ -z "$subdir" ] && subdir="-d";;
     -l) list=1;;
-    -[0-9]) edit=${x:1}; ;;
-    -h) echo $usage; return;;
-    --help) echo $usage; return;;
+    -[0-9]) edit=${x:1};;
+    -h|--help) echo $usage; return;;
     --debug) debug=1;;
     --) shift; fnd+=("$@"); break;;
     *) fnd+=("$x");;
-  esac;
-  shift;
+  esac
+  shift
 done
 set -- "${fnd[@]}"
 
+# -d without argument: detect project root
 if [ "$subdir" = "-d" ]; then
   IFS=, read -rA _csv_marks <<< "${_ZL_ROOT_MARKERS:-.git,.svn,.hg,.root}"
   _cpath=$_pwd
   while true; do
-    for line in ${_csv_marks[@]}
-    do
-      [ $debug ] && echo csv, "${_cpath}/$line"
-      [ -e "${_cpath}/$line" ] && subdir="$_cpath" && break
+    for line in ${_csv_marks[@]}; do
+      [ $debug ] && echo "csv: ${_cpath}/$line"
+      if [ -e "${_cpath}/$line" ]; then
+        subdir="$_cpath"
+        break 2
+      fi
     done
     _cpath=${_cpath%/*}
     [ -z "$_cpath" ] && break
   done
+  [ "$subdir" = "-d" ] && subdir="$_pwd"
 else
-  subdir=${(~)subdir}
+  subdir="${subdir/#\~/$HOME}"
 fi
 
-[ "$subdir" = "-d" ] && subdir="$_pwd"
-[ $debug ] && echo "pwd $subdir"
-[ $debug  ] && echo "fnd ${fnd[@]}"
+[ $debug ] && echo "pwd: $subdir"
+[ $debug ] && echo "fnd: ${fnd[@]}"
 
-[ -f "$1" ] && {
-  $vim "$1"
-  return
-}
+# direct file argument
+[ -f "$1" ] && { $vim "$1"; return }
 
+# --- Phase 1: extract raw file list ---
 if [[ "$viminfo" =~ \.shada$ ]]; then
-  nvim  -Es +'redir @">|echo join(v:oldfiles,"\n")|redir END|enew|put ' -V1 -i "$viminfo" 2>&1 | grep '^/' | tr -d '' | while read line; do
-  local fl=${line}
-  [ $debug ] && echo fl, $fl, $_fl
-  local match=1
+  raw_files=(${(f)"$(nvim -Es +'redir @">|echo join(v:oldfiles,"\n")|redir END|enew|put ' -V1 -i "$viminfo" 2>&1 | grep '^/' | tr -d '\r')"})
+else
+  raw_files=(${(f)"$(grep '^>' "$viminfo" | cut -c3-)"})
+fi
+
+# --- Phase 2: filter ---
+local -i i=0
+local fl _fl match
+for fl in "${raw_files[@]}"; do
+  _fl="${fl/#\~/$HOME}"
+
+  # existence check
+  [ -f "$_fl" -o "$deleted" ] || continue
+
+  # skip nvim virtual buffers
+  [[ "$fl" =~ '(neo-tree|COMMIT_EDITMSG|fugitive://|term://|man://|health://|NvimTree_)' ]] && continue
+
+  # regex match
+  match=1
   for x; do
     [[ "$fl" =~ $x ]] || match=
   done
+  [ "$match" ] || continue
+
+  # subdir filter
   [ "$subdir" ] && {
     case "$_fl" in
-      $subdir*);;
-      *) match=;;
+      $subdir*) ;;
+      *) continue;;
     esac
   }
 
-  [ "$match" ] || continue
-  i=$((i+1))
-  [ $debug ] && echo i, $i, $fl
+  i+=1
+  [ $debug ] && echo "i=$i: $fl"
   files[$i]="$fl"
 done
-else
-while IFS=" " read line; do
-  [ "${line:0:1}" = ">" ] || continue
-  local fl=${line:2}
-  local _fl="${(~)fl}"
-  [ -f "$_fl" -o "$deleted" ] || continue
-  [ $debug ] && echo fl, $fl, $_fl
-  local match=1
-  for x; do
-    [[ "$fl" =~ $x ]] || match=
-  done
-  [ "$subdir" ] && {
-    case "$_fl" in
-      $subdir*);;
-      *) match=;;
-    esac
-  }
-  [ "$fl" =~ COMMIT_EDITMSG$ ] && continue
-  [ "$match" ] || continue
-  i=$((i+1))
-  [ $debug ] && echo i, $i, $fl
-  files[$i]="$fl"
-done < "$viminfo"
-fi
 
-[ $debug ] && echo "${files[@]}"
+[ $debug ] && echo "total: ${#files[@]}"
 
+# --- Phase 3: output/open ---
 if [ "$edit" ]; then
   resp=${files[$((edit+1))]}
-elif [ "$i" = 1 -o "$list" = "" ]; then
-  resp=${files[1]}
-elif [ "$i" ]; then 
-  while [ $i -gt 0 ]; do
-    echo -e "$((i-1))\t${files[$i]}"
-    i=$((i-1))
+elif [ "$list" ]; then
+  local -i j=${#files[@]}
+  while [ $j -gt 0 ]; do
+    echo -e "$((j-1))\t${files[$j]}"
+    j+=-1
   done
-  #read -p '> ' CHOICE
-  #[ "$CHOICE" ] && resp=${files[$((CHOICE+1))]}
+  return
+elif (( ${#files[@]} == 0 )); then
+  return 1
+elif [ -z "$_no_args" ] && (( ${#files[@]} == 1 )); then
+  resp=${files[1]}
+else
+  # fzf selection or fallback to numbered list
+  if (( $+commands[fzf-tmux] )); then
+    resp=$(printf '%s\n' "${(Oa)files[@]}" | fzf-tmux -d -m --preview 'v-preview {}' -q "$*" -1)
+  elif (( $+commands[fzf] )); then
+    resp=$(printf '%s\n' "${(Oa)files[@]}" | fzf -m --preview 'v-preview {}' -q "$*" -1)
+  else
+    local -i j=${#files[@]}
+    while [ $j -gt 0 ]; do
+      echo -e "$((j-1))\t${files[$j]}"
+      j+=-1
+    done
+    return
+  fi
 fi
 
 [ "$resp" ] || return
-$vim "${(~)resp}"
+local -a selected=(${(f)resp})
+$vim "${selected[@]/#\~/$HOME}"
 
 # vim:ft=sh:et

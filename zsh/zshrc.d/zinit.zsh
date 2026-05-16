@@ -9,7 +9,7 @@ typeset -A ZINIT=(
   ZCOMPDUMP_PATH  ${XDG_CACHE_HOME:-$HOME/.cache}/zcompdump-${(%):-%n}
   COMPINIT_OPTS   -C
 )
-hash -d zinit=$ZINIT[HOME_DIR]
+hash -d zinit="${ZINIT[HOME_DIR]}"
 
 if [[ ! -f $ZINIT[BIN_DIR]/zinit.zsh ]]; then
   print -P "%F{33}▓▒░ %F{220}Installing zinit…%f"
@@ -19,7 +19,7 @@ if [[ ! -f $ZINIT[BIN_DIR]/zinit.zsh ]]; then
     print -P "%F{160}▓▒░ Clone failed.%f"
 fi
 
-source $ZINIT[BIN_DIR]/zinit.zsh
+source "${ZINIT[BIN_DIR]}/zinit.zsh"
 
 # zt: shorthand for deferred parallel light loads; pass 'wait' to defer
 zt(){ zinit depth'3' light-mode lucid "${@}"; }
@@ -108,8 +108,9 @@ zt wait binary from'gh-r' lman lbin for \
   if'[[ -z $commands[mdcat] ]]' @swsnr/mdcat \
   if'[[ -z $commands[xsv]   ]]' BurntSushi/xsv \
   if'[[ -z $commands[sad]   ]]' ms-jpq/sad \
-  id-as'fx-bin'   lbin'fx* -> fx'                if'[[ -z $commands[fx]  ]]' antonmedv/fx \
-  id-as'tmux-bin' lbin'tmux* -> tmux' ver'v3.3a' mjakob-gh/build-static-tmux
+  id-as'fx-bin'   lbin'fx* -> fx'                if'[[ -z $commands[fx]  ]]' antonmedv/fx 
+
+  #id-as'tmux-bin' lbin'tmux* -> tmux' ver'v3.3a' mjakob-gh/build-static-tmux
 
 zt wait binary from'gh-r' lman for \
   lbin'**/rg -> rg'   if'[[ -z $commands[rg]  ]]' @BurntSushi/ripgrep \
@@ -128,6 +129,17 @@ zt wait for \
 
 
 # ─── §7 Deferred: UX plugins ──────────────────────────────────────────────────
+#
+__forgit_atload() {
+    export FORGIT_INSTALL_DIR="$PWD"
+    export FORGIT_NO_ALIASES=1
+    export FORGIT_LOG_FZF_OPTS='--bind="ctrl-e:execute(echo {} |grep -Eo [a-f0-9]+ |head -1 |xargs command git show |vim -)"'
+    alias gdca="forgit::diff --cached"
+    alias gds="forgit::diff --cached"
+    alias glog="forgit::log --oneline --decorate --graph"
+}
+#__forgit_atload
+
 
 zt wait for \
   hlissner/zsh-autopair \
@@ -139,13 +151,7 @@ zt wait for \
   atpull'git config --global core.pager "diff-so-fancy | less --tabs=4 -RFX"; \
     git config --global interactive.diffFilter "diff-so-fancy --patch"' \
     z-shell/zsh-diff-so-fancy \
-  atload'export FORGIT_INSTALL_DIR=$PWD; \
-    export FORGIT_NO_ALIASES=1; \
-    export FORGIT_LOG_FZF_OPTS="--bind=ctrl-e:execute(echo {} |grep -Eo [a-f0-9]+ |head -1 |xargs command git show |vim -)"; \
-    alias gdca="forgit::diff --cached"; alias gds="forgit::diff --cached"; \
-    alias glog="forgit::log --oneline --decorate --graph"; \
-    compdef _git gco=git-checkout' \
-    wfxr/forgit
+  atload$'!__forgit_atload;compdef _git gco=git-checkout;' wfxr/forgit
 
 zt wait for \
   atinit'local zew_word_style=whitespace' zdharma-continuum/zsh-editing-workbench \
@@ -153,7 +159,7 @@ zt wait for \
   atinit'export AUTOSWITCH_DEFAULT_CONDAENV=base' bckim92/zsh-autoswitch-conda
 
 zt wait'[[ -n $WORK_ENV ]]' id-as'work-env' for \
-  $XDG_CONFIG_HOME/work/$WORK_ENV
+  "$XDG_CONFIG_HOME"/work/"$WORK_ENV"
 
 
 # ─── §8 Completions ───────────────────────────────────────────────────────────

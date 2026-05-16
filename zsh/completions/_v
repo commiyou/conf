@@ -1,34 +1,28 @@
 #compdef v
 
 typeset -A opt_args
-
 local context state line
-local filedir findall
 
 _arguments -S \
-  "(-c)-d-[specify directory]:directory:_files -/" \
-  "(-d)-c[current  directory]" \
-  "-a[find all files]" \
-  "-h[help]" \
-  "--help[help]" \
-  "--debug[show debug info]" \
-  "(-)::args:->file-or-word" \
+  '(-d)-c[current directory]' \
+  '(-c)-d+[specify directory]:directory:_files -/' \
+  '-a[include deleted files]' \
+  '-l[list mode]' \
+  '-h[help]' \
+  '--help[help]' \
+  '--debug[show debug info]' \
+  '(-)::args:->file-or-word' \
   && return 0
 
-(( $+opt_args[-c] )) && filedir=$(pwd)
-(( $+opt_args[-d] )) && filedir=$opt_args[-d]
-(( $+opt_args[-a] )) && findall=1
-
 case "$state" in
-  (file-or-word)
-    if [ "$findall" ]; then
-      [ -d "$filedir" ] && _files -W ${filedir:a} -g "**/*(.)" && return 0
-    else
-      command -v tac > /dev/null && _values 'files' $(v -l ${(k)opt_args} | cut -f2 | tac)
-      command -v tac > /dev/null || _values 'files' $(v -l ${(k)opt_args} | cut -f2 | tail -r)
-    fi
+  file-or-word)
+    local -a cmd=(v -l)
+    (( $+opt_args[-c] )) && cmd+=(-c)
+    (( $+opt_args[-d] )) && cmd+=("-d$opt_args[-d]")
+    (( $+opt_args[-a] )) && cmd+=(-a)
+    local -a files=(${(f)"$(${cmd[@]} 2>/dev/null | cut -f2)"})
+    (( $#files )) && _values 'files' ${(Oa)files} && return 0
     ;;
 esac
 
 return 1
-

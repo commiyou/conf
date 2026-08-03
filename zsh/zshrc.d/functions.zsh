@@ -1,7 +1,4 @@
 # get the ftp path of files, defalut CWD
-#
-[ -f "$XDG_CONFIG_HOME/rc.d/functionrc" ] && source "$XDG_CONFIG_HOME"/rc.d/functionrc
-
 fpath+=($ZDOTDIR/functions)
 autoload -Uz "$ZDOTDIR"/functions/*(:t)
 
@@ -40,7 +37,7 @@ gconfig() {
   git config alias.cb "checkout -b"
   git config alias.ci commit
   git config alias.cim "commit -m"
-  git config alias.co checkouout
+  git config alias.co checkout
   git config alias.cp cherry-pick
   git config alias.df diff
   git config alias.dh "diff HEAD"
@@ -72,24 +69,39 @@ vignore() {
 #
 # run a web server whit port in 8000~8999 in 10 minutes
 websvr() {
-  if [[ "$1" == '-r' ]]; then
-    LPORT=8000
-    UPORT=1000
-    MPORT=$(($LPORT + ($RANDOM % $UPORT)))
-  elif [[ -n "$1" ]]; then
-    MPORT=$1
+  local port
+  if [[ ${1:-} == '-r' ]]; then
+    port=$((8000 + (RANDOM % 1000)))
+  elif [[ -n ${1:-} ]]; then
+    port=$1
   else
-    MPORT=8000
+    port=8000
   fi
-  timeout 10m python3 -m http.server "$MPORT" 2>&1 &
-  local ip_
+
+  local timeout_command
+  if (( $+commands[timeout] || $+functions[timeout] )); then
+    timeout_command=timeout
+  elif (( $+commands[gtimeout] || $+functions[gtimeout] )); then
+    timeout_command=gtimeout
+  else
+    print -u2 -r -- "websvr: timeout is unavailable; install GNU coreutils"
+    return 1
+  fi
+
+  local ip_ file url_path
+  local -a recent_files=(**/*(.DNom[1,10]))
+  "$timeout_command" 10m python3 -m http.server "$port" 2>&1 &
   for ip_ in $(myip); do
-    for l in $(find . -type f | ls -t | head -10); do
-      echo http://"$ip_":"$MPORT"/"$l"
+    for file in "${recent_files[@]}"; do
+      url_path=${file//\%/%25}
+      url_path=${url_path// /%20}
+      url_path=${url_path//\#/%23}
+      url_path=${url_path//\?/%3F}
+      print -r -- "http://$ip_:$port/$url_path"
     done
-    echo
-    echo http://"$ip_":"$MPORT" starting...
-    echo
+    print
+    print -r -- "http://$ip_:$port starting..."
+    print
   done
 }
 
@@ -124,33 +136,9 @@ restore_link() {
   done
 }
 
-# zsh trap function when recive HUG signal
-TRAPHUP() {
-  source "$ZDOTDIR"/.zshrc
-}
-
-# reload zshrcs
-reload_zshrcs() {
-  for pid in $(pgrep zsh -u "$USER"); do
-    if [ -n "$1" ]; then
-      echo "sending HUP to pid $pid .."
-    fi
-    if [[ $OSTYPE =~ darwin ]]; then
-      kill -HUP "$pid"
-    else
-      # for Accounts used by multiple people
-      cat /proc/"$pid"/environ 2>/dev/null | tr '\0' '\n' | grep -q "ZDOTDIR=$ZDOTDIR" && kill -HUP "$pid"
-    fi
-  done
-}
-
-# swap file from src to dst
-# args:
-#   $1 -> src file path
-#   $2 -> dst file path
+# Compatibility wrapper for exchange.
 swap() {
-  local TMPFILE=tmp.$$
-  mv "$1" $TMPFILE && mv "$2" "$1" && mv $TMPFILE "$2"
+  exchange "$@"
 }
 
 set_iterm_profile() {
@@ -173,10 +161,45 @@ send-terminal-sequence() {
 alias sip=set_iterm_profile
 
 tr0() {
+  zmodload -F zsh/stat b:zstat || {
+    print -u2 -r -- "tr0: cannot load zsh/stat"
+    return 1
+  }
+
+  local f tmp target_dir file_mode
+  local -A file_stat
+  local result=0
   for f in "$@"; do
-    TMPFILE=$(mktemp)
-    cat "$f" | tr '' '\t' >"$TMPFILE" && mv -f "$TMPFILE" "$f" || "tr $f error, skip.."
+    if [[ ! -f $f ]]; then
+      print -u2 -r -- "tr0: not a regular file: $f"
+      result=1
+      continue
+    fi
+
+    file_stat=()
+    if ! zstat -H file_stat -- "$f"; then
+      print -u2 -r -- "tr0: cannot stat: $f"
+      result=1
+      continue
+    fi
+    file_mode=$(([##8] (${file_stat[mode]} & 8#7777)))
+    target_dir=${f:h:A}
+    tmp=
+    if ! tmp=$(mktemp "$target_dir/.${f:t}.tr0.XXXXXX"); then
+      print -u2 -r -- "tr0: cannot create temporary file for: $f"
+      result=1
+      continue
+    fi
+
+    if ! command tr $'\x01' $'\t' <"$f" >|"$tmp" ||
+      ! command chmod -- "$file_mode" "$tmp" ||
+      ! command mv -f -- "$tmp" "$f"; then
+      print -u2 -r -- "tr0: failed to convert: $f"
+      command rm -f -- "$tmp"
+      result=1
+    fi
   done
+  return $result
 }
 
 field_match() {
@@ -195,18 +218,26 @@ alias ftm="field_match 'NF' " # NF is global alias of newest file
 # extract with new dir
 if typeset -f extract >/dev/null; then
   extractd() {
+    local result=0
     for f in "$@"; do
       local real_path=${f:A}
       local file_name=${real_path:t}
       local real_file_name="${file_name:r}"
-      if ! mkdir "$real_file_name"; then
-        "dir $real_file_name is exist, skip ..."
+      if [[ -e $real_file_name ]]; then
+        print -u2 -r -- "extractd: target already exists: $real_file_name"
+        result=1
         continue
       fi
-      cd "$real_file_name" || exit
-      extract "$real_path"
-      cd ..
+      if ! mkdir -- "$real_file_name"; then
+        print -u2 -r -- "extractd: cannot create target directory: $real_file_name"
+        result=1
+        continue
+      fi
+      (
+        cd -- "$real_file_name" && extract "$real_path"
+      ) || result=1
     done
+    return $result
   }
 fi
 
@@ -218,21 +249,23 @@ bash-set-title() {
   PS1=${ORIG}${TITLE}
 }
 
-m() {
-  local _cmd="cht.sh $*; cheat -c $*; "
-  (eval "$_cmd") | fzf --ansi
-}
-
-# https://github.com/rothgar/mastering-zsh/blob/master/docs/config/history.md
-# search entire history for "foo" with
-# h foo
-function h() {
-  # check if we passed any parameters
-  if [ -z "$*" ]; then
-    # if no parameters were passed print entire history
+# Search history for entries containing every keyword.
+h() {
+  if (( $# == 0 )); then
     history -i 1
-  else
-    # if words were passed use it as a search
-    history -i 1 | egrep --color=auto "$@"
+    return
   fi
+
+  local -a entries=("${(@f)$(history -i 1)}")
+  local -a matches
+  local keyword entry
+  for keyword in "$@"; do
+    matches=()
+    for entry in "${entries[@]}"; do
+      [[ $entry == *"$keyword"* ]] && matches+=("$entry")
+    done
+    entries=("${matches[@]}")
+    (( ${#entries} )) || return 1
+  done
+  print -rl -- "${entries[@]}"
 }

@@ -6,7 +6,7 @@ local _pwd="$(command pwd)"
 
 local fnd=() 
 local files=()
-local deleted subdir list edit debug resp i line _cpath _csv_marks
+local deleted subdir list edit debug resp i line _cpath _csv_marks selected
 for x; do
   case $x in
     -c) subdir="$_pwd"; ;;
@@ -52,6 +52,7 @@ FZF_DEFAULT_COMMAND="$RG_DEFAULT_COMMAND --files $subdir" fzf \
   --query="$@"
 )
 
-[[ -n $selected ]] && vim $selected # open multiple files in editor 
+local -a selected_files=(${(f)selected})
+(( ${#selected_files} )) && vim "${selected_files[@]}"
 
 # vim:ft=zsh:et

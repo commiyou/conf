@@ -34,7 +34,7 @@
 | `z-shell/zsh-diff-so-fancy` | git diff 美化 |
 | `Tarrasch/zsh-autoenv` | 进入目录自动执行 `.env` 文件 |
 | `OMZP::extract` / `x` | 万能解压命令 |
-| `OMZP::thefuck` / `fuck` | 自动修正上一条错误命令 |
+| `OMZP::thefuck` / `fuck` | 自动修正上一条错误命令（需另行安装 `thefuck`） |
 | `OMZP::fancy-ctrl-z` | `Ctrl-Z` 在前台/后台间切换 |
 | `OMZP::colored-man-pages` | man 页着色 |
 | `reegnz/jq-zsh-plugin` | jq 补全 |
@@ -44,15 +44,18 @@
 
 ## 自动安装的二进制工具
 
-系统中不存在时自动从 GitHub Release 安装：
+工具采用明确的混合归属：`make tools` 只安装系统和基础工具；下表中的用户态 CLI 在系统中不存在时由 zinit 从 GitHub Release 安装。两边不重复安装同一命令。
 
 | 命令 | 说明 |
 |------|------|
-| `exa` / `eza` | 现代 ls |
+| `eza` | 现代 ls |
 | `fd` | 现代 find |
 | `bat` | 现代 cat（语法高亮） |
 | `rg` | ripgrep 全文搜索 |
 | `fzf` | 模糊搜索 |
+| `delta` | Git diff 分页与语法高亮 |
+| `lazygit` | Git 终端界面 |
+| `yq` | YAML 查询与转换 |
 | `gron` | JSON 转 greppable 格式 |
 | `jless` | JSON 分页浏览 |
 | `fx` | JSON 交互浏览 |
@@ -61,7 +64,6 @@
 | `mdcat` | 终端渲染 Markdown |
 | `navi` | 命令速查手册（交互） |
 | `cheat` | 速查 cheatsheet |
-| `tmux` | 静态编译版 tmux v3.3a（备用） |
 | `git-extras` | `git-summary` `git-undo` 等扩展命令 |
 
 更新所有插件：`zupdate`
@@ -139,7 +141,6 @@
 | `TR1` | `\| tr '' '\t'`（SOH→tab） |
 | `TR,` | `\| tr ',' '\t'` |
 | `CSV` | `\| tr '\t' ','` |
-| `SPRNG` | `\| curl ... sprunge.us`（上传分享） |
 | `NF` | glob：当前目录最新文件 |
 | `ND` | glob：当前目录最新目录 |
 

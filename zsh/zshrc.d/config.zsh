@@ -5,7 +5,8 @@ typeset -g HIST_STAMPS="yyyy-mm-dd"
 [[ "$OSTYPE" == "linux-musl" ]] && OSTYPE=linux
 #export OSTYPE=linux-gnu
 # Highlight section titles in manual pages.
-export LESS_TERMCAP_md="${yellow}";
+export LESS_TERMCAP_md=$'\e[1;33m'
+export LESS_TERMCAP_me=$'\e[0m'
 unset TMOUT
 
 umask 022
@@ -13,4 +14,3 @@ umask 022
 export ARTISTIC_STYLE_OPTIONS=${XDG_CONFIG_HOME}/astylerc
 
 export RIPGREP_CONFIG_PATH=${XDG_CONFIG_HOME}/ripgreprc
-

@@ -1,8 +1,4 @@
-[ -f "$XDG_CONFIG_HOME"/rc.d/aliasrc ] && source "$XDG_CONFIG_HOME"/rc.d/aliasrc
-
 alias zmv='noglob zmv -w'
-# paste online
-alias -g SPRNG=" | curl -F 'sprunge=<-' http://sprunge.us"
 
 hash -d conf="$XDG_CONFIG_HOME"
 hash -d vim="$XDG_CONFIG_HOME"/vim

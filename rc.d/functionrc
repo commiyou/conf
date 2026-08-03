@@ -256,13 +256,11 @@ tmux_reset() {
 }
 
 swapf() {
-  local f1 f2 tmp_suffix
-  f1=${1}
-  f2=${2:-${1}.bak}
-  tmp_suffix=.tmp.for.swap
-  mv "$f1" "$f1$tmp_suffix"
-  mv "$f2" "$f1"
-  mv "$f1$tmp_suffix" "$f2"
+  if (( $# < 1 || $# > 2 )); then
+    print -u2 -r -- "usage: swapf PATH [PATH]"
+    return 1
+  fi
+  exchange "$1" "${2:-${1}.bak}"
 }
 
 proxy() {

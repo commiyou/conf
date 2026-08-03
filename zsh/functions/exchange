@@ -1,10 +1,75 @@
 # DESC: exchange two files
 
-[[ ! -e "$1" || ! -e "$2" ]] && { print -r -- "The args do not exist"; return 1; }
+if (( $# != 2 )); then
+  print -u2 -r -- "usage: exchange PATH PATH"
+  return 1
+fi
 
-local suffix=$(( RANDOM % 10000 ))
-mv -vf "$1" "$1"_"$suffix"
-mv -vf "$2" "$1"
-mv -vf "$1"_"$suffix" "$2"
+local left=$1 right=$2
+if [[ (! -e $left && ! -L $left) || (! -e $right && ! -L $right) ]]; then
+  print -u2 -r -- "exchange: both paths must exist"
+  return 1
+fi
+if [[ ${left:A} == ${right:A} ]]; then
+  print -u2 -r -- "exchange: paths resolve to the same object"
+  return 1
+fi
+
+zmodload -F zsh/stat b:zstat || {
+  print -u2 -r -- "exchange: cannot load zsh/stat"
+  return 1
+}
+
+local left_dir=${left:h:A}
+local right_dir=${right:h:A}
+local -A left_stat right_stat
+zstat -H left_stat -- "$left_dir" || return 1
+zstat -H right_stat -- "$right_dir" || return 1
+if [[ ${left_stat[device]} != ${right_stat[device]} ]]; then
+  print -u2 -r -- "exchange: paths must be on the same filesystem"
+  return 1
+fi
+
+local temp_dir temp_path
+if ! temp_dir=$(command mktemp -d "$left_dir/.exchange.XXXXXX"); then
+  print -u2 -r -- "exchange: cannot create temporary directory in $left_dir"
+  return 1
+fi
+temp_path=$temp_dir/item
+
+if ! command mv -f -- "$left" "$temp_path"; then
+  command rmdir -- "$temp_dir" 2>/dev/null
+  print -u2 -r -- "exchange: cannot move $left to temporary storage"
+  return 1
+fi
+
+if ! command mv -f -- "$right" "$left"; then
+  print -u2 -r -- "exchange: cannot move $right to $left; rolling back"
+  if command mv -f -- "$temp_path" "$left"; then
+    command rmdir -- "$temp_dir" 2>/dev/null
+  else
+    print -u2 -r -- "exchange: rollback failed; recover $left from $temp_path"
+  fi
+  return 1
+fi
+
+if ! command mv -f -- "$temp_path" "$right"; then
+  print -u2 -r -- "exchange: cannot move temporary storage to $right; rolling back"
+  local rollback_ok=1
+  command mv -f -- "$left" "$right" || rollback_ok=0
+  if (( rollback_ok )); then
+    command mv -f -- "$temp_path" "$left" || rollback_ok=0
+  fi
+  if (( rollback_ok )); then
+    command rmdir -- "$temp_dir" 2>/dev/null
+  else
+    print -u2 -r -- "exchange: rollback incomplete; original $left is stored at $temp_path"
+  fi
+  return 1
+fi
+
+command rmdir -- "$temp_dir" 2>/dev/null ||
+  print -u2 -r -- "exchange: warning: could not remove empty directory $temp_dir"
+return 0
 
 # vim:ft=zsh:et:sts=4:sw=4:wrap

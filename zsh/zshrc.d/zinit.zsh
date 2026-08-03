@@ -49,10 +49,8 @@ zinit depth'1' light-mode lucid for jeffreytse/zsh-vi-mode
 
 
 # ─── §4 Deferred: environment ─────────────────────────────────────────────────
-# zicompinit runs first so subsequent atload hooks can call compdef
 
 zt wait for \
-  atinit'zicompinit' zdharma-continuum/null \
   eval'dircolors -b LS_COLORS' \
   atload'zstyle ":completion:*" list-colors ${(s.:.)LS_COLORS}' \
   commiyou/LS_COLORS \
@@ -100,15 +98,18 @@ zt wait for \
 # Install only when the command is absent; lbin/lman wire up links automatically
 
 zt wait binary from'gh-r' lman lbin for \
-  if'[[ -z $commands[exa]   ]]' @ogham/exa \
+  if'[[ -z $commands[eza]   ]]' @eza-community/eza \
   if'[[ -z $commands[fd]    ]]' @sharkdp/fd \
   if'[[ -z $commands[bat]   ]]' @sharkdp/bat \
+  if'[[ -z $commands[delta] ]]' @dandavison/delta \
+  if'[[ -z $commands[lazygit] ]]' @jesseduffield/lazygit \
   if'[[ -z $commands[gron]  ]]' @tomnomnom/gron \
   if'[[ -z $commands[jless] ]]' PaulJuliusMartinez/jless \
   if'[[ -z $commands[mdcat] ]]' @swsnr/mdcat \
   if'[[ -z $commands[xsv]   ]]' BurntSushi/xsv \
   if'[[ -z $commands[sad]   ]]' ms-jpq/sad \
-  id-as'fx-bin'   lbin'fx* -> fx'                if'[[ -z $commands[fx]  ]]' antonmedv/fx 
+  id-as'fx-bin' lbin'fx* -> fx' if'[[ -z $commands[fx] ]]' antonmedv/fx \
+  id-as'yq-bin' lbin'!* -> yq' if'[[ -z $commands[yq] ]]' @mikefarah/yq
 
   #id-as'tmux-bin' lbin'tmux* -> tmux' ver'v3.3a' mjakob-gh/build-static-tmux
 
@@ -148,9 +149,7 @@ zt wait for \
   reegnz/jq-zsh-plugin \
   atload'ZSH_COMMAND_TIME_EXCLUDE=(vim v); ZSH_COMMAND_TIME_COLOR=red' \
     popstas/zsh-command-time \
-  atpull'git config --global core.pager "diff-so-fancy | less --tabs=4 -RFX"; \
-    git config --global interactive.diffFilter "diff-so-fancy --patch"' \
-    z-shell/zsh-diff-so-fancy \
+  z-shell/zsh-diff-so-fancy \
   atload$'!__forgit_atload;compdef _git gco=git-checkout;' wfxr/forgit
 
 zt wait for \
@@ -164,7 +163,7 @@ zt wait'[[ -n $WORK_ENV ]]' id-as'work-env' for \
 
 # ─── §8 Completions ───────────────────────────────────────────────────────────
 # Ordering contract:
-#   wait §4 (zicompinit first) → wait §5–§7 → wait'0b' (zicdreplay + fzf-tab → fsh → autosuggestions)
+#   .zshrc runs compinit → wait §4–§7 → wait'0b' (zicdreplay + fzf-tab → fsh → autosuggestions)
 #   wait'1'      → zsh-more-completions (heavy; loads after first prompt)
 #
 # fzf-tab-source provides extra previews; must load before fzf-tab

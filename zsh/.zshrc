@@ -10,13 +10,21 @@ if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]
 fi
 
 
-[ -n $ZDOTDIR ] || ZDOTDIR=${${(%):-%x}:A:h}
+[[ -n ${ZDOTDIR:-} ]] || ZDOTDIR=${${(%):-%x}:A:h}
+export ZDOTDIR
 
-for config_file ($XDG_CONFIG_HOME/rc.d/*rc) source $config_file
-for config_file ($ZDOTDIR/zshrc.d/*.zsh) source $config_file
+for config_file ($XDG_CONFIG_HOME/rc.d/*rc(N)) source "$config_file"
+for config_file ($ZDOTDIR/zshrc.d/*.zsh(N)) source "$config_file"
 
 unset config_file
 
-# To customize prompt, run `p10k configure` or edit 
-[[ ! -f $ZDOTDIR/.p10k.zsh ]] || source $ZDOTDIR/.p10k.zsh;
 [[ ! -f ~/.self.sh ]] || source ~/.self.sh
+
+# icode completion
+fpath=("$ZDOTDIR/.zsh/completions" $fpath)
+if (( $+functions[zicompinit] )); then
+  zicompinit
+else
+  autoload -Uz compinit
+  compinit
+fi

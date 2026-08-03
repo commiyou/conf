@@ -1,0 +1,37 @@
+#compdef reload_zshrcs websvr exchange swap swapf tr0 ff
+
+local state
+
+case $service in
+reload_zshrcs)
+  _arguments \
+    '(-n --dry-run)'{-n,--dry-run}'[show targets without notifying them]' \
+    '(-v --verbose)'{-v,--verbose}'[print each notified shell]'
+  ;;
+websvr)
+  _arguments \
+    '(- 1)-r[choose a random port from 8000 to 8999]' \
+    '(-r)1:port number:->port'
+  [[ $state == port ]] && _message 'port number'
+  ;;
+exchange | swap)
+  _arguments \
+    '1:first path:_files' \
+    '2:second path:_files'
+  ;;
+swapf)
+  _arguments \
+    '1:path:_files' \
+    '2:backup path:_files'
+  ;;
+tr0)
+  _arguments '*:regular file:_files -g "*(.)"'
+  ;;
+ff)
+  _arguments \
+    '(-d)-c[search from the current directory]' \
+    '(-c)-d-[search from the project root or an attached directory]::directory:_directories' \
+    '--[treat remaining arguments as search terms]' \
+    '*:search term:'
+  ;;
+esac

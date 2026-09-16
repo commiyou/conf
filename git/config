@@ -34,14 +34,14 @@
   # Don't consider trailing space change as a cause for merge conflicts
   whitespace = -trailing-space
   autocrlf = input
-  pager = ( diff-so-fancy 2>/dev/null || cat - ) | less --tabs=4 -RFX 
+	pager = diff-so-fancy | less --tabs=4 -RFX
 	quotepath = false
 [credential]
 	helper = store
 [pull]
 	rebase = true
 [interactive]
-	diffFilter = diff-so-fancy --patch || diff
+	diffFilter = diff-so-fancy --patch
 [includeIf "gitdir:~/conf/*"]
   path = ~/conf/git/gitconfig-github
 [includeIf "gitdir:/home/data2/fserver"]
@@ -51,3 +51,5 @@
 [user]
 	email = commiyou@gmail.com
 	name = commiyou
+[init]
+	defaultBranch = master

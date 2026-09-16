@@ -198,8 +198,10 @@ zsh_personal_viins_bindings() {
   bindkey -M viins '^n' down-line-or-history
   bindkey -M viins '^y' yank
   bindkey -M viins '^w' backward-kill-word
-  bindkey -M viins '^[.' insert-last-word
-  bindkey -M viins '^[m' copy-prev-shell-word
+  # NOTE: ESC-prefixed (^[) bindings must NOT be set here. zsh-vi-mode owns the
+  # ESC key for mode switching, so a plain `bindkey -M viins '^[.'` gets eaten:
+  # ESC switches to vicmd, then '.' runs vi-repeat-change. Register these via
+  # zvm_bindkey inside zvm_after_lazy_keybindings instead (see below).
 }
 
 function zvm_after_lazy_keybindings() {
@@ -220,6 +222,11 @@ function zvm_after_lazy_keybindings() {
 
   zvm_define_widget _fno_with_last_word
   zvm_bindkey viins '^X^x' _fno_with_last_word
+
+  # ESC-prefixed viins bindings must go through zvm_bindkey so they coexist with
+  # ZVM's ESC mode-switch handling (otherwise ESC->vicmd, then '.' repeats edit).
+  zvm_bindkey viins '^[.' insert-last-word
+  zvm_bindkey viins '^[m' copy-prev-shell-word
 
   export ZVM_ESCAPE_KEYTIMEOUT=0.05
 

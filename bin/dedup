@@ -10,10 +10,11 @@ Usage:
 Options:
     -k, --keys KEYS  The columns to use as keys. Use comma to separate multiple columns or range to specify a range of columns. Default is None, which means use all columns.
     -n, --num NUM     The threshold for the number of times a key appears. Default is 1.
-    -r, --repeat     If specified, print lines where the key count is >= NUM. By default, it prints lines where the key count is < NUM.
+    -r, --reverse     If specified, print lines where the key count is >= NUM. By default, it prints lines where the key count is < NUM.
     -d, --delim DELM  The delimiter to use to split the columns. Default is tab.
     -i, --ignore-case  Ignore case when comparing keys.
     -e, --encoding ENC The encoding of the delimiter. Default is utf-8.
+    --ignore-header  Ignore the first line of each input file.
 """
 
 import optparse
@@ -21,15 +22,19 @@ import sys
 from collections import defaultdict
 
 
-def _iter_lines(input_sources: list[str | None]):
+def _iter_lines(input_sources: list[str | None], ignore_header: bool):
     """IO 边界处理器：以纯字节流读取，摊平嵌套控制流"""
     for source in input_sources:
         if source:
             print(f"==  {source} : ", file=sys.stderr)
             with open(source, 'rb') as f:
+                if ignore_header:
+                    next(f, None)
                 for line_num, line_bytes in enumerate(f):
                     yield source, line_num, line_bytes.rstrip(b'\r\n')
         else:
+            if ignore_header:
+                next(sys.stdin.buffer, None)
             for line_num, line_bytes in enumerate(sys.stdin.buffer):
                 yield source, line_num, line_bytes.rstrip(b'\r\n')
 
@@ -63,13 +68,13 @@ def dedup(options: optparse.Values, input_files: list[str] | None = None) -> Non
     # 核心改动：仅对分隔符按需编码，数据流保持原始字节
     delim = options.delim.encode(options.encoding) if options.delim else None
 
-    if options.repeat:  # noqa: PLR1702
-        # -r 模式: 优化内存使用，缓存直到满足条件
+    if options.reverse:
+        # -r/--reverse 模式: 缓存行直到满足重复条件
         key_counts = defaultdict(int)
         line_cache = defaultdict(list)
         printed_keys = set()
 
-        for source, line_num, line_bytes in _iter_lines(input_sources):
+        for source, line_num, line_bytes in _iter_lines(input_sources, options.ignore_header):
             parts = line_bytes.split(delim) if delim else [line_bytes]
             try:
                 key = tuple(parts[i] for i in key_indices) if key_indices is not None else tuple(parts)
@@ -97,7 +102,7 @@ def dedup(options: optparse.Values, input_files: list[str] | None = None) -> Non
     else:
         # 默认模式: 流式处理，内存效率高
         key_counts = defaultdict(int)
-        for source, line_num, line_bytes in _iter_lines(input_sources):
+        for source, line_num, line_bytes in _iter_lines(input_sources, options.ignore_header):
             parts = line_bytes.split(delim) if delim else [line_bytes]
             try:
                 key = tuple(parts[i] for i in key_indices) if key_indices is not None else tuple(parts)
@@ -113,6 +118,156 @@ def dedup(options: optparse.Values, input_files: list[str] | None = None) -> Non
                 continue
 
 
+def run_tests():
+    """Runs a series of self-tests to verify the script's functionality."""
+    import os
+    import shlex
+    import shutil
+    import subprocess
+    import tempfile
+    import textwrap
+
+    script_path = __file__
+    test_dir = tempfile.mkdtemp(prefix="dedup_tests_")
+
+    try:
+        data_path = os.path.join(test_dir, "data.csv")
+        with open(data_path, "w", encoding="utf-8") as f:
+            f.write(
+                textwrap.dedent(
+                    """
+                fruit,color
+                apple,red
+                banana,yellow
+                apple,green
+                cherry,red
+                apple,blue
+                banana,yellow
+            """
+                ).lstrip()
+            )
+
+        # Test cases
+        test_cases = [
+            {
+                "name": "Test 1: Default dedup (whole line)",
+                "args": f"{data_path}",
+                "output": textwrap.dedent(
+                    """
+                    fruit,color
+                    apple,red
+                    banana,yellow
+                    apple,green
+                    cherry,red
+                    apple,blue
+                """
+                ),
+            },
+            {
+                "name": "Test 2: Dedup by key (first column)",
+                "args": f"-k 0 -d , {data_path}",
+                "output": textwrap.dedent(
+                    """
+                    fruit,color
+                    apple,red
+                    banana,yellow
+                    cherry,red
+                """
+                ),
+            },
+            {
+                "name": "Test 3: Ignore header",
+                "args": f"-k 0 -d , --ignore-header {data_path}",
+                "output": textwrap.dedent(
+                    """
+                    apple,red
+                    banana,yellow
+                    cherry,red
+                """
+                ),
+            },
+            {
+                "name": "Test 4: Reverse mode (find duplicates)",
+                "args": f"-k 0 -d , -n 2 -r {data_path}",
+                "output": textwrap.dedent(
+                    """
+                    apple,red
+                    apple,green
+                    apple,blue
+                    banana,yellow
+                    banana,yellow
+                """
+                ),
+            },
+            {
+                "name": "Test 5: Keep first 2 occurrences",
+                "args": f"-k 0 -d , -n 2 {data_path}",
+                "output": textwrap.dedent(
+                    """
+                    fruit,color
+                    apple,red
+                    banana,yellow
+                    apple,green
+                    cherry,red
+                    banana,yellow
+                """
+                ),
+            },
+            {
+                "name": "Test 6: Invalid column (graceful error)",
+                "args": f"-k 5 -d , {data_path}",
+                "output": "",  # Should print nothing to stdout
+                "expected_stderr": "行没有足够的列",
+            },
+        ]
+
+        print(f"Running {len(test_cases)} tests in '{test_dir}'...")
+        failures = 0
+        for i, case in enumerate(test_cases):
+            print(f"--- {case['name']} ---")
+            command = [sys.executable, script_path] + shlex.split(case["args"])
+
+            process = subprocess.run(command, capture_output=True, text=True, encoding="utf-8")
+
+            expected_stderr = case.get("expected_stderr")
+
+            # Check stdout
+            stdout_ok = process.stdout.strip() == case["output"].strip()
+
+            # Check stderr
+            stderr_ok = True
+            if expected_stderr:
+                stderr_ok = expected_stderr in process.stderr
+
+            if stdout_ok and stderr_ok and process.returncode == case.get("returncode", 0):
+                print("\033[92mPASS\033[0m")
+            else:
+                failures += 1
+                print("\033[91mFAIL\033[0m")
+                if not stdout_ok:
+                    print("Expected Stdout:")
+                    print(textwrap.indent(case["output"], "> "))
+                    print("Actual Stdout:")
+                    print(textwrap.indent(process.stdout, "> "))
+                if not stderr_ok:
+                    print(f"Expected Stderr containing: '{expected_stderr}'")
+                    print("Actual Stderr:")
+                    print(textwrap.indent(process.stderr, "> "))
+                if process.returncode != case.get("returncode", 0):
+                    print(f"Expected return code {case.get('returncode', 0)}, got {process.returncode}")
+            print()
+
+    finally:
+        shutil.rmtree(test_dir)
+
+    if failures > 0:
+        print(f"Result: {failures} of {len(test_cases)} tests failed.")
+        sys.exit(1)
+    else:
+        print("Result: All tests passed.")
+        sys.exit(0)
+
+
 def main():
     parser = optparse.OptionParser(description="从文本文件中移除重复行。")
     parser.add_option(
@@ -120,13 +275,31 @@ def main():
         "--keys",
         help='用于检测重复项的列索引。使用逗号分隔，例如 "0,2,4" 或范围 "1-3"。默认是 None，表示使用整行进行去重。',
     )
-    parser.add_option("-n", "--num", type="int", default=1, help="重复次数的阈值。默认为 1。")
+    parser.add_option(
+        "-n",
+        "--num",
+        type="int",
+        default=1,
+        help="设置重复次数阈值N。默认打印出现<N次的行；与-r连用时，打印出现>=N次的行。",
+    )
     parser.add_option("-d", "--delim", default="\t", help="用于分割列的分隔符。默认是制表符。")
     parser.add_option("-i", "--ignore-case", action="store_true", help="比较键时忽略大小写。")
-    parser.add_option("-r", "--repeat", action="store_true", help="与-n配合使用。打印所有出现次数大于或等于-n的行。注意：此选项会缓存部分输入行，内存消耗取决于数据中键的分布情况。")
+    parser.add_option(
+        "-r",
+        "--reverse",
+        "--repeat",
+        dest="reverse",
+        action="store_true",
+        help="反转模式：仅打印重复的行（出现次数>=N）。默认打印唯一的行（出现次数<N）。",
+    )
     parser.add_option("-e", "--encoding", default="utf-8", help="用于编码分隔符的字符集，默认为 utf-8。由于文件按字节流处理，此选项仅用于分隔符匹配。")
+    parser.add_option("--ignore-header", action="store_true", help="忽略每个输入文件的第一行（标题行）。")
+    parser.add_option("--test", action="store_true", help="执行内置的单元测试。")
 
     options, args = parser.parse_args()
+
+    if options.test:
+        run_tests()
 
     # 传递所有输入文件
     input_files = args if args else None

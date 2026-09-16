@@ -54,3 +54,6 @@ zsh/.zsh_sessions/
 nvim/Session.vim
 nvim/lazy-lock.json
 nvim/README.md
+/gh
+/uv
+/gog

@@ -119,8 +119,12 @@ zt wait binary from'gh-r' lman for \
     dl'https://raw.githubusercontent.com/junegunn/fzf/master/man/man1/fzf.1' \
     junegunn/fzf \
   id-as'cheat-bin' lbin'**/cheat* -> cheat' cheat/cheat \
-  lbin'**/codex-mixin -> codex-mixin' Edward-lyz/codex-mixin \
   lbin so-fancy/diff-so-fancy
+
+# codex-mixin publishes a Linux binary only.
+zt wait binary from'gh-r' lman for \
+  if'[[ $OSTYPE == linux* ]]' \
+    lbin'**/codex-mixin -> codex-mixin' Edward-lyz/codex-mixin
 
 zt wait binary from'gh-r' as'program' for \
   id-as'navi' pick'navi' denisidoro/navi

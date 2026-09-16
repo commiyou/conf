@@ -271,9 +271,7 @@ def main(
     expr: str,
     files: Tuple[IO, ...],
 ):
-    """
-    Pretty print the fields of one line in a file with field numbers.
-    """
+    """Pretty print the fields of one line in a file with field numbers."""
     if not files:
         stdin_stream = (line.encode("utf-8") for line in sys.stdin)
         files = (stdin_stream,)  # type: ignore

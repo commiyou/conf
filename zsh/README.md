@@ -189,7 +189,7 @@
 | `sort` | `LC_ALL=C sort` |
 | `grep` | `LC_ALL=C grep --color -a` |
 | `wcl` | `wc -l` |
-| `dud` | `du -m -h -s -c -- * \| sort -h` |
+| `dud [PATH...]` | 显示当前目录项或指定路径的磁盘占用，支持 `sudo dud DIR` |
 
 ### 其他
 

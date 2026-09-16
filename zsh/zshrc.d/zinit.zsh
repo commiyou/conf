@@ -118,7 +118,9 @@ zt wait binary from'gh-r' lman for \
   id-as'fzf-bin' lbin if'[[ -z $commands[fzf] ]]' \
     dl'https://raw.githubusercontent.com/junegunn/fzf/master/man/man1/fzf.1' \
     junegunn/fzf \
-  id-as'cheat-bin' lbin'**/cheat* -> cheat' cheat/cheat
+  id-as'cheat-bin' lbin'**/cheat* -> cheat' cheat/cheat \
+  lbin'**/codex-mixin -> codex-mixin' Edward-lyz/codex-mixin \
+  lbin so-fancy/diff-so-fancy
 
 zt wait binary from'gh-r' as'program' for \
   id-as'navi' pick'navi' denisidoro/navi
@@ -153,7 +155,9 @@ zt wait for \
   atload$'!__forgit_atload;compdef _git gco=git-checkout;' wfxr/forgit
 
 zt wait for \
-  atinit'local zew_word_style=whitespace' zdharma-continuum/zsh-editing-workbench \
+  atinit'local zew_word_style=whitespace' \
+  atload'zsh_personal_viins_bindings' \
+    zdharma-continuum/zsh-editing-workbench \
   multisrc'shell/*.zsh' trackbinds bindmap'^T -> ^X^T; \ec -> ^X^C' junegunn/fzf \
   atinit'export AUTOSWITCH_DEFAULT_CONDAENV=base' bckim92/zsh-autoswitch-conda
 

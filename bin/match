@@ -1,0 +1,92 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+file=""
+line=""
+col=""
+mode="exact"
+pattern=""
+fs="[[:space:]]+"
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+  -l | --line)
+    line="$2"
+    shift 2
+    ;;
+  -c | --col)
+    col="$2"
+    shift 2
+    ;;
+  -m | --mode)
+    mode="$2"
+    shift 2
+    ;;
+  --fs)
+    fs="$2"
+    shift 2
+    ;;
+  *)
+    if [[ -z "$file" ]]; then
+      file="$1"
+    elif [[ -z "$pattern" ]]; then
+      pattern="$1"
+    else
+      echo "Unknown arg: $1" >&2
+      exit 2
+    fi
+    shift
+    ;;
+  esac
+done
+
+[[ -z "$file" ]] && {
+  echo "Usage: match.sh FILE [--line L] [--col C] [--mode exact|re|glob] [pattern]" >&2
+  exit 2
+}
+
+match() {
+  local v="$1"
+  case "$mode" in
+  exact) [[ "$v" == "$pattern" ]] ;;
+  re) [[ "$v" =~ $pattern ]] ;;
+  glob) [[ "$v" == $pattern ]] ;;
+  *) return 1 ;;
+  esac
+}
+
+# ---------- 核心读取 ----------
+if [[ -z "$pattern" ]]; then
+  # ===== 输出模式 =====
+  awk -v line="$line" -v col="$col" -v FS="$fs" '
+    {
+      if (line != "" && NR != line) next
+
+      if (col != "") print $col
+      else print $0
+
+      if (line != "") exit
+    }
+  ' "$file"
+  exit 0
+else
+  # ===== 匹配模式 =====
+  awk -v line="$line" -v col="$col" -v FS="$fs" '
+    {
+      if (line != "" && NR != line) next
+
+      if (col != "") print $col
+      else print $0
+
+      if (line != "") exit
+    }
+  ' "$file" | while IFS= read -r value; do
+    if match "$value"; then
+      echo "MATCH"
+      exit 0
+    fi
+  done
+
+  echo "NO MATCH"
+  exit 1
+fi

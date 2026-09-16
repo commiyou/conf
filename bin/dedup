@@ -13,11 +13,25 @@ Options:
     -r, --repeat     If specified, print lines where the key count is >= NUM. By default, it prints lines where the key count is < NUM.
     -d, --delim DELM  The delimiter to use to split the columns. Default is tab.
     -i, --ignore-case  Ignore case when comparing keys.
+    -e, --encoding ENC The encoding of the delimiter. Default is utf-8.
 """
 
 import optparse
 import sys
 from collections import defaultdict
+
+
+def _iter_lines(input_sources: list[str | None]):
+    """IO 边界处理器：以纯字节流读取，摊平嵌套控制流"""
+    for source in input_sources:
+        if source:
+            print(f"==  {source} : ", file=sys.stderr)
+            with open(source, 'rb') as f:
+                for line_num, line_bytes in enumerate(f):
+                    yield source, line_num, line_bytes.rstrip(b'\r\n')
+        else:
+            for line_num, line_bytes in enumerate(sys.stdin.buffer):
+                yield source, line_num, line_bytes.rstrip(b'\r\n')
 
 
 def dedup(options: optparse.Values, input_files: list[str] | None = None) -> None:
@@ -46,6 +60,8 @@ def dedup(options: optparse.Values, input_files: list[str] | None = None) -> Non
                     sys.exit(1)
 
     input_sources = input_files if input_files else [None]
+    # 核心改动：仅对分隔符按需编码，数据流保持原始字节
+    delim = options.delim.encode(options.encoding) if options.delim else None
 
     if options.repeat:  # noqa: PLR1702
         # -r 模式: 优化内存使用，缓存直到满足条件
@@ -53,55 +69,48 @@ def dedup(options: optparse.Values, input_files: list[str] | None = None) -> Non
         line_cache = defaultdict(list)
         printed_keys = set()
 
-        for source in input_sources:
-            with open(source) if source else sys.stdin as f:
-                if source:
-                    print(f"==  {source} : ", file=sys.stderr)
-                for line_num, line_text in enumerate(f):
-                    line_text = line_text.rstrip("\n")
-                    parts = line_text.split(options.delim) if options.delim else [line_text]
-                    try:
-                        key = tuple(parts[i] for i in key_indices) if key_indices is not None else tuple(parts)
-                        if options.ignore_case:
-                            key = tuple(k.lower() for k in key)
+        for source, line_num, line_bytes in _iter_lines(input_sources):
+            parts = line_bytes.split(delim) if delim else [line_bytes]
+            try:
+                key = tuple(parts[i] for i in key_indices) if key_indices is not None else tuple(parts)
+                if options.ignore_case:
+                    key = tuple(k.lower() for k in key)
 
-                        if key in printed_keys:
-                            print(line_text, flush=True)
-                            continue
+                if key in printed_keys:
+                    sys.stdout.buffer.write(line_bytes + b'\n')
+                    sys.stdout.buffer.flush()
+                    continue
 
-                        key_counts[key] += 1
-                        line_cache[key].append(line_text)
+                key_counts[key] += 1
+                line_cache[key].append(line_bytes)
 
-                        if key_counts[key] >= options.num:
-                            for cached_line in line_cache[key]:
-                                print(cached_line, flush=True)
-                            del line_cache[key]
-                            printed_keys.add(key)
+                if key_counts[key] >= options.num:
+                    for cached_line in line_cache[key]:
+                        sys.stdout.buffer.write(cached_line + b'\n')
+                    del line_cache[key]
+                    printed_keys.add(key)
+                    sys.stdout.buffer.flush()
 
-                    except IndexError:
-                        print(f"错误:{source or '标准输入'} 第 {line_num + 1} 行没有足够的列。", file=sys.stderr)
-                        continue
+            except IndexError:
+                print(f"错误:{source or '标准输入'} 第 {line_num + 1} 行没有足够的列。", file=sys.stderr)
+                continue
     else:
         # 默认模式: 流式处理，内存效率高
         key_counts = defaultdict(int)
-        for source in input_sources:
-            with open(source) if source else sys.stdin as f:
-                if source:
-                    print(f"==  {source} : ", file=sys.stderr)
-                for line_num, line_text in enumerate(f):
-                    line_text = line_text.rstrip("\n")
-                    parts = line_text.split(options.delim) if options.delim else [line_text]
-                    try:
-                        key = tuple(parts[i] for i in key_indices) if key_indices is not None else tuple(parts)
-                        if options.ignore_case:
-                            key = tuple(k.lower() for k in key)
-                        
-                        if key_counts[key] < options.num:
-                            print(line_text, flush=True)
-                        key_counts[key] += 1
-                    except IndexError:
-                        print(f"错误:{source or '标准输入'} 第 {line_num + 1} 行没有足够的列。", file=sys.stderr)
-                        continue
+        for source, line_num, line_bytes in _iter_lines(input_sources):
+            parts = line_bytes.split(delim) if delim else [line_bytes]
+            try:
+                key = tuple(parts[i] for i in key_indices) if key_indices is not None else tuple(parts)
+                if options.ignore_case:
+                    key = tuple(k.lower() for k in key)
+                
+                if key_counts[key] < options.num:
+                    sys.stdout.buffer.write(line_bytes + b'\n')
+                    sys.stdout.buffer.flush()
+                key_counts[key] += 1
+            except IndexError:
+                print(f"错误:{source or '标准输入'} 第 {line_num + 1} 行没有足够的列。", file=sys.stderr)
+                continue
 
 
 def main():
@@ -112,15 +121,24 @@ def main():
         help='用于检测重复项的列索引。使用逗号分隔，例如 "0,2,4" 或范围 "1-3"。默认是 None，表示使用整行进行去重。',
     )
     parser.add_option("-n", "--num", type="int", default=1, help="重复次数的阈值。默认为 1。")
-    parser.add_option("-d", "--delim", default="\t", help="用于分割列的分分隔符。默认是制表符。")
+    parser.add_option("-d", "--delim", default="\t", help="用于分割列的分隔符。默认是制表符。")
     parser.add_option("-i", "--ignore-case", action="store_true", help="比较键时忽略大小写。")
     parser.add_option("-r", "--repeat", action="store_true", help="与-n配合使用。打印所有出现次数大于或等于-n的行。注意：此选项会缓存部分输入行，内存消耗取决于数据中键的分布情况。")
+    parser.add_option("-e", "--encoding", default="utf-8", help="用于编码分隔符的字符集，默认为 utf-8。由于文件按字节流处理，此选项仅用于分隔符匹配。")
 
     options, args = parser.parse_args()
 
     # 传递所有输入文件
     input_files = args if args else None
-    dedup(options, input_files)
+    
+    try:
+        dedup(options, input_files)
+    except KeyboardInterrupt:
+        sys.exit(130)
+    except BrokenPipeError:
+        # Prevent broken pipe errors when piping to `head` or `less`
+        sys.stderr.close()
+        sys.exit(0)
 
 
 if __name__ == "__main__":

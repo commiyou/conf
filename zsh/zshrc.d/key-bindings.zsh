@@ -94,7 +94,7 @@ bindkey -s '^X^Z' '%-^M'
 bindkey '^Xe' expand-cmd-path
 #bindkey '^[^I' reverse-menu-complete
 #bindkey '^X^N' accept-and-infer-next-history
-bindkey '^W' kill-region
+bindkey '^W' backward-kill-word
 bindkey '^I' complete-word
 
 expand-dot-to-parent-directory-path() {
@@ -189,8 +189,20 @@ bindkey "^X^x" _fno_with_last_word
 # viopp - Vi mode - OPERATOR-PENDING mode
 # visual - Vi mode - VISUAL mode
 # https://github.com/jeffreytse/zsh-vi-mode
-#function zvm_after_lazy_keybindings() {
-function zvm_after_init() {
+# zsh-vi-mode owns mode switching.  The personal bindings below are applied
+# after zsh-editing-workbench has loaded its widgets and defaults.
+zsh_personal_viins_bindings() {
+  bindkey -M viins '^a' beginning-of-line
+  bindkey -M viins '^e' end-of-line
+  bindkey -M viins '^p' up-line-or-history
+  bindkey -M viins '^n' down-line-or-history
+  bindkey -M viins '^y' yank
+  bindkey -M viins '^w' backward-kill-word
+  bindkey -M viins '^[.' insert-last-word
+  bindkey -M viins '^[m' copy-prev-shell-word
+}
+
+function zvm_after_lazy_keybindings() {
   # Here we define the custom widget
   #zvm_define_widget my_custom_widget
 
@@ -199,8 +211,6 @@ function zvm_after_init() {
 
   zvm_define_widget _run_with_sudo
   zvm_bindkey viins '^Xs' _run_with_sudo
-  zvm_bindkey vicmd '^[.' insert-last-word
-  zvm_bindkey vicmd '^[m' copy-earlier-word
 
   zvm_define_widget _insert_date
   zvm_bindkey viins '^Xa' _insert_date
@@ -226,4 +236,3 @@ function zvm_after_init() {
 # bindkey -lL                      # format the output as a series of the bindkey commands
 # bindkey -L                       # a list of all your current bindings, including those of a built-in keymap, formatted in a way you can use within your scripts
 # zle -al  # list all  registered zle commands
-

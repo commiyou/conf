@@ -1,0 +1,20 @@
+#!/usr/bin/env zsh
+# Preview dispatcher for fzf — used by v, etc.
+
+file="$1"
+[ -f "$file" ] || { echo "[not a file]"; exit 1 }
+
+case "${file:t:e:l}" in
+  tsv|csv)
+    fno -H -l 0 -- "$file" 2>/dev/null || bat --color=always --style=numbers --line-range=:200 "$file" 2>/dev/null || head -200 "$file"
+    ;;
+  jsonl|ndjson)
+    head -5 "$file" | jq -C . 2>/dev/null || head -200 "$file"
+    ;;
+  json)
+    jq -C . "$file" 2>/dev/null | head -200 || bat --color=always --style=numbers --line-range=:200 "$file" 2>/dev/null || head -200 "$file"
+    ;;
+  *)
+    bat --color=always --style=numbers --line-range=:200 "$file" 2>/dev/null || head -200 "$file"
+    ;;
+esac

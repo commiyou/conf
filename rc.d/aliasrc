@@ -72,7 +72,6 @@ alias awkt='LC_ALL=C awk -F"\t" -v OFS="\t"'
 alias cutt="cut -d$'\t'"
 alias sortt="LC_ALL=C sort -t$'\t'"
 
-alias dud='du -m -h -s -c -- * | sort -h'
 alias sortnr='sort -n -r -k'
 alias sortnrt="sort -n -r -t$'\t' -k"
 

@@ -75,10 +75,17 @@ elif [ "$kind" = vnd.sqlite3 ]; then
 	fi
 # https://github.com/wofr06/lesspipe/pull/107
 elif [ -d "$1" ]; then
-	if has_cmd eza; then
-		eza -hl --git --color=always --icons "$1"
-	elif has_cmd exa; then
-		exa -hl --color=always --icons "$1"
+	# Avoid falling through to `less DIR` when a directory has no entries.
+	if [ -n "$(command ls -A "$1" 2>/dev/null)" ]; then
+		if has_cmd eza; then
+			eza -hl --git --color=always --icons "$1"
+		elif has_cmd exa; then
+			exa -hl --color=always --icons "$1"
+		else
+			command ls -la "$1"
+		fi
+	else
+		printf '%s\n' '(empty directory)'
 	fi
 # https://github.com/wofr06/lesspipe/pull/110
 elif [ "$kind" = pdf ]; then
@@ -112,4 +119,3 @@ elif [ "$category" = text ]; then
 else
 	exit 1
 fi
-

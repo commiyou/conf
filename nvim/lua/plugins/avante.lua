@@ -104,6 +104,12 @@ return {
         "MeanderingProgrammer/render-markdown.nvim",
         opts = {
           file_types = { "markdown", "Avante" },
+          heading = {
+            -- Use ordinary Markdown markers instead of Nerd Font circled
+            -- heading numbers (󰲡, 󰲣, ...).
+            icons = { "# ", "## ", "### ", "#### ", "##### ", "###### " },
+            signs = { "" },
+          },
         },
         ft = { "markdown", "Avante" },
       },

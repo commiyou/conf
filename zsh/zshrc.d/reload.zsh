@@ -14,7 +14,8 @@ typeset -g _ZSH_RELOAD_PENDING=0
 _zsh_reload_prepare_registry() {
   command mkdir -p -m 700 -- "$ZSH_RELOAD_REGISTRY_DIR" 2>/dev/null || return 1
   [[ -d $ZSH_RELOAD_REGISTRY_DIR && -O $ZSH_RELOAD_REGISTRY_DIR && ! -L $ZSH_RELOAD_REGISTRY_DIR ]] || return 1
-  command chmod 700 -- "$ZSH_RELOAD_REGISTRY_DIR" 2>/dev/null
+  # macOS /bin/chmod does not accept GNU's `--` end-of-options marker.
+  command chmod 700 "$ZSH_RELOAD_REGISTRY_DIR" 2>/dev/null
 }
 
 _zsh_reload_zdotdir() {
